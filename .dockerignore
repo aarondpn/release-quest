@@ -1,0 +1,5 @@
+node_modules
+concept.html
+.git
+.dockerignore
+Dockerfile

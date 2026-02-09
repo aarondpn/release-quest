@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Release Quest – Bug Hunter</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0f0e17;
+    --surface: #1a1a2e;
+    --red: #ff6b6b;
+    --teal: #4ecdc4;
+    --yellow: #ffe66d;
+    --purple: #a855f7;
+    --muted: #a7a9be;
+    --dark-purple: #2d1b30;
+    --dark-teal: #1b3a35;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--muted);
+    font-family: 'Press Start 2P', monospace;
+    overflow: hidden;
+    cursor: crosshair;
+  }
+
+  /* ── Scanlines overlay ── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.06) 2px,
+      rgba(0,0,0,0.06) 4px
+    );
+    z-index: 9999;
+  }
+
+  /* ── Layout ── */
+  .wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 16px;
+    gap: 12px;
+  }
+
+  /* ── Header ── */
+  header {
+    text-align: center;
+    padding: 18px 12px;
+    background: var(--surface);
+    border: 2px solid var(--purple);
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+  header h1 {
+    font-size: 18px;
+    color: var(--yellow);
+    text-shadow: 0 0 20px rgba(255,230,109,0.4);
+    margin-bottom: 6px;
+  }
+  header p {
+    font-size: 7px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  /* ── HUD ── */
+  .hud {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  .hud-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: 1px solid #2a2a4a;
+    font-size: 8px;
+  }
+
+  .hud-label { color: var(--muted); }
+  .hud-value { color: var(--yellow); }
+  .hud-value.hp { color: var(--teal); }
+  .hud-value.bugs { color: var(--red); }
+
+  .hp-bar-track {
+    width: 80px;
+    height: 10px;
+    background: var(--bg);
+    border: 1px solid #3d3d5c;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .hp-bar-fill {
+    height: 100%;
+    background: var(--teal);
+    border-radius: 1px;
+    transition: width 0.4s ease, background-color 0.4s ease;
+  }
+  .hp-bar-fill.low { background: var(--red); animation: pulse-hp 0.6s infinite; }
+
+  @keyframes pulse-hp {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* ── Game Arena ── */
+  .arena-wrap {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+  }
+
+  .arena {
+    width: 100%;
+    height: 100%;
+    background:
+      radial-gradient(circle at 20% 80%, rgba(168,85,247,0.05) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(78,205,196,0.05) 0%, transparent 50%),
+      var(--bg);
+    border: 2px solid #2a2a4a;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Grid floor */
+  .arena::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 100px;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 18px,
+      rgba(167,169,190,0.06) 18px,
+      rgba(167,169,190,0.06) 19px
+    );
+    pointer-events: none;
+  }
+
+  /* ── Bug sprite ── */
+  .bug {
+    position: absolute;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.08s;
+    z-index: 10;
+    animation: bug-spawn 0.3s ease-out;
+  }
+  .bug:active { transform: scale(0.7); }
+
+  .bug-body {
+    position: relative;
+    width: 36px;
+    height: 28px;
+    background: var(--red);
+    border-radius: 50%;
+    box-shadow: 0 0 12px rgba(255,107,107,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .bug-body::before,
+  .bug-body::after {
+    content: '';
+    position: absolute;
+    top: -6px;
+    width: 4px;
+    height: 10px;
+    background: var(--red);
+    border-radius: 2px;
+  }
+  .bug-body::before { left: 8px; transform: rotate(-20deg); }
+  .bug-body::after { right: 8px; transform: rotate(20deg); }
+
+  .bug-eyes {
+    font-size: 10px;
+    color: var(--bg);
+    font-family: monospace;
+    font-weight: bold;
+    letter-spacing: 4px;
+    margin-top: -2px;
+  }
+
+  /* Bug legs via extra elements */
+  .bug-legs {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+  }
+  .bug-legs span {
+    position: absolute;
+    width: 6px;
+    height: 2px;
+    background: var(--red);
+    border-radius: 1px;
+  }
+  .bug-legs span:nth-child(1) { top: 8px; left: -4px; transform: rotate(-30deg); }
+  .bug-legs span:nth-child(2) { top: 16px; left: -5px; transform: rotate(0deg); }
+  .bug-legs span:nth-child(3) { top: 24px; left: -4px; transform: rotate(30deg); }
+  .bug-legs span:nth-child(4) { top: 8px; right: -4px; transform: rotate(30deg); }
+  .bug-legs span:nth-child(5) { top: 16px; right: -5px; transform: rotate(0deg); }
+  .bug-legs span:nth-child(6) { top: 24px; right: -4px; transform: rotate(-30deg); }
+
+  .bug.walking {
+    animation: bug-walk 0.4s steps(2) infinite;
+  }
+
+  @keyframes bug-walk {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-2px); }
+  }
+
+  @keyframes bug-spawn {
+    0% { transform: scale(0) rotate(180deg); opacity: 0; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+
+  /* ── Squash effect ── */
+  .squash {
+    position: absolute;
+    pointer-events: none;
+    z-index: 20;
+    animation: squash-anim 0.5s ease-out forwards;
+  }
+  .squash-text {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    color: var(--yellow);
+    text-shadow: 0 0 8px rgba(255,230,109,0.6);
+    white-space: nowrap;
+  }
+
+  @keyframes squash-anim {
+    0% { transform: translateY(0) scale(1); opacity: 1; }
+    100% { transform: translateY(-50px) scale(1.3); opacity: 0; }
+  }
+
+  /* ── Screens (start / game over / win) ── */
+  .screen-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15,14,23,0.92);
+    z-index: 100;
+    gap: 20px;
+    border-radius: 8px;
+    text-align: center;
+    padding: 20px;
+  }
+  .screen-overlay.hidden { display: none; }
+
+  .screen-title {
+    font-size: 20px;
+    color: var(--yellow);
+    text-shadow: 0 0 24px rgba(255,230,109,0.5);
+    line-height: 1.6;
+  }
+  .screen-title.fail { color: var(--red); text-shadow: 0 0 24px rgba(255,107,107,0.5); }
+  .screen-title.win { color: var(--teal); text-shadow: 0 0 24px rgba(78,205,196,0.5); }
+
+  .screen-sub {
+    font-size: 7px;
+    color: var(--muted);
+    line-height: 2;
+    max-width: 500px;
+  }
+
+  .screen-stats {
+    display: flex;
+    gap: 24px;
+    font-size: 8px;
+  }
+  .screen-stats span { color: var(--yellow); }
+
+  .btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    padding: 14px 28px;
+    border: 2px solid var(--purple);
+    background: var(--dark-purple);
+    color: var(--purple);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 1px;
+  }
+  .btn:hover {
+    background: var(--purple);
+    color: var(--bg);
+    box-shadow: 0 0 20px rgba(168,85,247,0.4);
+  }
+
+  /* ── Message bar ── */
+  .message-bar {
+    flex-shrink: 0;
+    text-align: center;
+    padding: 10px;
+    font-size: 6px;
+    color: var(--muted);
+    opacity: 0.5;
+    line-height: 1.8;
+  }
+  .message-bar em {
+    color: var(--purple);
+    font-style: normal;
+  }
+
+  /* ── Floating decorative pixels ── */
+  .deco-pixel {
+    position: fixed;
+    width: 4px;
+    height: 4px;
+    opacity: 0.15;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    header h1 { font-size: 12px; }
+    header p { font-size: 6px; }
+    .hud { gap: 6px; }
+    .hud-item { padding: 6px 8px; font-size: 6px; }
+    .hp-bar-track { width: 50px; }
+    .bug { width: 40px; height: 40px; }
+    .bug-body { width: 28px; height: 22px; }
+    .screen-title { font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Decorative background pixels -->
+<div class="deco-pixel" style="top:8%;left:5%;background:var(--red);"></div>
+<div class="deco-pixel" style="top:15%;right:8%;background:var(--teal);width:6px;height:6px;"></div>
+<div class="deco-pixel" style="top:60%;left:3%;background:var(--yellow);"></div>
+<div class="deco-pixel" style="top:80%;right:4%;background:var(--purple);width:5px;height:5px;"></div>
+<div class="deco-pixel" style="top:40%;right:2%;background:var(--red);"></div>
+
+<div class="wrapper">
+
+  <header>
+    <h1>🕹️ RELEASE QUEST</h1>
+    <p>Stolpern → Lernen → Weitermachen</p>
+  </header>
+
+  <div class="hud">
+    <div class="hud-item">
+      <span class="hud-label">SCORE</span>
+      <span class="hud-value" id="score">0</span>
+    </div>
+    <div class="hud-item">
+      <span class="hud-label">BUGS</span>
+      <span class="hud-value bugs" id="bugs-left">10</span>
+    </div>
+    <div class="hud-item">
+      <span class="hud-label">HP</span>
+      <div class="hp-bar-track">
+        <div class="hp-bar-fill" id="hp-bar" style="width:100%"></div>
+      </div>
+    </div>
+    <div class="hud-item">
+      <span class="hud-label">LEVEL</span>
+      <span class="hud-value" id="level">1</span>
+    </div>
+  </div>
+
+  <div class="arena-wrap">
+    <div class="arena" id="arena">
+
+      <!-- Start screen -->
+      <div class="screen-overlay" id="start-screen">
+        <div class="screen-title">🐛 BUG HUNTER 🐛</div>
+        <div class="screen-sub">
+          Das Release lief nicht perfekt.<br>
+          Aber hey – wir sind Menschen!<br><br>
+          Klicke die Bugs weg, bevor sie<br>
+          deine HP auffressen.<br><br>
+          3 Level. Schneller werdende Bugs.<br>
+          Schaffst du es?
+        </div>
+        <button class="btn" id="start-btn">▶ START</button>
+      </div>
+
+      <!-- Game Over screen -->
+      <div class="screen-overlay hidden" id="gameover-screen">
+        <div class="screen-title fail">GAME OVER</div>
+        <div class="screen-sub">
+          Die Bugs haben gewonnen...<br>
+          Aber Menschen lernen aus Fehlern!
+        </div>
+        <div class="screen-stats">
+          Score: <span id="final-score">0</span> &nbsp;|&nbsp;
+          Level: <span id="final-level">1</span>
+        </div>
+        <button class="btn" id="retry-btn">↻ NOCHMAL</button>
+      </div>
+
+      <!-- Win screen -->
+      <div class="screen-overlay hidden" id="win-screen">
+        <div class="screen-title win">🏆 LEVEL UP! 🏆</div>
+        <div class="screen-sub">
+          Alle Bugs gefixt!<br><br>
+          Wir sind Menschen.<br>
+          Wir machen Fehler.<br>
+          Wir werden besser.<br><br>
+          <em style="color:var(--yellow)">+100 XP Erfahrung</em>
+        </div>
+        <div class="screen-stats">
+          Score: <span id="win-score">0</span>
+        </div>
+        <button class="btn" id="continue-btn">❤️ CONTINUE</button>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="message-bar">
+    Wir sind Menschen. Wir machen Fehler. Wir werden besser.
+    &nbsp;·&nbsp;
+    <em>❤️ CONTINUE? [Y] ❤️</em>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  const arena = document.getElementById('arena');
+  const scoreEl = document.getElementById('score');
+  const bugsLeftEl = document.getElementById('bugs-left');
+  const hpBar = document.getElementById('hp-bar');
+  const levelEl = document.getElementById('level');
+
+  const startScreen = document.getElementById('start-screen');
+  const gameoverScreen = document.getElementById('gameover-screen');
+  const winScreen = document.getElementById('win-screen');
+
+  const SQUASH_WORDS = ['+10', 'SQUASH!', 'NICE!', 'BUG FIX!', 'GOTCHA!', 'PATCH!', 'FIXED!', 'BOOM!'];
+
+  let score = 0;
+  let hp = 100;
+  let level = 1;
+  let bugsTotal = 10;
+  let bugsRemaining = 10;
+  let bugSpeed = 5000;    // ms before a bug escapes
+  let spawnRate = 2000;   // ms between spawns
+  let maxBugsOnScreen = 3;
+  let activeBugs = [];
+  let spawnTimer = null;
+  let running = false;
+
+  function levelConfig() {
+    if (level === 1) { bugsTotal = 8;  bugSpeed = 5000; spawnRate = 2200; maxBugsOnScreen = 2; }
+    if (level === 2) { bugsTotal = 12; bugSpeed = 3800; spawnRate = 1600; maxBugsOnScreen = 3; }
+    if (level === 3) { bugsTotal = 16; bugSpeed = 2800; spawnRate = 1200; maxBugsOnScreen = 4; }
+  }
+
+  function updateHUD() {
+    scoreEl.textContent = score;
+    bugsLeftEl.textContent = bugsRemaining;
+    levelEl.textContent = level;
+    hpBar.style.width = hp + '%';
+    if (hp <= 25) hpBar.classList.add('low');
+    else hpBar.classList.remove('low');
+  }
+
+  function createBugElement() {
+    const bug = document.createElement('div');
+    bug.className = 'bug walking';
+    bug.innerHTML = `
+      <div class="bug-body">
+        <div class="bug-eyes">··</div>
+        <div class="bug-legs">
+          <span></span><span></span><span></span>
+          <span></span><span></span><span></span>
+        </div>
+      </div>`;
+    return bug;
+  }
+
+  function randomPosition() {
+    const rect = arena.getBoundingClientRect();
+    const pad = 60;
+    const x = pad + Math.random() * (rect.width - pad * 2);
+    const y = pad + Math.random() * (rect.height - pad * 2);
+    return { x, y };
+  }
+
+  function spawnBug() {
+    if (!running) return;
+    if (bugsRemaining <= 0) return;
+    if (activeBugs.length >= maxBugsOnScreen) return;
+
+    const pos = randomPosition();
+    const el = createBugElement();
+    el.style.left = pos.x + 'px';
+    el.style.top = pos.y + 'px';
+    arena.appendChild(el);
+
+    const bugObj = { el, timer: null };
+
+    // Wander movement
+    function wander() {
+      if (!running) return;
+      const newPos = randomPosition();
+      el.style.transition = `left ${bugSpeed * 0.4}ms linear, top ${bugSpeed * 0.4}ms linear`;
+      el.style.left = newPos.x + 'px';
+      el.style.top = newPos.y + 'px';
+    }
+    const wanderInterval = setInterval(wander, bugSpeed * 0.45);
+
+    // Escape timer – bug damages HP if not clicked
+    bugObj.timer = setTimeout(() => {
+      clearInterval(wanderInterval);
+      removeBug(bugObj, false);
+    }, bugSpeed);
+
+    bugObj.wanderInterval = wanderInterval;
+
+    el.addEventListener('click', function(e) {
+      e.stopPropagation();
+      clearTimeout(bugObj.timer);
+      clearInterval(wanderInterval);
+      removeBug(bugObj, true);
+    });
+
+    activeBugs.push(bugObj);
+  }
+
+  function removeBug(bugObj, squashed) {
+    const idx = activeBugs.indexOf(bugObj);
+    if (idx !== -1) activeBugs.splice(idx, 1);
+
+    const rect = bugObj.el.getBoundingClientRect();
+    const arenaRect = arena.getBoundingClientRect();
+
+    if (squashed) {
+      score += 10;
+      bugsRemaining--;
+      showSquashEffect(
+        rect.left - arenaRect.left + rect.width / 2,
+        rect.top - arenaRect.top
+      );
+    } else {
+      hp -= 15;
+      if (hp < 0) hp = 0;
+      // Flash arena border red
+      arena.style.borderColor = 'var(--red)';
+      setTimeout(() => arena.style.borderColor = '#2a2a4a', 300);
+    }
+
+    bugObj.el.remove();
+    updateHUD();
+    checkState();
+  }
+
+  function showSquashEffect(x, y) {
+    const fx = document.createElement('div');
+    fx.className = 'squash';
+    fx.style.left = x + 'px';
+    fx.style.top = y + 'px';
+    fx.innerHTML = `<span class="squash-text">${SQUASH_WORDS[Math.floor(Math.random() * SQUASH_WORDS.length)]}</span>`;
+    arena.appendChild(fx);
+    setTimeout(() => fx.remove(), 600);
+  }
+
+  function checkState() {
+    if (hp <= 0) {
+      endGame(false);
+      return;
+    }
+    if (bugsRemaining <= 0 && activeBugs.length === 0) {
+      endGame(true);
+    }
+  }
+
+  function endGame(won) {
+    running = false;
+    clearInterval(spawnTimer);
+    activeBugs.forEach(b => {
+      clearTimeout(b.timer);
+      clearInterval(b.wanderInterval);
+      b.el.remove();
+    });
+    activeBugs = [];
+
+    if (won) {
+      if (level >= 3) {
+        document.getElementById('win-score').textContent = score;
+        winScreen.classList.remove('hidden');
+      } else {
+        // Next level
+        level++;
+        levelConfig();
+        bugsRemaining = bugsTotal;
+        updateHUD();
+        startGame();
+      }
+    } else {
+      document.getElementById('final-score').textContent = score;
+      document.getElementById('final-level').textContent = level;
+      gameoverScreen.classList.remove('hidden');
+    }
+  }
+
+  function startGame() {
+    running = true;
+    updateHUD();
+    spawnTimer = setInterval(spawnBug, spawnRate);
+    spawnBug(); // immediate first bug
+  }
+
+  function fullReset() {
+    score = 0;
+    hp = 100;
+    level = 1;
+    levelConfig();
+    bugsRemaining = bugsTotal;
+    updateHUD();
+  }
+
+  // ── Button handlers ──
+  document.getElementById('start-btn').addEventListener('click', () => {
+    startScreen.classList.add('hidden');
+    fullReset();
+    startGame();
+  });
+
+  document.getElementById('retry-btn').addEventListener('click', () => {
+    gameoverScreen.classList.add('hidden');
+    fullReset();
+    startGame();
+  });
+
+  document.getElementById('continue-btn').addEventListener('click', () => {
+    winScreen.classList.add('hidden');
+    fullReset();
+    startGame();
+  });
+
+  // Init
+  levelConfig();
+  updateHUD();
+})();
+</script>
+
+</body>
+</html>

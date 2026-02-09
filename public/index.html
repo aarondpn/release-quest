@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Release Quest – Bug Hunter</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0f0e17;
+    --surface: #1a1a2e;
+    --red: #ff6b6b;
+    --teal: #4ecdc4;
+    --yellow: #ffe66d;
+    --purple: #a855f7;
+    --muted: #a7a9be;
+    --dark-purple: #2d1b30;
+    --dark-teal: #1b3a35;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--muted);
+    font-family: 'Press Start 2P', monospace;
+    overflow: hidden;
+    cursor: crosshair;
+  }
+
+  /* ── Scanlines overlay ── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.06) 2px,
+      rgba(0,0,0,0.06) 4px
+    );
+    z-index: 9999;
+  }
+
+  /* ── Layout ── */
+  .wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 16px;
+    gap: 12px;
+  }
+
+  /* ── Header ── */
+  header {
+    text-align: center;
+    padding: 18px 12px;
+    background: var(--surface);
+    border: 2px solid var(--purple);
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+  header h1 {
+    font-size: 18px;
+    color: var(--yellow);
+    text-shadow: 0 0 20px rgba(255,230,109,0.4);
+    margin-bottom: 6px;
+  }
+  header p {
+    font-size: 7px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  /* ── HUD ── */
+  .hud {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  .hud-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: 1px solid #2a2a4a;
+    font-size: 8px;
+  }
+
+  .hud-label { color: var(--muted); }
+  .hud-value { color: var(--yellow); }
+  .hud-value.hp { color: var(--teal); }
+  .hud-value.bugs { color: var(--red); }
+
+  .hp-bar-track {
+    width: 80px;
+    height: 10px;
+    background: var(--bg);
+    border: 1px solid #3d3d5c;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .hp-bar-fill {
+    height: 100%;
+    background: var(--teal);
+    border-radius: 1px;
+    transition: width 0.4s ease, background-color 0.4s ease;
+  }
+  .hp-bar-fill.low { background: var(--red); animation: pulse-hp 0.6s infinite; }
+
+  @keyframes pulse-hp {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* ── Game Arena ── */
+  .arena-wrap {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+  }
+
+  .arena {
+    width: 100%;
+    height: 100%;
+    background:
+      radial-gradient(circle at 20% 80%, rgba(168,85,247,0.05) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(78,205,196,0.05) 0%, transparent 50%),
+      var(--bg);
+    border: 2px solid #2a2a4a;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Grid floor */
+  .arena::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 100px;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 18px,
+      rgba(167,169,190,0.06) 18px,
+      rgba(167,169,190,0.06) 19px
+    );
+    pointer-events: none;
+  }
+
+  /* ── Bug sprite ── */
+  .bug {
+    position: absolute;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.08s;
+    z-index: 10;
+    animation: bug-spawn 0.3s ease-out;
+  }
+  .bug:active { transform: scale(0.7); }
+
+  .bug-body {
+    position: relative;
+    width: 36px;
+    height: 28px;
+    background: var(--red);
+    border-radius: 50%;
+    box-shadow: 0 0 12px rgba(255,107,107,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .bug-body::before,
+  .bug-body::after {
+    content: '';
+    position: absolute;
+    top: -6px;
+    width: 4px;
+    height: 10px;
+    background: var(--red);
+    border-radius: 2px;
+  }
+  .bug-body::before { left: 8px; transform: rotate(-20deg); }
+  .bug-body::after { right: 8px; transform: rotate(20deg); }
+
+  .bug-eyes {
+    font-size: 10px;
+    color: var(--bg);
+    font-family: monospace;
+    font-weight: bold;
+    letter-spacing: 4px;
+    margin-top: -2px;
+  }
+
+  /* Bug legs */
+  .bug-legs {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+  }
+  .bug-legs span {
+    position: absolute;
+    width: 6px;
+    height: 2px;
+    background: var(--red);
+    border-radius: 1px;
+  }
+  .bug-legs span:nth-child(1) { top: 8px; left: -4px; transform: rotate(-30deg); }
+  .bug-legs span:nth-child(2) { top: 16px; left: -5px; transform: rotate(0deg); }
+  .bug-legs span:nth-child(3) { top: 24px; left: -4px; transform: rotate(30deg); }
+  .bug-legs span:nth-child(4) { top: 8px; right: -4px; transform: rotate(30deg); }
+  .bug-legs span:nth-child(5) { top: 16px; right: -5px; transform: rotate(0deg); }
+  .bug-legs span:nth-child(6) { top: 24px; right: -4px; transform: rotate(-30deg); }
+
+  .bug.walking {
+    animation: bug-walk 0.4s steps(2) infinite;
+  }
+
+  @keyframes bug-walk {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-2px); }
+  }
+
+  @keyframes bug-spawn {
+    0% { transform: scale(0) rotate(180deg); opacity: 0; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+
+  /* ── Squash effect ── */
+  .squash {
+    position: absolute;
+    pointer-events: none;
+    z-index: 20;
+    animation: squash-anim 0.5s ease-out forwards;
+  }
+  .squash-text {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    color: var(--yellow);
+    text-shadow: 0 0 8px rgba(255,230,109,0.6);
+    white-space: nowrap;
+  }
+
+  @keyframes squash-anim {
+    0% { transform: translateY(0) scale(1); opacity: 1; }
+    100% { transform: translateY(-50px) scale(1.3); opacity: 0; }
+  }
+
+  /* ── Screens (start / game over / win) ── */
+  .screen-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15,14,23,0.92);
+    z-index: 100;
+    gap: 20px;
+    border-radius: 8px;
+    text-align: center;
+    padding: 20px;
+  }
+  .screen-overlay.hidden { display: none; }
+
+  .screen-title {
+    font-size: 20px;
+    color: var(--yellow);
+    text-shadow: 0 0 24px rgba(255,230,109,0.5);
+    line-height: 1.6;
+  }
+  .screen-title.fail { color: var(--red); text-shadow: 0 0 24px rgba(255,107,107,0.5); }
+  .screen-title.win { color: var(--teal); text-shadow: 0 0 24px rgba(78,205,196,0.5); }
+
+  .screen-sub {
+    font-size: 7px;
+    color: var(--muted);
+    line-height: 2;
+    max-width: 500px;
+  }
+
+  .screen-stats {
+    display: flex;
+    gap: 24px;
+    font-size: 8px;
+  }
+  .screen-stats span { color: var(--yellow); }
+
+  .btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    padding: 14px 28px;
+    border: 2px solid var(--purple);
+    background: var(--dark-purple);
+    color: var(--purple);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 1px;
+  }
+  .btn:hover {
+    background: var(--purple);
+    color: var(--bg);
+    box-shadow: 0 0 20px rgba(168,85,247,0.4);
+  }
+
+  /* ── Message bar ── */
+  .message-bar {
+    flex-shrink: 0;
+    text-align: center;
+    padding: 10px;
+    font-size: 6px;
+    color: var(--muted);
+    opacity: 0.5;
+    line-height: 1.8;
+  }
+  .message-bar em {
+    color: var(--purple);
+    font-style: normal;
+  }
+
+  /* ── Floating decorative pixels ── */
+  .deco-pixel {
+    position: fixed;
+    width: 4px;
+    height: 4px;
+    opacity: 0.15;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Remote player cursor ── */
+  .remote-cursor {
+    position: absolute;
+    pointer-events: none;
+    z-index: 50;
+    transition: left 60ms linear, top 60ms linear;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .remote-cursor-icon {
+    font-size: 22px;
+    line-height: 1;
+    filter: drop-shadow(0 0 4px rgba(255,255,255,0.3));
+  }
+  .remote-cursor-name {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 5px;
+    white-space: nowrap;
+    opacity: 0.8;
+  }
+
+  /* ── Scoreboard on end screens ── */
+  .scoreboard {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 7px;
+    max-width: 300px;
+    width: 100%;
+  }
+  .scoreboard-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 8px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 4px;
+    gap: 12px;
+  }
+  .scoreboard-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .scoreboard-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .scoreboard-points {
+    color: var(--yellow);
+  }
+
+  /* ── Name entry screen ── */
+  .name-entry {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    z-index: 500;
+    gap: 20px;
+    text-align: center;
+    padding: 20px;
+  }
+  .name-entry.hidden { display: none; }
+
+  .name-entry-title {
+    font-size: 20px;
+    color: var(--yellow);
+    text-shadow: 0 0 24px rgba(255,230,109,0.5);
+  }
+
+  .name-entry-sub {
+    font-size: 7px;
+    color: var(--muted);
+    line-height: 2;
+  }
+
+  .name-input {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px;
+    padding: 12px 20px;
+    background: var(--surface);
+    border: 2px solid var(--purple);
+    border-radius: 6px;
+    color: var(--yellow);
+    text-align: center;
+    outline: none;
+    width: 280px;
+    max-width: 90vw;
+  }
+  .name-input::placeholder {
+    color: #3d3d5c;
+    font-size: 9px;
+  }
+  .name-input:focus {
+    border-color: var(--yellow);
+    box-shadow: 0 0 16px rgba(255,230,109,0.2);
+  }
+
+  .icon-picker {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 320px;
+  }
+  .icon-picker-label {
+    font-size: 7px;
+    color: var(--muted);
+    width: 100%;
+    margin-bottom: 4px;
+  }
+  .icon-option {
+    width: 48px;
+    height: 48px;
+    font-size: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    border: 2px solid #2a2a4a;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .icon-option:hover {
+    border-color: var(--muted);
+    transform: scale(1.1);
+  }
+  .icon-option.selected {
+    border-color: var(--yellow);
+    background: var(--dark-purple);
+    box-shadow: 0 0 12px rgba(255,230,109,0.3);
+    transform: scale(1.15);
+  }
+
+  /* ── Connection status ── */
+  .conn-status {
+    position: fixed;
+    top: 8px;
+    right: 8px;
+    font-size: 5px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: var(--surface);
+    border: 1px solid #2a2a4a;
+    z-index: 200;
+    opacity: 0.7;
+  }
+  .conn-status.connected { color: var(--teal); }
+  .conn-status.disconnected { color: var(--red); }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    header h1 { font-size: 12px; }
+    header p { font-size: 6px; }
+    .hud { gap: 6px; }
+    .hud-item { padding: 6px 8px; font-size: 6px; }
+    .hp-bar-track { width: 50px; }
+    .bug { width: 40px; height: 40px; }
+    .bug-body { width: 28px; height: 22px; }
+    .screen-title { font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Decorative background pixels -->
+<div class="deco-pixel" style="top:8%;left:5%;background:var(--red);"></div>
+<div class="deco-pixel" style="top:15%;right:8%;background:var(--teal);width:6px;height:6px;"></div>
+<div class="deco-pixel" style="top:60%;left:3%;background:var(--yellow);"></div>
+<div class="deco-pixel" style="top:80%;right:4%;background:var(--purple);width:5px;height:5px;"></div>
+<div class="deco-pixel" style="top:40%;right:2%;background:var(--red);"></div>
+
+<div class="conn-status disconnected" id="conn-status">CONNECTING...</div>
+
+<!-- Name entry overlay -->
+<div class="name-entry" id="name-entry">
+  <div class="name-entry-title">BUG HUNTER</div>
+  <div class="name-entry-sub">Choose your name &amp; icon</div>
+  <input class="name-input" id="name-input" type="text" placeholder="Your name..." maxlength="16" autocomplete="off" spellcheck="false">
+  <div class="icon-picker" id="icon-picker">
+    <div class="icon-picker-label">Pick your hunter</div>
+  </div>
+  <button class="btn" id="join-btn">JOIN</button>
+</div>
+
+<div class="wrapper">
+
+  <header>
+    <h1>RELEASE QUEST</h1>
+    <p>Multiplayer Bug Hunt</p>
+  </header>
+
+  <div class="hud">
+    <div class="hud-item">
+      <span class="hud-label">SCORE</span>
+      <span class="hud-value" id="score">0</span>
+    </div>
+    <div class="hud-item">
+      <span class="hud-label">LEVEL</span>
+      <span class="hud-value" id="level">1</span>
+    </div>
+    <div class="hud-item">
+      <span class="hud-label">HP</span>
+      <div class="hp-bar-track">
+        <div class="hp-bar-fill" id="hp-bar" style="width:100%"></div>
+      </div>
+    </div>
+    <div class="hud-item">
+      <span class="hud-label">PLAYERS</span>
+      <span class="hud-value" id="player-count">0</span>
+    </div>
+  </div>
+
+  <div class="arena-wrap">
+    <div class="arena" id="arena">
+
+      <!-- Start / Lobby screen -->
+      <div class="screen-overlay" id="start-screen">
+        <div class="screen-title">BUG HUNTER</div>
+        <div class="screen-sub">
+          Das Release lief nicht perfekt.<br>
+          Aber hey – wir sind Menschen!<br><br>
+          Klicke die Bugs weg, bevor sie<br>
+          deine HP auffressen.<br><br>
+          3 Level. Schneller werdende Bugs.<br>
+          Jetzt mit Multiplayer!
+        </div>
+        <button class="btn" id="start-btn">START</button>
+      </div>
+
+      <!-- Game Over screen -->
+      <div class="screen-overlay hidden" id="gameover-screen">
+        <div class="screen-title fail">GAME OVER</div>
+        <div class="screen-sub">
+          Die Bugs haben gewonnen...<br>
+          Aber Menschen lernen aus Fehlern!
+        </div>
+        <div class="screen-stats">
+          Score: <span id="final-score">0</span> &nbsp;|&nbsp;
+          Level: <span id="final-level">1</span>
+        </div>
+        <div class="scoreboard" id="gameover-scoreboard"></div>
+        <button class="btn" id="retry-btn">NOCHMAL</button>
+      </div>
+
+      <!-- Win screen -->
+      <div class="screen-overlay hidden" id="win-screen">
+        <div class="screen-title win">LEVEL UP!</div>
+        <div class="screen-sub">
+          Alle Bugs gefixt!<br><br>
+          Wir sind Menschen.<br>
+          Wir machen Fehler.<br>
+          Wir werden besser.<br><br>
+          <em style="color:var(--yellow)">+100 XP Erfahrung</em>
+        </div>
+        <div class="screen-stats">
+          Score: <span id="win-score">0</span>
+        </div>
+        <div class="scoreboard" id="win-scoreboard"></div>
+        <button class="btn" id="continue-btn">CONTINUE</button>
+      </div>
+
+      <!-- Level transition -->
+      <div class="screen-overlay hidden" id="level-screen">
+        <div class="screen-title">LEVEL <span id="level-screen-num">2</span></div>
+        <div class="screen-sub">Get ready...</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="message-bar">
+    Wir sind Menschen. Wir machen Fehler. Wir werden besser.
+    &nbsp;&middot;&nbsp;
+    <em>MULTIPLAYER</em>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  // ── Constants ──
+  const LOGICAL_W = 800;
+  const LOGICAL_H = 500;
+  const SQUASH_WORDS = ['+10', 'SQUASH!', 'NICE!', 'BUG FIX!', 'GOTCHA!', 'PATCH!', 'FIXED!', 'BOOM!'];
+  const CURSOR_THROTTLE_MS = 50;
+  const PLAYER_ICONS = ['\u{1F431}', '\u{1F436}', '\u{1F430}', '\u{1F98A}', '\u{1F438}', '\u{1F427}', '\u{1F43C}', '\u{1F428}'];
+
+  // ── DOM refs ──
+  const arena = document.getElementById('arena');
+  const scoreEl = document.getElementById('score');
+  const levelEl = document.getElementById('level');
+  const hpBar = document.getElementById('hp-bar');
+  const playerCountEl = document.getElementById('player-count');
+  const connStatus = document.getElementById('conn-status');
+
+  const startScreen = document.getElementById('start-screen');
+  const gameoverScreen = document.getElementById('gameover-screen');
+  const winScreen = document.getElementById('win-screen');
+  const levelScreen = document.getElementById('level-screen');
+  const nameEntry = document.getElementById('name-entry');
+  const nameInput = document.getElementById('name-input');
+  const iconPicker = document.getElementById('icon-picker');
+  const joinBtn = document.getElementById('join-btn');
+
+  // ── Client state ──
+  let myId = null;
+  let myColor = null;
+  let myIcon = null;
+  let myName = null;
+  let hasJoined = false;
+  let ws = null;
+  let bugs = {};           // bugId -> DOM element
+  let remoteCursors = {};  // playerId -> DOM element
+  let players = {};        // playerId -> { name, color, icon, score }
+  let lastCursorSend = 0;
+  let selectedIcon = null;
+  let currentPhase = null;
+
+  // ── Icon picker setup ──
+  PLAYER_ICONS.forEach((icon, i) => {
+    const el = document.createElement('div');
+    el.className = 'icon-option' + (i === 0 ? ' selected' : '');
+    el.textContent = icon;
+    el.addEventListener('click', () => {
+      iconPicker.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedIcon = icon;
+    });
+    iconPicker.appendChild(el);
+  });
+  selectedIcon = PLAYER_ICONS[0];
+
+  function submitJoin() {
+    if (!ws || ws.readyState !== 1) return;
+    const name = nameInput.value.trim().slice(0, 16) || myName || 'Anon';
+    myName = name;
+    myIcon = selectedIcon;
+    ws.send(JSON.stringify({ type: 'set-name', name, icon: selectedIcon }));
+    hasJoined = true;
+    nameEntry.classList.add('hidden');
+
+    // Show the correct game screen now
+    // Read current phase from what welcome told us
+    const phase = currentPhase;
+    if (phase === 'lobby' || !phase) showStartScreen();
+    else if (phase === 'gameover') showGameOverScreen(0, 1, Object.values(players));
+    else if (phase === 'win') showWinScreen(0, Object.values(players));
+    else hideAllScreens();
+  }
+
+  joinBtn.addEventListener('click', submitJoin);
+  nameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submitJoin();
+  });
+
+  // ── Coordinate mapping ──
+  function logicalToPixel(lx, ly) {
+    const rect = arena.getBoundingClientRect();
+    return {
+      x: (lx / LOGICAL_W) * rect.width,
+      y: (ly / LOGICAL_H) * rect.height,
+    };
+  }
+
+  function pixelToLogical(px, py) {
+    const rect = arena.getBoundingClientRect();
+    return {
+      x: (px / rect.width) * LOGICAL_W,
+      y: (py / rect.height) * LOGICAL_H,
+    };
+  }
+
+  // ── HUD ──
+  function updateHUD(score, level, hp) {
+    if (score !== undefined) scoreEl.textContent = score;
+    if (level !== undefined) levelEl.textContent = level;
+    if (hp !== undefined) {
+      hpBar.style.width = hp + '%';
+      if (hp <= 25) hpBar.classList.add('low');
+      else hpBar.classList.remove('low');
+    }
+  }
+
+  function updatePlayerCount() {
+    playerCountEl.textContent = Object.keys(players).length;
+  }
+
+  // ── Bug DOM ──
+  function createBugElement(bugId, lx, ly) {
+    const el = document.createElement('div');
+    el.className = 'bug walking';
+    el.dataset.bugId = bugId;
+    el.innerHTML = `
+      <div class="bug-body">
+        <div class="bug-eyes">&middot;&middot;</div>
+        <div class="bug-legs">
+          <span></span><span></span><span></span>
+          <span></span><span></span><span></span>
+        </div>
+      </div>`;
+
+    const pos = logicalToPixel(lx, ly);
+    el.style.left = pos.x + 'px';
+    el.style.top = pos.y + 'px';
+
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (ws && ws.readyState === 1) {
+        ws.send(JSON.stringify({ type: 'click-bug', bugId }));
+      }
+    });
+
+    arena.appendChild(el);
+    bugs[bugId] = el;
+  }
+
+  function removeBugElement(bugId) {
+    const el = bugs[bugId];
+    if (el) {
+      el.remove();
+      delete bugs[bugId];
+    }
+  }
+
+  function clearAllBugs() {
+    for (const id of Object.keys(bugs)) {
+      bugs[id].remove();
+    }
+    bugs = {};
+  }
+
+  // ── Squash effect ──
+  function showSquashEffect(lx, ly, color) {
+    const pos = logicalToPixel(lx, ly);
+    const fx = document.createElement('div');
+    fx.className = 'squash';
+    fx.style.left = pos.x + 'px';
+    fx.style.top = pos.y + 'px';
+    const word = SQUASH_WORDS[Math.floor(Math.random() * SQUASH_WORDS.length)];
+    fx.innerHTML = '<span class="squash-text" style="color:' + (color || 'var(--yellow)') + '">' + word + '</span>';
+    arena.appendChild(fx);
+    setTimeout(() => fx.remove(), 600);
+  }
+
+  // ── Remote cursors ──
+  function addRemoteCursor(playerId, name, color, icon) {
+    if (playerId === myId) return;
+    if (remoteCursors[playerId]) {
+      // Update existing cursor name/icon
+      const el = remoteCursors[playerId];
+      el.querySelector('.remote-cursor-icon').textContent = icon || '\u{1F431}';
+      el.querySelector('.remote-cursor-name').textContent = name;
+      el.style.color = color;
+      return;
+    }
+
+    const el = document.createElement('div');
+    el.className = 'remote-cursor';
+    el.style.color = color;
+    el.innerHTML =
+      '<span class="remote-cursor-icon">' + (icon || '\u{1F431}') + '</span>' +
+      '<span class="remote-cursor-name">' + escapeHtml(name) + '</span>';
+    arena.appendChild(el);
+    remoteCursors[playerId] = el;
+  }
+
+  function removeRemoteCursor(playerId) {
+    const el = remoteCursors[playerId];
+    if (el) {
+      el.remove();
+      delete remoteCursors[playerId];
+    }
+  }
+
+  function updateRemoteCursor(playerId, lx, ly) {
+    const el = remoteCursors[playerId];
+    if (!el) return;
+    const pos = logicalToPixel(lx, ly);
+    el.style.left = pos.x + 'px';
+    el.style.top = pos.y + 'px';
+  }
+
+  function clearRemoteCursors() {
+    for (const id of Object.keys(remoteCursors)) {
+      remoteCursors[id].remove();
+    }
+    remoteCursors = {};
+  }
+
+  // ── Scoreboard rendering ──
+  function renderScoreboard(container, playerList) {
+    const sorted = playerList.slice().sort((a, b) => b.score - a.score);
+    container.innerHTML = sorted.map(p =>
+      '<div class="scoreboard-row">' +
+        '<span class="scoreboard-name">' +
+          '<span style="font-size:14px;margin-right:4px">' + (p.icon || '') + '</span>' +
+          escapeHtml(p.name) + (p.id === myId ? ' (you)' : '') +
+        '</span>' +
+        '<span class="scoreboard-points">' + p.score + '</span>' +
+      '</div>'
+    ).join('');
+  }
+
+  // ── Screens ──
+  function hideAllScreens() {
+    startScreen.classList.add('hidden');
+    gameoverScreen.classList.add('hidden');
+    winScreen.classList.add('hidden');
+    levelScreen.classList.add('hidden');
+  }
+
+  function showStartScreen() {
+    hideAllScreens();
+    startScreen.classList.remove('hidden');
+  }
+
+  function showGameOverScreen(score, level, playerList) {
+    hideAllScreens();
+    document.getElementById('final-score').textContent = score;
+    document.getElementById('final-level').textContent = level;
+    renderScoreboard(document.getElementById('gameover-scoreboard'), playerList);
+    gameoverScreen.classList.remove('hidden');
+  }
+
+  function showWinScreen(score, playerList) {
+    hideAllScreens();
+    document.getElementById('win-score').textContent = score;
+    renderScoreboard(document.getElementById('win-scoreboard'), playerList);
+    winScreen.classList.remove('hidden');
+  }
+
+  function showLevelScreen(levelNum) {
+    hideAllScreens();
+    document.getElementById('level-screen-num').textContent = levelNum;
+    levelScreen.classList.remove('hidden');
+  }
+
+  // ── Utility ──
+  function escapeHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  // ── WebSocket ──
+  function connect() {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(proto + '://' + location.host);
+
+    ws.onopen = () => {
+      connStatus.textContent = 'CONNECTED';
+      connStatus.className = 'conn-status connected';
+    };
+
+    ws.onclose = () => {
+      connStatus.textContent = 'DISCONNECTED';
+      connStatus.className = 'conn-status disconnected';
+      // Try to reconnect after a delay
+      setTimeout(connect, 2000);
+    };
+
+    ws.onmessage = (event) => {
+      let msg;
+      try { msg = JSON.parse(event.data); } catch { return; }
+      handleMessage(msg);
+    };
+  }
+
+  function handleMessage(msg) {
+    switch (msg.type) {
+
+      case 'welcome': {
+        myId = msg.playerId;
+        myColor = msg.color;
+        myIcon = msg.icon;
+        myName = msg.name;
+
+        // Pre-select assigned icon in picker
+        if (msg.icon) {
+          selectedIcon = msg.icon;
+          iconPicker.querySelectorAll('.icon-option').forEach(o => {
+            o.classList.toggle('selected', o.textContent === msg.icon);
+          });
+        }
+
+        // Rebuild player list
+        players = {};
+        if (msg.players) {
+          msg.players.forEach(p => {
+            players[p.id] = p;
+            if (p.id !== myId) addRemoteCursor(p.id, p.name, p.color, p.icon);
+          });
+        }
+        updatePlayerCount();
+
+        // Rebuild bugs
+        clearAllBugs();
+        if (msg.bugs) {
+          msg.bugs.forEach(b => createBugElement(b.id, b.x, b.y));
+        }
+
+        updateHUD(msg.score, msg.level, msg.hp);
+        currentPhase = msg.phase;
+
+        // Show name entry on first connect, otherwise go to correct screen
+        if (!hasJoined) {
+          nameEntry.classList.remove('hidden');
+          nameInput.focus();
+        } else {
+          nameEntry.classList.add('hidden');
+          if (msg.phase === 'lobby') showStartScreen();
+          else if (msg.phase === 'gameover') showGameOverScreen(msg.score, msg.level, msg.players || []);
+          else if (msg.phase === 'win') showWinScreen(msg.score, msg.players || []);
+          else hideAllScreens();
+        }
+        break;
+      }
+
+      case 'player-joined': {
+        const p = msg.player;
+        players[p.id] = p;
+        if (p.id !== myId) addRemoteCursor(p.id, p.name, p.color, p.icon);
+        updatePlayerCount();
+        break;
+      }
+
+      case 'player-left': {
+        delete players[msg.playerId];
+        removeRemoteCursor(msg.playerId);
+        updatePlayerCount();
+        break;
+      }
+
+      case 'player-cursor': {
+        updateRemoteCursor(msg.playerId, msg.x, msg.y);
+        break;
+      }
+
+      case 'game-start': {
+        hideAllScreens();
+        clearAllBugs();
+        updateHUD(msg.score, msg.level, msg.hp);
+        // Update player scores
+        if (msg.players) {
+          msg.players.forEach(p => { if (players[p.id]) players[p.id].score = p.score; });
+        }
+        break;
+      }
+
+      case 'level-start': {
+        hideAllScreens();
+        updateHUD(msg.score, msg.level, msg.hp);
+        break;
+      }
+
+      case 'level-complete': {
+        showLevelScreen(msg.level + 1);
+        break;
+      }
+
+      case 'bug-spawned': {
+        createBugElement(msg.bug.id, msg.bug.x, msg.bug.y);
+        break;
+      }
+
+      case 'bug-wander': {
+        const el = bugs[msg.bugId];
+        if (el) {
+          const pos = logicalToPixel(msg.x, msg.y);
+          const cfg = { 1: 5000, 2: 3800, 3: 2800 };
+          const dur = (cfg[parseInt(levelEl.textContent)] || 5000) * 0.4;
+          el.style.transition = 'left ' + dur + 'ms linear, top ' + dur + 'ms linear';
+          el.style.left = pos.x + 'px';
+          el.style.top = pos.y + 'px';
+        }
+        break;
+      }
+
+      case 'bug-squashed': {
+        // Get bug position for effect before removing
+        const bugEl = bugs[msg.bugId];
+        if (bugEl) {
+          const rect = bugEl.getBoundingClientRect();
+          const arenaRect = arena.getBoundingClientRect();
+          const lx = ((rect.left - arenaRect.left + rect.width / 2) / arenaRect.width) * LOGICAL_W;
+          const ly = ((rect.top - arenaRect.top) / arenaRect.height) * LOGICAL_H;
+          showSquashEffect(lx, ly, msg.playerColor);
+        }
+        removeBugElement(msg.bugId);
+        updateHUD(msg.score);
+
+        // Update player score
+        if (players[msg.playerId]) {
+          players[msg.playerId].score = msg.playerScore;
+        }
+        break;
+      }
+
+      case 'bug-escaped': {
+        removeBugElement(msg.bugId);
+        updateHUD(undefined, undefined, msg.hp);
+        // Flash arena border red
+        arena.style.borderColor = 'var(--red)';
+        setTimeout(() => arena.style.borderColor = '#2a2a4a', 300);
+        break;
+      }
+
+      case 'game-over': {
+        clearAllBugs();
+        showGameOverScreen(msg.score, msg.level, msg.players || []);
+        break;
+      }
+
+      case 'game-win': {
+        clearAllBugs();
+        showWinScreen(msg.score, msg.players || []);
+        break;
+      }
+
+      case 'game-reset': {
+        clearAllBugs();
+        showStartScreen();
+        updateHUD(0, 1, 100);
+        break;
+      }
+    }
+  }
+
+  // ── Cursor broadcasting ──
+  arena.addEventListener('mousemove', (e) => {
+    const now = Date.now();
+    if (now - lastCursorSend < CURSOR_THROTTLE_MS) return;
+    lastCursorSend = now;
+
+    const rect = arena.getBoundingClientRect();
+    const px = e.clientX - rect.left;
+    const py = e.clientY - rect.top;
+    const logical = pixelToLogical(px, py);
+
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({
+        type: 'cursor-move',
+        x: Math.round(logical.x * 10) / 10,
+        y: Math.round(logical.y * 10) / 10,
+      }));
+    }
+  });
+
+  // ── Button handlers ──
+  document.getElementById('start-btn').addEventListener('click', () => {
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: 'start-game' }));
+    }
+  });
+
+  document.getElementById('retry-btn').addEventListener('click', () => {
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: 'start-game' }));
+    }
+  });
+
+  document.getElementById('continue-btn').addEventListener('click', () => {
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: 'start-game' }));
+    }
+  });
+
+  // ── Handle window resize: reposition bugs ──
+  window.addEventListener('resize', () => {
+    // Bug positions are set in pixels from logical coords.
+    // On resize we need to re-map all bug and cursor positions.
+    // Bugs will be repositioned on next wander, so no action needed.
+    // Remote cursors will update on next cursor-move message.
+  });
+
+  // ── Start ──
+  connect();
+  updateHUD(0, 1, 100);
+})();
+</script>
+
+</body>
+</html>
