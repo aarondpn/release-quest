@@ -692,6 +692,155 @@
     text-shadow: 0 0 24px rgba(168,85,247,0.7), 0 0 48px rgba(168,85,247,0.3);
   }
 
+  /* ── Particle burst ── */
+  .particle {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 22;
+    animation: particle-fly 0.4s ease-out forwards;
+  }
+
+  @keyframes particle-fly {
+    0% { transform: translate(0, 0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--px), var(--py)) scale(0); opacity: 0; }
+  }
+
+  /* ── Screen shake ── */
+  .arena.shake-light { animation: shake-light 200ms ease-out; }
+  .arena.shake-micro { animation: shake-micro 100ms ease-out; }
+  .arena.shake-medium { animation: shake-medium 300ms ease-out; }
+  .arena.shake-heavy { animation: shake-heavy 500ms ease-out; }
+
+  @keyframes shake-light {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(-3px, 2px); }
+    50% { transform: translate(3px, -2px); }
+    75% { transform: translate(-2px, 1px); }
+  }
+
+  @keyframes shake-micro {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(-1px, 1px); }
+    75% { transform: translate(1px, -1px); }
+  }
+
+  @keyframes shake-medium {
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(-5px, 3px); }
+    30% { transform: translate(4px, -4px); }
+    50% { transform: translate(-3px, 5px); }
+    70% { transform: translate(5px, -2px); }
+    90% { transform: translate(-2px, 1px); }
+  }
+
+  @keyframes shake-heavy {
+    0%, 100% { transform: translate(0, 0); }
+    8% { transform: translate(-8px, 5px); }
+    16% { transform: translate(7px, -6px); }
+    24% { transform: translate(-6px, 7px); }
+    32% { transform: translate(8px, -4px); }
+    48% { transform: translate(-5px, 6px); }
+    64% { transform: translate(6px, -5px); }
+    80% { transform: translate(-4px, 3px); }
+    90% { transform: translate(2px, -1px); }
+  }
+
+  /* ── Impact ring ── */
+  .impact-ring {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 3px solid currentColor;
+    pointer-events: none;
+    z-index: 21;
+    transform: translate(-50%, -50%) scale(0);
+    animation: ring-expand 0.4s ease-out forwards;
+  }
+
+  @keyframes ring-expand {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+  }
+
+  /* ── Damage vignette ── */
+  .damage-vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 80;
+    border-radius: 8px;
+    animation: vignette-flash 0.4s ease-out forwards;
+  }
+
+  @keyframes vignette-flash {
+    0% { background: radial-gradient(ellipse at center, transparent 50%, rgba(255,60,60,0) 100%); }
+    30% { background: radial-gradient(ellipse at center, transparent 50%, rgba(255,60,60,0.4) 100%); }
+    100% { background: radial-gradient(ellipse at center, transparent 50%, rgba(255,60,60,0) 100%); }
+  }
+
+  /* ── Bug death pop ── */
+  .bug.popping {
+    pointer-events: none;
+    animation: bug-pop 0.2s ease-out forwards;
+  }
+
+  @keyframes bug-pop {
+    0% { transform: scale(1) rotate(0deg); opacity: 1; }
+    50% { transform: scale(1.3) rotate(15deg); opacity: 0.8; }
+    100% { transform: scale(0) rotate(-30deg); opacity: 0; }
+  }
+
+  /* ── Boss damage number ── */
+  .boss-damage-num {
+    position: absolute;
+    pointer-events: none;
+    z-index: 23;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    text-shadow: 0 0 8px currentColor;
+    white-space: nowrap;
+    animation: squash-anim 0.5s ease-out forwards;
+  }
+
+  /* ── Enrage flash ── */
+  .enrage-flash {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 82;
+    border-radius: 8px;
+    background: rgba(255,60,60,0.25);
+    animation: enrage-flash-anim 0.4s ease-out forwards;
+  }
+
+  @keyframes enrage-flash-anim {
+    0% { opacity: 0; }
+    30% { opacity: 1; }
+    60% { opacity: 0.6; }
+    100% { opacity: 0; }
+  }
+
+  /* ── Level flash ── */
+  .level-flash {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 85;
+    border-radius: 8px;
+    background: white;
+    animation: level-flash-anim 0.5s ease-out forwards;
+  }
+
+  @keyframes level-flash-anim {
+    0% { opacity: 0; }
+    30% { opacity: 0.3; }
+    100% { opacity: 0; }
+  }
+
   /* ── Responsive ── */
   @media (max-width: 600px) {
     header h1 { font-size: 12px; }
@@ -969,11 +1118,15 @@
     bugs[bugId] = el;
   }
 
-  function removeBugElement(bugId) {
+  function removeBugElement(bugId, animate) {
     const el = bugs[bugId];
-    if (el) {
+    if (!el) return;
+    delete bugs[bugId]; // prevent double-click
+    if (animate) {
+      el.classList.add('popping');
+      setTimeout(() => el.remove(), 200);
+    } else {
       el.remove();
-      delete bugs[bugId];
     }
   }
 
@@ -1154,12 +1307,90 @@
     setTimeout(() => {
       if (bossElement) bossElement.style.animation = '';
     }, 150);
-    // Floating damage number at random offset near boss
+    // Floating damage number + impact ring + micro shake
     const rect = bossElement.getBoundingClientRect();
     const arenaRect = arena.getBoundingClientRect();
     const lx = ((rect.left - arenaRect.left + rect.width / 2) / arenaRect.width) * LOGICAL_W + (Math.random() - 0.5) * 40;
     const ly = ((rect.top - arenaRect.top) / arenaRect.height) * LOGICAL_H + (Math.random() - 0.5) * 30;
-    showSquashEffect(lx, ly, color);
+    showBossDamageNumber(lx, ly, 5, color);
+    showImpactRing(lx, ly, color);
+    shakeArena('micro');
+  }
+
+  // ── VFX Utilities ──
+  const SHAKE_DURATIONS = { light: 200, micro: 100, medium: 300, heavy: 500 };
+
+  function shakeArena(intensity) {
+    const cls = 'shake-' + intensity;
+    arena.classList.remove(cls);
+    void arena.offsetWidth; // force reflow for re-trigger
+    arena.classList.add(cls);
+    setTimeout(() => arena.classList.remove(cls), SHAKE_DURATIONS[intensity] || 300);
+  }
+
+  function showParticleBurst(lx, ly, color) {
+    const pos = logicalToPixel(lx, ly);
+    const count = 6 + Math.floor(Math.random() * 3); // 6-8
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i / count) + (Math.random() - 0.5) * 0.6;
+      const dist = 30 + Math.random() * 30;
+      const px = Math.cos(angle) * dist;
+      const py = Math.sin(angle) * dist;
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.style.left = pos.x + 'px';
+      p.style.top = pos.y + 'px';
+      p.style.background = color || 'var(--yellow)';
+      p.style.setProperty('--px', px + 'px');
+      p.style.setProperty('--py', py + 'px');
+      arena.appendChild(p);
+      setTimeout(() => p.remove(), 450);
+    }
+  }
+
+  function showImpactRing(lx, ly, color) {
+    const pos = logicalToPixel(lx, ly);
+    const ring = document.createElement('div');
+    ring.className = 'impact-ring';
+    ring.style.left = pos.x + 'px';
+    ring.style.top = pos.y + 'px';
+    ring.style.color = color || 'var(--yellow)';
+    arena.appendChild(ring);
+    setTimeout(() => ring.remove(), 450);
+  }
+
+  function showDamageVignette() {
+    const v = document.createElement('div');
+    v.className = 'damage-vignette';
+    arena.appendChild(v);
+    setTimeout(() => v.remove(), 450);
+  }
+
+  function showBossDamageNumber(lx, ly, damage, color) {
+    const pos = logicalToPixel(lx, ly);
+    const el = document.createElement('div');
+    el.className = 'boss-damage-num';
+    el.style.left = pos.x + 'px';
+    el.style.top = pos.y + 'px';
+    el.style.color = color || 'var(--yellow)';
+    el.textContent = '-' + damage;
+    arena.appendChild(el);
+    setTimeout(() => el.remove(), 600);
+  }
+
+  function showEnrageFlash() {
+    const el = document.createElement('div');
+    el.className = 'enrage-flash';
+    arena.appendChild(el);
+    setTimeout(() => el.remove(), 450);
+    shakeArena('medium');
+  }
+
+  function showLevelFlash() {
+    const el = document.createElement('div');
+    el.className = 'level-flash';
+    arena.appendChild(el);
+    setTimeout(() => el.remove(), 550);
   }
 
   // ── Utility ──
@@ -1290,6 +1521,7 @@
       }
 
       case 'level-complete': {
+        showLevelFlash();
         if (msg.level >= 3) {
           // Show boss warning instead of next level
           hideAllScreens();
@@ -1325,7 +1557,7 @@
       }
 
       case 'bug-squashed': {
-        // Get bug position for effect before removing
+        // Get bug position for effects before removing
         const bugEl = bugs[msg.bugId];
         if (bugEl) {
           const rect = bugEl.getBoundingClientRect();
@@ -1333,8 +1565,10 @@
           const lx = ((rect.left - arenaRect.left + rect.width / 2) / arenaRect.width) * LOGICAL_W;
           const ly = ((rect.top - arenaRect.top) / arenaRect.height) * LOGICAL_H;
           showSquashEffect(lx, ly, msg.playerColor);
+          showParticleBurst(lx, ly, msg.playerColor);
+          showImpactRing(lx, ly, msg.playerColor);
         }
-        removeBugElement(msg.bugId);
+        removeBugElement(msg.bugId, true);
         updateHUD(msg.score);
 
         // Update player score
@@ -1350,12 +1584,15 @@
         // Flash arena border red
         arena.style.borderColor = 'var(--red)';
         setTimeout(() => arena.style.borderColor = '#2a2a4a', 300);
+        showDamageVignette();
+        shakeArena('light');
         break;
       }
 
       case 'game-over': {
         clearAllBugs();
         removeBossElement();
+        shakeArena('heavy');
         showGameOverScreen(msg.score, msg.level, msg.players || []);
         break;
       }
@@ -1389,6 +1626,9 @@
         showBossHitEffect(msg.playerColor);
         if (msg.enraged && bossElement) {
           bossElement.classList.add('enraged');
+        }
+        if (msg.justEnraged) {
+          showEnrageFlash();
         }
         updateHUD(msg.score);
         if (players[msg.playerId]) {
