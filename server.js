@@ -122,7 +122,15 @@ function randomPosition() {
 }
 
 function currentLevelConfig() {
-  return LEVEL_CONFIG[state.level] || LEVEL_CONFIG[MAX_LEVEL];
+  const base = LEVEL_CONFIG[state.level] || LEVEL_CONFIG[MAX_LEVEL];
+  const extra = Math.max(0, Object.keys(state.players).length - 1);
+  if (extra === 0) return base;
+  return {
+    bugsTotal: base.bugsTotal + extra * 4,
+    escapeTime: base.escapeTime,
+    spawnRate: Math.max(800, base.spawnRate - extra * 150),
+    maxOnScreen: base.maxOnScreen + 1 + Math.floor(extra / 2),
+  };
 }
 
 // ── Bug lifecycle ──
@@ -191,9 +199,10 @@ function clearBossTimers() {
 function startBoss() {
   state.phase = 'boss';
   const pos = randomPosition();
+  const extra = Math.max(0, Object.keys(state.players).length - 1);
   state.boss = {
-    hp: BOSS_CONFIG.hp,
-    maxHp: BOSS_CONFIG.hp,
+    hp: BOSS_CONFIG.hp + extra * 150,
+    maxHp: BOSS_CONFIG.hp + extra * 150,
     x: pos.x,
     y: pos.y,
     enraged: false,
@@ -201,7 +210,9 @@ function startBoss() {
     timeRemaining: BOSS_CONFIG.timeLimit,
     escalationLevel: 0,
     currentSpawnRate: BOSS_CONFIG.minionSpawnRate,
-    currentMaxOnScreen: BOSS_CONFIG.minionMaxOnScreen,
+    currentMaxOnScreen: BOSS_CONFIG.minionMaxOnScreen + extra,
+    regenPerSecond: BOSS_CONFIG.regenPerSecond + extra,
+    extraPlayers: extra,
   };
 
   broadcast({
@@ -236,7 +247,7 @@ function bossTick() {
 
   // HP regeneration
   const oldHp = state.boss.hp;
-  state.boss.hp = Math.min(state.boss.hp + BOSS_CONFIG.regenPerSecond, state.boss.maxHp);
+  state.boss.hp = Math.min(state.boss.hp + state.boss.regenPerSecond, state.boss.maxHp);
   const regenAmount = state.boss.hp - oldHp;
 
   // Check escalation thresholds
@@ -247,7 +258,7 @@ function bossTick() {
     if (state.boss.timeRemaining <= threshold.timeRemaining) {
       state.boss.escalationLevel++;
       state.boss.currentSpawnRate = threshold.spawnRate;
-      state.boss.currentMaxOnScreen = threshold.maxOnScreen;
+      state.boss.currentMaxOnScreen = threshold.maxOnScreen + state.boss.extraPlayers;
       escalated = true;
       // Restart minion spawn with new effective rate
       if (bossTimers.minionSpawn) clearInterval(bossTimers.minionSpawn);
@@ -291,7 +302,7 @@ function getEffectiveSpawnRate() {
 function getEffectiveMaxOnScreen() {
   if (!state.boss) return BOSS_CONFIG.minionMaxOnScreen;
   const base = state.boss.currentMaxOnScreen;
-  if (state.boss.enraged) return Math.max(base, BOSS_CONFIG.enrageMinionMaxOnScreen);
+  if (state.boss.enraged) return Math.max(base, BOSS_CONFIG.enrageMinionMaxOnScreen + state.boss.extraPlayers);
   return base;
 }
 
