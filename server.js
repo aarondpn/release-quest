@@ -62,6 +62,14 @@ const BOSS_CONFIG = {
   minionMaxOnScreen: 3,
   enrageMinionMaxOnScreen: 5,
   clickCooldownMs: 100,
+  // Timer + regen + escalation
+  regenPerSecond: 3,
+  timeLimit: 120,
+  escalation: [
+    { timeRemaining: 90, spawnRate: 3200, maxOnScreen: 4 },
+    { timeRemaining: 60, spawnRate: 2600, maxOnScreen: 4 },
+    { timeRemaining: 30, spawnRate: 2000, maxOnScreen: 5 },
+  ],
 };
 const MAX_LEVEL = 3;
 const HP_DAMAGE = 15;
@@ -84,7 +92,7 @@ let nextBugId = 1;
 let nextPlayerId = 1;
 let colorIndex = 0;
 let spawnTimer = null;
-let bossTimers = { wander: null, minionSpawn: null };
+let bossTimers = { wander: null, minionSpawn: null, tick: null };
 
 // Map ws -> playerId
 const wsToPlayer = new Map();
@@ -177,6 +185,7 @@ function clearSpawnTimer() {
 function clearBossTimers() {
   if (bossTimers.wander) { clearInterval(bossTimers.wander); bossTimers.wander = null; }
   if (bossTimers.minionSpawn) { clearInterval(bossTimers.minionSpawn); bossTimers.minionSpawn = null; }
+  if (bossTimers.tick) { clearInterval(bossTimers.tick); bossTimers.tick = null; }
 }
 
 function startBoss() {
@@ -189,6 +198,10 @@ function startBoss() {
     y: pos.y,
     enraged: false,
     lastClickBy: {},
+    timeRemaining: BOSS_CONFIG.timeLimit,
+    escalationLevel: 0,
+    currentSpawnRate: BOSS_CONFIG.minionSpawnRate,
+    currentMaxOnScreen: BOSS_CONFIG.minionMaxOnScreen,
   };
 
   broadcast({
@@ -196,6 +209,7 @@ function startBoss() {
     boss: { hp: state.boss.hp, maxHp: state.boss.maxHp, x: pos.x, y: pos.y, enraged: false },
     hp: state.hp,
     score: state.score,
+    timeRemaining: BOSS_CONFIG.timeLimit,
   });
 
   // Boss wander
@@ -209,13 +223,81 @@ function startBoss() {
 
   // Minion spawning
   bossTimers.minionSpawn = setInterval(spawnMinion, BOSS_CONFIG.minionSpawnRate);
+
+  // Boss fight tick - timer, regen, escalation (every second)
+  bossTimers.tick = setInterval(bossTick, 1000);
+}
+
+function bossTick() {
+  if (state.phase !== 'boss' || !state.boss) return;
+
+  // Decrement timer
+  state.boss.timeRemaining--;
+
+  // HP regeneration
+  const oldHp = state.boss.hp;
+  state.boss.hp = Math.min(state.boss.hp + BOSS_CONFIG.regenPerSecond, state.boss.maxHp);
+  const regenAmount = state.boss.hp - oldHp;
+
+  // Check escalation thresholds
+  let escalated = false;
+  const nextLevel = state.boss.escalationLevel;
+  if (nextLevel < BOSS_CONFIG.escalation.length) {
+    const threshold = BOSS_CONFIG.escalation[nextLevel];
+    if (state.boss.timeRemaining <= threshold.timeRemaining) {
+      state.boss.escalationLevel++;
+      state.boss.currentSpawnRate = threshold.spawnRate;
+      state.boss.currentMaxOnScreen = threshold.maxOnScreen;
+      escalated = true;
+      // Restart minion spawn with new effective rate
+      if (bossTimers.minionSpawn) clearInterval(bossTimers.minionSpawn);
+      bossTimers.minionSpawn = setInterval(spawnMinion, getEffectiveSpawnRate());
+    }
+  }
+
+  // Broadcast tick update
+  broadcast({
+    type: 'boss-tick',
+    timeRemaining: state.boss.timeRemaining,
+    bossHp: state.boss.hp,
+    bossMaxHp: state.boss.maxHp,
+    enraged: state.boss.enraged,
+    regenAmount,
+    escalated,
+  });
+
+  // Time's up
+  if (state.boss.timeRemaining <= 0) {
+    state.phase = 'gameover';
+    clearBossTimers();
+    clearAllBugs();
+    state.boss = null;
+    broadcast({
+      type: 'game-over',
+      score: state.score,
+      level: state.level,
+      players: getPlayerScores(),
+    });
+  }
+}
+
+function getEffectiveSpawnRate() {
+  if (!state.boss) return BOSS_CONFIG.minionSpawnRate;
+  const base = state.boss.currentSpawnRate;
+  if (state.boss.enraged) return Math.min(base, BOSS_CONFIG.enrageMinionSpawnRate);
+  return base;
+}
+
+function getEffectiveMaxOnScreen() {
+  if (!state.boss) return BOSS_CONFIG.minionMaxOnScreen;
+  const base = state.boss.currentMaxOnScreen;
+  if (state.boss.enraged) return Math.max(base, BOSS_CONFIG.enrageMinionMaxOnScreen);
+  return base;
 }
 
 function spawnMinion() {
   if (state.phase !== 'boss') return;
-  const maxOnScreen = state.boss && state.boss.enraged
-    ? BOSS_CONFIG.enrageMinionMaxOnScreen
-    : BOSS_CONFIG.minionMaxOnScreen;
+  const maxOnScreen = getEffectiveMaxOnScreen();
   if (Object.keys(state.bugs).length >= maxOnScreen) return;
 
   const id = 'bug_' + (nextBugId++);
@@ -272,8 +354,8 @@ function handleBossClick(pid) {
     state.boss.enraged = true;
     justEnraged = true;
 
-    // Speed up timers
-    clearBossTimers();
+    // Speed up boss wander
+    if (bossTimers.wander) clearInterval(bossTimers.wander);
     bossTimers.wander = setInterval(() => {
       if (state.phase !== 'boss' || !state.boss) return;
       const newPos = randomPosition();
@@ -281,7 +363,10 @@ function handleBossClick(pid) {
       state.boss.y = newPos.y;
       broadcast({ type: 'boss-wander', x: newPos.x, y: newPos.y });
     }, BOSS_CONFIG.enrageWanderInterval);
-    bossTimers.minionSpawn = setInterval(spawnMinion, BOSS_CONFIG.enrageMinionSpawnRate);
+
+    // Update minion spawn rate if enraged rate is faster than current escalated rate
+    if (bossTimers.minionSpawn) clearInterval(bossTimers.minionSpawn);
+    bossTimers.minionSpawn = setInterval(spawnMinion, getEffectiveSpawnRate());
   }
 
   broadcast({
@@ -474,6 +559,7 @@ function getStateSnapshot() {
       x: state.boss.x,
       y: state.boss.y,
       enraged: state.boss.enraged,
+      timeRemaining: state.boss.timeRemaining,
     } : null,
   };
 }

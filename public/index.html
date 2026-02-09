@@ -658,6 +658,48 @@
     background: linear-gradient(90deg, #dc2626, #ff6b6b);
   }
 
+  /* Boss timer */
+  .boss-timer {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px;
+    color: var(--yellow);
+    text-shadow: 0 0 8px rgba(255,230,109,0.4);
+  }
+  .boss-timer.urgent {
+    color: var(--red);
+    text-shadow: 0 0 12px rgba(255,107,107,0.6);
+    animation: pulse-hp 0.6s infinite;
+  }
+
+  /* Boss regen number */
+  .boss-regen-num {
+    position: absolute;
+    pointer-events: none;
+    z-index: 23;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: #22c55e;
+    text-shadow: 0 0 8px rgba(34,197,94,0.6);
+    white-space: nowrap;
+    animation: regen-float 0.8s ease-out forwards;
+  }
+
+  @keyframes regen-float {
+    0% { transform: translateY(0); opacity: 1; }
+    100% { transform: translateY(-30px); opacity: 0; }
+  }
+
+  /* Boss escalation warning */
+  .escalation-flash {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 82;
+    border-radius: 8px;
+    background: rgba(168,85,247,0.2);
+    animation: enrage-flash-anim 0.4s ease-out forwards;
+  }
+
   /* Boss animations */
   @keyframes boss-spawn {
     0% { transform: scale(0) rotate(720deg); opacity: 0; }
@@ -1018,6 +1060,7 @@
   let currentPhase = null;
   let bossElement = null;
   let bossHpBarContainer = null;
+  let bossEnraged = false;
 
   // ── Icon picker setup ──
   PLAYER_ICONS.forEach((icon, i) => {
@@ -1245,7 +1288,7 @@
   }
 
   // ── Boss DOM ──
-  function createBossElement(x, y, hp, maxHp, enraged) {
+  function createBossElement(x, y, hp, maxHp, enraged, timeRemaining) {
     removeBossElement();
     const el = document.createElement('div');
     el.className = 'boss walking' + (enraged ? ' enraged' : '');
@@ -1273,14 +1316,18 @@
     arena.appendChild(el);
     bossElement = el;
 
-    // Create HP bar
+    // Create HP bar + timer
     const hpContainer = document.createElement('div');
     hpContainer.className = 'boss-hp-bar-container';
+    const timeStr = typeof timeRemaining === 'number' ? formatTime(timeRemaining) : '1:30';
+    const urgentClass = timeRemaining <= 20 ? ' urgent' : '';
     hpContainer.innerHTML =
+      '<div class="boss-timer' + urgentClass + '" id="boss-timer">' + timeStr + '</div>' +
       '<div class="boss-hp-bar-label">MEGA BUG &mdash; <span class="boss-hp-text">' + hp + '/' + maxHp + '</span></div>' +
       '<div class="boss-hp-bar-track"><div class="boss-hp-bar-fill' + (enraged ? ' enraged' : '') + '" style="width:' + ((hp / maxHp) * 100) + '%"></div></div>';
     arena.appendChild(hpContainer);
     bossHpBarContainer = hpContainer;
+    bossEnraged = enraged;
   }
 
   function updateBossHp(hp, maxHp, enraged) {
@@ -1298,6 +1345,7 @@
   function removeBossElement() {
     if (bossElement) { bossElement.remove(); bossElement = null; }
     if (bossHpBarContainer) { bossHpBarContainer.remove(); bossHpBarContainer = null; }
+    bossEnraged = false;
   }
 
   function showBossHitEffect(color) {
@@ -1315,6 +1363,37 @@
     showBossDamageNumber(lx, ly, 5, color);
     showImpactRing(lx, ly, color);
     shakeArena('micro');
+  }
+
+  function formatTime(seconds) {
+    if (seconds < 0) seconds = 0;
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  function showBossRegenNumber(amount) {
+    if (!bossElement) return;
+    const rect = bossElement.getBoundingClientRect();
+    const arenaRect = arena.getBoundingClientRect();
+    const lx = ((rect.left - arenaRect.left + rect.width / 2) / arenaRect.width) * LOGICAL_W + (Math.random() - 0.5) * 30;
+    const ly = ((rect.top - arenaRect.top + rect.height * 0.3) / arenaRect.height) * LOGICAL_H;
+    const pos = logicalToPixel(lx, ly);
+    const el = document.createElement('div');
+    el.className = 'boss-regen-num';
+    el.style.left = pos.x + 'px';
+    el.style.top = pos.y + 'px';
+    el.textContent = '+' + amount;
+    arena.appendChild(el);
+    setTimeout(() => el.remove(), 850);
+  }
+
+  function showEscalationWarning() {
+    const el = document.createElement('div');
+    el.className = 'escalation-flash';
+    arena.appendChild(el);
+    setTimeout(() => el.remove(), 450);
+    shakeArena('light');
   }
 
   // ── VFX Utilities ──
@@ -1460,7 +1539,8 @@
         // Rebuild boss if in boss phase
         removeBossElement();
         if (msg.boss) {
-          createBossElement(msg.boss.x, msg.boss.y, msg.boss.hp, msg.boss.maxHp, msg.boss.enraged);
+          createBossElement(msg.boss.x, msg.boss.y, msg.boss.hp, msg.boss.maxHp, msg.boss.enraged, msg.boss.timeRemaining);
+          bossEnraged = msg.boss.enraged;
         }
 
         updateHUD(msg.score, msg.level, msg.hp);
@@ -1606,7 +1686,7 @@
       case 'boss-spawn': {
         hideAllScreens();
         levelEl.textContent = 'BOSS';
-        createBossElement(msg.boss.x, msg.boss.y, msg.boss.hp, msg.boss.maxHp, msg.boss.enraged);
+        createBossElement(msg.boss.x, msg.boss.y, msg.boss.hp, msg.boss.maxHp, msg.boss.enraged, msg.timeRemaining);
         updateHUD(msg.score, undefined, msg.hp);
         break;
       }
@@ -1633,6 +1713,24 @@
         updateHUD(msg.score);
         if (players[msg.playerId]) {
           players[msg.playerId].score = msg.playerScore;
+        }
+        bossEnraged = msg.enraged;
+        break;
+      }
+
+      case 'boss-tick': {
+        const timerEl = document.getElementById('boss-timer');
+        if (timerEl) {
+          timerEl.textContent = formatTime(msg.timeRemaining);
+          if (msg.timeRemaining <= 20) timerEl.classList.add('urgent');
+          else timerEl.classList.remove('urgent');
+        }
+        if (msg.regenAmount > 0) {
+          updateBossHp(msg.bossHp, msg.bossMaxHp, msg.enraged);
+          showBossRegenNumber(msg.regenAmount);
+        }
+        if (msg.escalated) {
+          showEscalationWarning();
         }
         break;
       }
