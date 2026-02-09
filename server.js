@@ -48,13 +48,28 @@ const LEVEL_CONFIG = {
   2: { bugsTotal: 12, escapeTime: 3800, spawnRate: 1600, maxOnScreen: 3 },
   3: { bugsTotal: 16, escapeTime: 2800, spawnRate: 1200, maxOnScreen: 4 },
 };
+const BOSS_CONFIG = {
+  hp: 500,
+  clickDamage: 5,
+  clickPoints: 5,
+  killBonus: 200,
+  wanderInterval: 2000,
+  enrageThreshold: 0.5,
+  enrageWanderInterval: 1200,
+  minionSpawnRate: 4000,
+  enrageMinionSpawnRate: 2200,
+  minionEscapeTime: 3500,
+  minionMaxOnScreen: 3,
+  enrageMinionMaxOnScreen: 5,
+  clickCooldownMs: 100,
+};
 const MAX_LEVEL = 3;
 const HP_DAMAGE = 15;
 const BUG_POINTS = 10;
 
 // ── Game state ──
 let state = {
-  phase: 'lobby', // lobby | playing | gameover | win
+  phase: 'lobby', // lobby | playing | gameover | win | boss
   score: 0,
   hp: 100,
   level: 1,
@@ -62,12 +77,14 @@ let state = {
   bugsSpawned: 0,
   bugs: {},       // bugId -> { id, x, y, escapeTimer, wanderInterval }
   players: {},    // playerId -> { id, name, color, icon, x, y, score }
+  boss: null,     // { hp, maxHp, x, y, enraged, lastClickBy: {} }
 };
 
 let nextBugId = 1;
 let nextPlayerId = 1;
 let colorIndex = 0;
 let spawnTimer = null;
+let bossTimers = { wander: null, minionSpawn: null };
 
 // Map ws -> playerId
 const wsToPlayer = new Map();
@@ -156,6 +173,174 @@ function clearSpawnTimer() {
   }
 }
 
+// ── Boss lifecycle ──
+function clearBossTimers() {
+  if (bossTimers.wander) { clearInterval(bossTimers.wander); bossTimers.wander = null; }
+  if (bossTimers.minionSpawn) { clearInterval(bossTimers.minionSpawn); bossTimers.minionSpawn = null; }
+}
+
+function startBoss() {
+  state.phase = 'boss';
+  const pos = randomPosition();
+  state.boss = {
+    hp: BOSS_CONFIG.hp,
+    maxHp: BOSS_CONFIG.hp,
+    x: pos.x,
+    y: pos.y,
+    enraged: false,
+    lastClickBy: {},
+  };
+
+  broadcast({
+    type: 'boss-spawn',
+    boss: { hp: state.boss.hp, maxHp: state.boss.maxHp, x: pos.x, y: pos.y, enraged: false },
+    hp: state.hp,
+    score: state.score,
+  });
+
+  // Boss wander
+  bossTimers.wander = setInterval(() => {
+    if (state.phase !== 'boss' || !state.boss) return;
+    const newPos = randomPosition();
+    state.boss.x = newPos.x;
+    state.boss.y = newPos.y;
+    broadcast({ type: 'boss-wander', x: newPos.x, y: newPos.y });
+  }, BOSS_CONFIG.wanderInterval);
+
+  // Minion spawning
+  bossTimers.minionSpawn = setInterval(spawnMinion, BOSS_CONFIG.minionSpawnRate);
+}
+
+function spawnMinion() {
+  if (state.phase !== 'boss') return;
+  const maxOnScreen = state.boss && state.boss.enraged
+    ? BOSS_CONFIG.enrageMinionMaxOnScreen
+    : BOSS_CONFIG.minionMaxOnScreen;
+  if (Object.keys(state.bugs).length >= maxOnScreen) return;
+
+  const id = 'bug_' + (nextBugId++);
+  const pos = randomPosition();
+  const bug = { id, x: pos.x, y: pos.y, escapeTimer: null, wanderInterval: null, isMinion: true };
+
+  state.bugs[id] = bug;
+
+  broadcast({ type: 'bug-spawned', bug: { id, x: bug.x, y: bug.y, isMinion: true } });
+
+  // Wander
+  bug.wanderInterval = setInterval(() => {
+    if (state.phase !== 'boss' || !state.bugs[id]) return;
+    const newPos = randomPosition();
+    bug.x = newPos.x;
+    bug.y = newPos.y;
+    broadcast({ type: 'bug-wander', bugId: id, x: newPos.x, y: newPos.y });
+  }, BOSS_CONFIG.minionEscapeTime * 0.45);
+
+  // Escape timer
+  bug.escapeTimer = setTimeout(() => {
+    if (!state.bugs[id]) return;
+    clearInterval(bug.wanderInterval);
+    delete state.bugs[id];
+
+    state.hp -= HP_DAMAGE;
+    if (state.hp < 0) state.hp = 0;
+
+    broadcast({ type: 'bug-escaped', bugId: id, hp: state.hp });
+
+    checkBossGameState();
+  }, BOSS_CONFIG.minionEscapeTime);
+}
+
+function handleBossClick(pid) {
+  if (state.phase !== 'boss' || !state.boss) return;
+  const player = state.players[pid];
+  if (!player) return;
+
+  // Per-player cooldown
+  const now = Date.now();
+  if (state.boss.lastClickBy[pid] && now - state.boss.lastClickBy[pid] < BOSS_CONFIG.clickCooldownMs) return;
+  state.boss.lastClickBy[pid] = now;
+
+  state.boss.hp -= BOSS_CONFIG.clickDamage;
+  if (state.boss.hp < 0) state.boss.hp = 0;
+
+  state.score += BOSS_CONFIG.clickPoints;
+  player.score += BOSS_CONFIG.clickPoints;
+
+  // Check enrage
+  let justEnraged = false;
+  if (!state.boss.enraged && state.boss.hp <= state.boss.maxHp * BOSS_CONFIG.enrageThreshold) {
+    state.boss.enraged = true;
+    justEnraged = true;
+
+    // Speed up timers
+    clearBossTimers();
+    bossTimers.wander = setInterval(() => {
+      if (state.phase !== 'boss' || !state.boss) return;
+      const newPos = randomPosition();
+      state.boss.x = newPos.x;
+      state.boss.y = newPos.y;
+      broadcast({ type: 'boss-wander', x: newPos.x, y: newPos.y });
+    }, BOSS_CONFIG.enrageWanderInterval);
+    bossTimers.minionSpawn = setInterval(spawnMinion, BOSS_CONFIG.enrageMinionSpawnRate);
+  }
+
+  broadcast({
+    type: 'boss-hit',
+    bossHp: state.boss.hp,
+    bossMaxHp: state.boss.maxHp,
+    enraged: state.boss.enraged,
+    justEnraged,
+    playerId: pid,
+    playerColor: player.color,
+    score: state.score,
+    playerScore: player.score,
+  });
+
+  if (state.boss.hp <= 0) {
+    defeatBoss();
+  }
+}
+
+function defeatBoss() {
+  // Award kill bonus to all players
+  const playerCount = Object.keys(state.players).length;
+  if (playerCount > 0) {
+    const bonusEach = Math.floor(BOSS_CONFIG.killBonus / playerCount);
+    for (const pid of Object.keys(state.players)) {
+      state.players[pid].score += bonusEach;
+    }
+    state.score += BOSS_CONFIG.killBonus;
+  }
+
+  clearBossTimers();
+  clearAllBugs();
+  state.phase = 'win';
+
+  broadcast({
+    type: 'boss-defeated',
+    score: state.score,
+    players: getPlayerScores(),
+  });
+
+  state.boss = null;
+}
+
+function checkBossGameState() {
+  if (state.phase !== 'boss') return;
+  if (state.hp <= 0) {
+    state.phase = 'gameover';
+    clearBossTimers();
+    clearAllBugs();
+    state.boss = null;
+    broadcast({
+      type: 'game-over',
+      score: state.score,
+      level: state.level,
+      players: getPlayerScores(),
+    });
+  }
+}
+
 // ── Game state checks ──
 function checkGameState() {
   if (state.phase !== 'playing') return;
@@ -180,12 +365,13 @@ function checkGameState() {
   if (allSpawned && noneAlive) {
     clearSpawnTimer();
     if (state.level >= MAX_LEVEL) {
-      state.phase = 'win';
+      // Instead of winning, transition to boss fight
       broadcast({
-        type: 'game-win',
+        type: 'level-complete',
+        level: state.level,
         score: state.score,
-        players: getPlayerScores(),
       });
+      setTimeout(startBoss, 2000);
     } else {
       broadcast({
         type: 'level-complete',
@@ -228,6 +414,8 @@ function startGame() {
   state.hp = 100;
   state.level = 1;
   state.phase = 'playing';
+  state.boss = null;
+  clearBossTimers();
 
   // Reset per-player scores
   for (const pid of Object.keys(state.players)) {
@@ -255,8 +443,10 @@ function resetToLobby() {
   state.level = 1;
   state.bugsRemaining = 0;
   state.bugsSpawned = 0;
+  state.boss = null;
   clearSpawnTimer();
   clearAllBugs();
+  clearBossTimers();
 }
 
 function getPlayerScores() {
@@ -278,6 +468,13 @@ function getStateSnapshot() {
     bugsRemaining: currentLevelConfig().bugsTotal - state.bugsSpawned + Object.keys(state.bugs).length,
     bugs: Object.values(state.bugs).map(b => ({ id: b.id, x: b.x, y: b.y })),
     players: getPlayerScores(),
+    boss: state.boss ? {
+      hp: state.boss.hp,
+      maxHp: state.boss.maxHp,
+      x: state.boss.x,
+      y: state.boss.y,
+      enraged: state.boss.enraged,
+    } : null,
   };
 }
 
@@ -338,7 +535,7 @@ wss.on('connection', (ws) => {
       }
 
       case 'click-bug': {
-        if (state.phase !== 'playing') break;
+        if (state.phase !== 'playing' && state.phase !== 'boss') break;
         const bugId = msg.bugId;
         const bug = state.bugs[bugId];
         if (!bug) break; // already dead or doesn't exist
@@ -360,7 +557,16 @@ wss.on('connection', (ws) => {
           playerScore: state.players[pid].score,
         });
 
-        checkGameState();
+        if (state.phase === 'boss') {
+          checkBossGameState();
+        } else {
+          checkGameState();
+        }
+        break;
+      }
+
+      case 'click-boss': {
+        handleBossClick(pid);
         break;
       }
 

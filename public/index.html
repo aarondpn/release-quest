@@ -510,6 +510,188 @@
   .conn-status.connected { color: var(--teal); }
   .conn-status.disconnected { color: var(--red); }
 
+  /* ── Boss sprite ── */
+  .boss {
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    z-index: 15;
+    animation: boss-spawn 0.8s ease-out;
+  }
+  .boss:active { transform: scale(0.9); }
+
+  .boss-body {
+    position: relative;
+    width: 80px;
+    height: 60px;
+    background: linear-gradient(135deg, #a855f7, #7c3aed);
+    border-radius: 50%;
+    box-shadow: 0 0 24px rgba(168,85,247,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Boss antennae */
+  .boss-body::before,
+  .boss-body::after {
+    content: '';
+    position: absolute;
+    top: -12px;
+    width: 6px;
+    height: 16px;
+    background: #a855f7;
+    border-radius: 3px;
+  }
+  .boss-body::before { left: 16px; transform: rotate(-25deg); }
+  .boss-body::after { right: 16px; transform: rotate(25deg); }
+
+  .boss-eyes {
+    font-size: 18px;
+    color: var(--bg);
+    font-family: monospace;
+    font-weight: bold;
+    letter-spacing: 8px;
+    margin-top: -2px;
+  }
+
+  /* Boss legs */
+  .boss-legs {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+  }
+  .boss-legs span {
+    position: absolute;
+    width: 10px;
+    height: 3px;
+    background: #a855f7;
+    border-radius: 2px;
+  }
+  .boss-legs span:nth-child(1) { top: 14px; left: 4px; transform: rotate(-30deg); }
+  .boss-legs span:nth-child(2) { top: 28px; left: 1px; transform: rotate(0deg); }
+  .boss-legs span:nth-child(3) { top: 42px; left: 4px; transform: rotate(30deg); }
+  .boss-legs span:nth-child(4) { top: 14px; right: 4px; transform: rotate(30deg); }
+  .boss-legs span:nth-child(5) { top: 28px; right: 1px; transform: rotate(0deg); }
+  .boss-legs span:nth-child(6) { top: 42px; right: 4px; transform: rotate(-30deg); }
+
+  /* Boss crown spikes */
+  .boss-crown {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 4px;
+    pointer-events: none;
+  }
+  .boss-crown span {
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 12px solid #ffe66d;
+  }
+  .boss-crown span:nth-child(2) { border-bottom-height: 16px; border-bottom: 16px solid #ffe66d; }
+
+  .boss.walking {
+    animation: boss-walk 0.6s steps(2) infinite;
+  }
+
+  /* Boss enraged state */
+  .boss.enraged .boss-body {
+    background: linear-gradient(135deg, #ff6b6b, #dc2626);
+    box-shadow: 0 0 32px rgba(255,107,107,0.8);
+    animation: boss-pulse 0.8s ease-in-out infinite;
+  }
+  .boss.enraged .boss-body::before,
+  .boss.enraged .boss-body::after {
+    background: #ff6b6b;
+  }
+  .boss.enraged .boss-legs span {
+    background: #ff6b6b;
+  }
+  .boss.enraged .boss-crown span {
+    border-bottom-color: #ff6b6b;
+  }
+
+  /* Boss HP bar */
+  .boss-hp-bar-container {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 90;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .boss-hp-bar-label {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 6px;
+    color: var(--muted);
+  }
+  .boss-hp-bar-track {
+    width: 300px;
+    height: 14px;
+    background: var(--bg);
+    border: 2px solid #3d3d5c;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .boss-hp-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #a855f7, #c084fc);
+    border-radius: 1px;
+    transition: width 0.3s ease;
+  }
+  .boss-hp-bar-fill.enraged {
+    background: linear-gradient(90deg, #dc2626, #ff6b6b);
+  }
+
+  /* Boss animations */
+  @keyframes boss-spawn {
+    0% { transform: scale(0) rotate(720deg); opacity: 0; }
+    60% { transform: scale(1.2) rotate(0deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+
+  @keyframes boss-walk {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+
+  @keyframes boss-pulse {
+    0%, 100% { box-shadow: 0 0 32px rgba(255,107,107,0.8); }
+    50% { box-shadow: 0 0 48px rgba(255,107,107,1); }
+  }
+
+  @keyframes boss-hit-flash {
+    0% { filter: brightness(3); }
+    100% { filter: brightness(1); }
+  }
+
+  @keyframes boss-explode {
+    0% { transform: scale(1) rotate(0deg); opacity: 1; }
+    40% { transform: scale(1.5) rotate(180deg); opacity: 0.8; }
+    100% { transform: scale(0) rotate(720deg); opacity: 0; }
+  }
+
+  /* Boss warning title */
+  .screen-title.boss-title {
+    color: var(--purple);
+    text-shadow: 0 0 24px rgba(168,85,247,0.7), 0 0 48px rgba(168,85,247,0.3);
+  }
+
   /* ── Responsive ── */
   @media (max-width: 600px) {
     header h1 { font-size: 12px; }
@@ -628,6 +810,12 @@
         <div class="screen-sub">Get ready...</div>
       </div>
 
+      <!-- Boss warning -->
+      <div class="screen-overlay hidden" id="boss-screen">
+        <div class="screen-title boss-title">WARNING</div>
+        <div class="screen-sub">MEGA BUG incoming!</div>
+      </div>
+
     </div>
   </div>
 
@@ -660,6 +848,7 @@
   const gameoverScreen = document.getElementById('gameover-screen');
   const winScreen = document.getElementById('win-screen');
   const levelScreen = document.getElementById('level-screen');
+  const bossScreen = document.getElementById('boss-screen');
   const nameEntry = document.getElementById('name-entry');
   const nameInput = document.getElementById('name-input');
   const iconPicker = document.getElementById('icon-picker');
@@ -678,6 +867,8 @@
   let lastCursorSend = 0;
   let selectedIcon = null;
   let currentPhase = null;
+  let bossElement = null;
+  let bossHpBarContainer = null;
 
   // ── Icon picker setup ──
   PLAYER_ICONS.forEach((icon, i) => {
@@ -708,6 +899,7 @@
     if (phase === 'lobby' || !phase) showStartScreen();
     else if (phase === 'gameover') showGameOverScreen(0, 1, Object.values(players));
     else if (phase === 'win') showWinScreen(0, Object.values(players));
+    else if (phase === 'boss') hideAllScreens();
     else hideAllScreens();
   }
 
@@ -870,6 +1062,7 @@
     gameoverScreen.classList.add('hidden');
     winScreen.classList.add('hidden');
     levelScreen.classList.add('hidden');
+    bossScreen.classList.add('hidden');
   }
 
   function showStartScreen() {
@@ -896,6 +1089,77 @@
     hideAllScreens();
     document.getElementById('level-screen-num').textContent = levelNum;
     levelScreen.classList.remove('hidden');
+  }
+
+  // ── Boss DOM ──
+  function createBossElement(x, y, hp, maxHp, enraged) {
+    removeBossElement();
+    const el = document.createElement('div');
+    el.className = 'boss walking' + (enraged ? ' enraged' : '');
+    el.innerHTML =
+      '<div class="boss-crown"><span></span><span></span><span></span></div>' +
+      '<div class="boss-body">' +
+        '<div class="boss-eyes">\u00d7\u00d7</div>' +
+        '<div class="boss-legs">' +
+          '<span></span><span></span><span></span>' +
+          '<span></span><span></span><span></span>' +
+        '</div>' +
+      '</div>';
+
+    const pos = logicalToPixel(x, y);
+    el.style.left = pos.x + 'px';
+    el.style.top = pos.y + 'px';
+
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (ws && ws.readyState === 1) {
+        ws.send(JSON.stringify({ type: 'click-boss' }));
+      }
+    });
+
+    arena.appendChild(el);
+    bossElement = el;
+
+    // Create HP bar
+    const hpContainer = document.createElement('div');
+    hpContainer.className = 'boss-hp-bar-container';
+    hpContainer.innerHTML =
+      '<div class="boss-hp-bar-label">MEGA BUG &mdash; <span class="boss-hp-text">' + hp + '/' + maxHp + '</span></div>' +
+      '<div class="boss-hp-bar-track"><div class="boss-hp-bar-fill' + (enraged ? ' enraged' : '') + '" style="width:' + ((hp / maxHp) * 100) + '%"></div></div>';
+    arena.appendChild(hpContainer);
+    bossHpBarContainer = hpContainer;
+  }
+
+  function updateBossHp(hp, maxHp, enraged) {
+    if (!bossHpBarContainer) return;
+    const fill = bossHpBarContainer.querySelector('.boss-hp-bar-fill');
+    const label = bossHpBarContainer.querySelector('.boss-hp-text');
+    if (fill) {
+      fill.style.width = ((hp / maxHp) * 100) + '%';
+      if (enraged) fill.classList.add('enraged');
+      else fill.classList.remove('enraged');
+    }
+    if (label) label.textContent = hp + '/' + maxHp;
+  }
+
+  function removeBossElement() {
+    if (bossElement) { bossElement.remove(); bossElement = null; }
+    if (bossHpBarContainer) { bossHpBarContainer.remove(); bossHpBarContainer = null; }
+  }
+
+  function showBossHitEffect(color) {
+    if (!bossElement) return;
+    // Flash boss white
+    bossElement.style.animation = 'boss-hit-flash 0.15s ease-out';
+    setTimeout(() => {
+      if (bossElement) bossElement.style.animation = '';
+    }, 150);
+    // Floating damage number at random offset near boss
+    const rect = bossElement.getBoundingClientRect();
+    const arenaRect = arena.getBoundingClientRect();
+    const lx = ((rect.left - arenaRect.left + rect.width / 2) / arenaRect.width) * LOGICAL_W + (Math.random() - 0.5) * 40;
+    const ly = ((rect.top - arenaRect.top) / arenaRect.height) * LOGICAL_H + (Math.random() - 0.5) * 30;
+    showSquashEffect(lx, ly, color);
   }
 
   // ── Utility ──
@@ -962,7 +1226,14 @@
           msg.bugs.forEach(b => createBugElement(b.id, b.x, b.y));
         }
 
+        // Rebuild boss if in boss phase
+        removeBossElement();
+        if (msg.boss) {
+          createBossElement(msg.boss.x, msg.boss.y, msg.boss.hp, msg.boss.maxHp, msg.boss.enraged);
+        }
+
         updateHUD(msg.score, msg.level, msg.hp);
+        if (msg.phase === 'boss') levelEl.textContent = 'BOSS';
         currentPhase = msg.phase;
 
         // Show name entry on first connect, otherwise go to correct screen
@@ -974,6 +1245,7 @@
           if (msg.phase === 'lobby') showStartScreen();
           else if (msg.phase === 'gameover') showGameOverScreen(msg.score, msg.level, msg.players || []);
           else if (msg.phase === 'win') showWinScreen(msg.score, msg.players || []);
+          else if (msg.phase === 'boss') hideAllScreens();
           else hideAllScreens();
         }
         break;
@@ -1002,6 +1274,7 @@
       case 'game-start': {
         hideAllScreens();
         clearAllBugs();
+        removeBossElement();
         updateHUD(msg.score, msg.level, msg.hp);
         // Update player scores
         if (msg.players) {
@@ -1017,7 +1290,13 @@
       }
 
       case 'level-complete': {
-        showLevelScreen(msg.level + 1);
+        if (msg.level >= 3) {
+          // Show boss warning instead of next level
+          hideAllScreens();
+          bossScreen.classList.remove('hidden');
+        } else {
+          showLevelScreen(msg.level + 1);
+        }
         break;
       }
 
@@ -1030,8 +1309,14 @@
         const el = bugs[msg.bugId];
         if (el) {
           const pos = logicalToPixel(msg.x, msg.y);
-          const cfg = { 1: 5000, 2: 3800, 3: 2800 };
-          const dur = (cfg[parseInt(levelEl.textContent)] || 5000) * 0.4;
+          const lvlText = levelEl.textContent;
+          let dur;
+          if (lvlText === 'BOSS') {
+            dur = 3500 * 0.4;
+          } else {
+            const cfg = { 1: 5000, 2: 3800, 3: 2800 };
+            dur = (cfg[parseInt(lvlText)] || 5000) * 0.4;
+          }
           el.style.transition = 'left ' + dur + 'ms linear, top ' + dur + 'ms linear';
           el.style.left = pos.x + 'px';
           el.style.top = pos.y + 'px';
@@ -1070,6 +1355,7 @@
 
       case 'game-over': {
         clearAllBugs();
+        removeBossElement();
         showGameOverScreen(msg.score, msg.level, msg.players || []);
         break;
       }
@@ -1080,8 +1366,58 @@
         break;
       }
 
+      case 'boss-spawn': {
+        hideAllScreens();
+        levelEl.textContent = 'BOSS';
+        createBossElement(msg.boss.x, msg.boss.y, msg.boss.hp, msg.boss.maxHp, msg.boss.enraged);
+        updateHUD(msg.score, undefined, msg.hp);
+        break;
+      }
+
+      case 'boss-wander': {
+        if (bossElement) {
+          const pos = logicalToPixel(msg.x, msg.y);
+          bossElement.style.transition = 'left 1.5s ease, top 1.5s ease';
+          bossElement.style.left = pos.x + 'px';
+          bossElement.style.top = pos.y + 'px';
+        }
+        break;
+      }
+
+      case 'boss-hit': {
+        updateBossHp(msg.bossHp, msg.bossMaxHp, msg.enraged);
+        showBossHitEffect(msg.playerColor);
+        if (msg.enraged && bossElement) {
+          bossElement.classList.add('enraged');
+        }
+        updateHUD(msg.score);
+        if (players[msg.playerId]) {
+          players[msg.playerId].score = msg.playerScore;
+        }
+        break;
+      }
+
+      case 'boss-defeated': {
+        if (bossElement) {
+          bossElement.style.animation = 'boss-explode 0.8s ease-in forwards';
+          setTimeout(() => {
+            removeBossElement();
+            showWinScreen(msg.score, msg.players || []);
+          }, 800);
+        } else {
+          showWinScreen(msg.score, msg.players || []);
+        }
+        // Update player scores
+        if (msg.players) {
+          msg.players.forEach(p => { if (players[p.id]) players[p.id].score = p.score; });
+        }
+        updateHUD(msg.score);
+        break;
+      }
+
       case 'game-reset': {
         clearAllBugs();
+        removeBossElement();
         showStartScreen();
         updateHUD(0, 1, 100);
         break;
