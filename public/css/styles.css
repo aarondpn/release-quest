@@ -1118,6 +1118,115 @@ header p {
   100% { transform: translateX(-50%) translateY(-60px); opacity: 0; }
 }
 
+/* ── Feature 3: Memory Leak ── */
+.bug.memory-leak {
+  cursor: grab;
+}
+
+.bug.memory-leak .bug-body {
+  background: #9333ea;
+  box-shadow: 0 0 12px rgba(147,51,234,0.4);
+  transition: transform 2s ease-out, background-color 2s ease-out, box-shadow 2s ease-out;
+}
+.bug.memory-leak .bug-body::before,
+.bug.memory-leak .bug-body::after {
+  background: #9333ea;
+  transition: background-color 2s ease-out;
+}
+.bug.memory-leak .bug-legs span {
+  background: #9333ea;
+  transition: background-color 2s ease-out;
+}
+
+/* Growth stage 1: slightly larger, darker purple */
+.bug.memory-leak[data-growth-stage="1"] .bug-body {
+  transform: scale(1.15);
+  background: #7c3aed;
+  box-shadow: 0 0 14px rgba(124,58,237,0.5);
+}
+.bug.memory-leak[data-growth-stage="1"] .bug-body::before,
+.bug.memory-leak[data-growth-stage="1"] .bug-body::after {
+  background: #7c3aed;
+}
+.bug.memory-leak[data-growth-stage="1"] .bug-legs span {
+  background: #7c3aed;
+}
+
+/* Growth stage 2: noticeably larger, even darker */
+.bug.memory-leak[data-growth-stage="2"] .bug-body {
+  transform: scale(1.35);
+  background: #6d28d9;
+  box-shadow: 0 0 16px rgba(109,40,217,0.6);
+}
+.bug.memory-leak[data-growth-stage="2"] .bug-body::before,
+.bug.memory-leak[data-growth-stage="2"] .bug-body::after {
+  background: #6d28d9;
+}
+.bug.memory-leak[data-growth-stage="2"] .bug-legs span {
+  background: #6d28d9;
+}
+
+/* Growth stage 3: maximum size, darkest purple */
+.bug.memory-leak[data-growth-stage="3"] .bug-body {
+  transform: scale(1.6);
+  background: #5b21b6;
+  box-shadow: 0 0 20px rgba(91,33,182,0.8), 0 0 40px rgba(91,33,182,0.3);
+  animation: memory-leak-pulse 1s ease-in-out infinite;
+}
+.bug.memory-leak[data-growth-stage="3"] .bug-body::before,
+.bug.memory-leak[data-growth-stage="3"] .bug-body::after {
+  background: #5b21b6;
+}
+.bug.memory-leak[data-growth-stage="3"] .bug-legs span {
+  background: #5b21b6;
+}
+
+@keyframes memory-leak-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(91,33,182,0.8), 0 0 40px rgba(91,33,182,0.3); }
+  50% { box-shadow: 0 0 24px rgba(91,33,182,1), 0 0 48px rgba(91,33,182,0.5); }
+}
+
+/* Memory leak hold progress bar */
+.memory-leak-progress {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 44px;
+  height: 4px;
+  background: rgba(0,0,0,0.4);
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid rgba(147,51,234,0.5);
+}
+
+.memory-leak-progress-fill {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #9333ea, #a855f7);
+  box-shadow: 0 0 8px rgba(147,51,234,0.8);
+}
+
+.memory-leak-holder-count {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #a855f7;
+  text-shadow: 0 0 6px rgba(168,85,247,0.8);
+  white-space: nowrap;
+  display: none;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.bug.memory-leak.being-held {
+  cursor: grabbing;
+  filter: brightness(1.2);
+}
+
 /* ── Feature 4: Rubber Duck Debugger ── */
 .rubber-duck {
   position: absolute;

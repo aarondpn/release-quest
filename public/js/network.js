@@ -328,6 +328,129 @@ function handleMessage(msg) {
       break;
     }
 
+    // ── Memory Leak Growth ──
+    case 'memory-leak-grow': {
+      const bugEl = clientState.bugs[msg.bugId];
+      if (bugEl) {
+        bugEl.dataset.growthStage = msg.growthStage;
+      }
+      break;
+    }
+
+    // ── Memory Leak Escaped ──
+    case 'memory-leak-escaped': {
+      removeBugElement(msg.bugId);
+      updateHUD(undefined, undefined, msg.hp);
+      dom.arena.style.borderColor = 'var(--red)';
+      setTimeout(() => dom.arena.style.borderColor = '#2a2a4a', 300);
+      showDamageVignette();
+      shakeArena(msg.growthStage >= 2 ? 'medium' : 'light');
+      break;
+    }
+
+    // ── Memory Leak Hold Update ──
+    case 'memory-leak-hold-update': {
+      const bugEl = clientState.bugs[msg.bugId];
+      if (!bugEl) break;
+      
+      let progressBar = bugEl.querySelector('.memory-leak-progress');
+      let countEl = bugEl.querySelector('.memory-leak-holder-count');
+      
+      // Create progress bar if it doesn't exist
+      if (!progressBar) {
+        progressBar = document.createElement('div');
+        progressBar.className = 'memory-leak-progress';
+        progressBar.innerHTML = '<div class="memory-leak-progress-fill"></div>';
+        bugEl.appendChild(progressBar);
+        bugEl.classList.add('being-held');
+        
+        // Create holder count as a sibling (not inside progress bar to avoid overflow clipping)
+        countEl = document.createElement('div');
+        countEl.className = 'memory-leak-holder-count';
+        bugEl.appendChild(countEl);
+        
+        // Store start time for this progress session
+        bugEl.dataset.holdStartTime = Date.now() - msg.elapsedTime;
+        bugEl.dataset.requiredTime = msg.requiredHoldTime;
+      }
+      
+      // Update holder count display
+      if (countEl) {
+        if (msg.holderCount > 1) {
+          countEl.textContent = 'x' + msg.holderCount;
+          countEl.style.display = 'block';
+        } else {
+          countEl.style.display = 'none';
+        }
+      }
+      
+      // Handle dropout
+      if (msg.dropOut && msg.holderCount === 0) {
+        if (progressBar) progressBar.remove();
+        if (countEl) countEl.remove();
+        bugEl.classList.remove('being-held');
+        delete bugEl.dataset.holdStartTime;
+        delete bugEl.dataset.requiredTime;
+        break;
+      }
+      
+      // Calculate and update progress with current holder count
+      const holdStartTime = parseInt(bugEl.dataset.holdStartTime);
+      const requiredTime = parseInt(bugEl.dataset.requiredTime);
+      const effectiveRequiredTime = requiredTime / msg.holderCount;
+      const elapsed = Date.now() - holdStartTime;
+      
+      // Update progress bar with smooth transition
+      const fill = progressBar.querySelector('.memory-leak-progress-fill');
+      const currentProgress = Math.min(100, (elapsed / effectiveRequiredTime) * 100);
+      const remainingTime = Math.max(0, effectiveRequiredTime - elapsed);
+      
+      fill.style.transition = `width ${remainingTime}ms linear`;
+      fill.style.width = currentProgress + '%';
+      
+      // Animate to 100% from current position
+      requestAnimationFrame(() => {
+        fill.style.width = '100%';
+      });
+      
+      break;
+    }
+
+    // ── Memory Leak Cleared ──
+    case 'memory-leak-cleared': {
+      const bugEl = clientState.bugs[msg.bugId];
+      if (bugEl) {
+        const rect = bugEl.getBoundingClientRect();
+        const arenaRect = dom.arena.getBoundingClientRect();
+        const lx = ((rect.left - arenaRect.left + rect.width / 2) / arenaRect.width) * LOGICAL_W;
+        const ly = ((rect.top - arenaRect.top) / arenaRect.height) * LOGICAL_H;
+        
+        // Show effects for all holders
+        if (msg.holders && msg.holders.length > 0) {
+          for (const holderId of msg.holders) {
+            const holderPlayer = clientState.players[holderId];
+            if (holderPlayer) {
+              showSquashEffect(lx, ly, holderPlayer.color);
+              showParticleBurst(lx, ly, holderPlayer.color);
+            }
+          }
+          showImpactRing(lx, ly, '#a855f7');
+        }
+      }
+      removeBugElement(msg.bugId, true);
+      updateHUD(msg.score);
+
+      // Update scores for all holders
+      if (msg.players) {
+        for (const [playerId, score] of Object.entries(msg.players)) {
+          if (clientState.players[playerId]) {
+            clientState.players[playerId].score = score;
+          }
+        }
+      }
+      break;
+    }
+
     // ── Heisenbug flee ──
     case 'bug-flee': {
       const bugEl = clientState.bugs[msg.bugId];
