@@ -140,6 +140,28 @@ export function removeDuckBuffOverlay() {
   if (existing) existing.remove();
 }
 
+// ── Dependency chain resolved effect ──
+export function showDependencyChainResolvedEffect() {
+  const el = document.createElement('div');
+  el.className = 'dependency-resolved-text';
+  el.style.left = '50%';
+  el.style.top = '40%';
+  el.textContent = 'CHAIN RESOLVED!';
+  dom.arena.appendChild(el);
+  setTimeout(() => el.remove(), 1200);
+}
+
+// ── Dependency chain reset effect ──
+export function showDependencyChainResetEffect() {
+  const el = document.createElement('div');
+  el.className = 'dependency-reset-text';
+  el.style.left = '50%';
+  el.style.top = '40%';
+  el.textContent = 'WRONG ORDER!';
+  dom.arena.appendChild(el);
+  setTimeout(() => el.remove(), 1000);
+}
+
 // ── Merge conflict resolved effect ──
 export function showMergeResolvedEffect(lx, ly) {
   const pos = logicalToPixel(lx, ly);

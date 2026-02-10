@@ -2,10 +2,10 @@ import { LOGICAL_W, LOGICAL_H } from './config.js';
 import { dom, clientState } from './state.js';
 import { logicalToPixel } from './coordinates.js';
 import { updateHUD, updatePlayerCount, hideAllScreens, showStartScreen, showGameOverScreen, showWinScreen, showLevelScreen, updateLobbyRoster } from './hud.js';
-import { createBugElement, removeBugElement, clearAllBugs, showSquashEffect, removeMergeTether } from './bugs.js';
+import { createBugElement, removeBugElement, clearAllBugs, showSquashEffect, removeMergeTether, removeDependencyTether, rebuildDependencyTether } from './bugs.js';
 import { createBossElement, updateBossHp, removeBossElement, showBossHitEffect, formatTime } from './boss.js';
 import { addRemoteCursor, removeRemoteCursor, updateRemoteCursor, clearRemoteCursors } from './players.js';
-import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, showEnrageFlash, showLevelFlash, showEscalationWarning, showBossRegenNumber, showHeisenbugFleeEffect, showFeaturePenaltyEffect, showDuckBuffOverlay, removeDuckBuffOverlay, showMergeResolvedEffect } from './vfx.js';
+import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, showEnrageFlash, showLevelFlash, showEscalationWarning, showBossRegenNumber, showHeisenbugFleeEffect, showFeaturePenaltyEffect, showDuckBuffOverlay, removeDuckBuffOverlay, showMergeResolvedEffect, showDependencyChainResolvedEffect, showDependencyChainResetEffect } from './vfx.js';
 import { showLobbyBrowser, hideLobbyBrowser, renderLobbyList, showLobbyError } from './lobby-ui.js';
 import { updateAuthUI, hideAuthOverlay, showAuthError } from './auth-ui.js';
 import { renderLeaderboard } from './leaderboard-ui.js';
@@ -275,13 +275,14 @@ function handleMessage(msg) {
       const el = clientState.bugs[msg.bugId];
       if (el) {
         const pos = logicalToPixel(msg.x, msg.y);
-        const lvlText = dom.levelEl.textContent;
         let dur;
-        if (lvlText === 'BOSS') {
+        if (el.classList.contains('dependency-bug')) {
+          dur = 330; // fast tick for snake slither
+        } else if (dom.levelEl.textContent === 'BOSS') {
           dur = 3500 * 0.4;
         } else {
           const cfg = { 1: 5000, 2: 3800, 3: 2800 };
-          dur = (cfg[parseInt(lvlText)] || 5000) * 0.4;
+          dur = (cfg[parseInt(dom.levelEl.textContent)] || 5000) * 0.4;
         }
         el.style.transition = 'left ' + dur + 'ms linear, top ' + dur + 'ms linear';
         el.style.left = pos.x + 'px';
@@ -500,6 +501,72 @@ function handleMessage(msg) {
           }
         }
       }
+      updateHUD(undefined, undefined, msg.hp);
+      showDamageVignette();
+      shakeArena('medium');
+      break;
+    }
+
+    // ── Dependency chain ──
+    case 'dependency-bug-squashed': {
+      const bugEl = clientState.bugs[msg.bugId];
+      if (bugEl) {
+        const rect = bugEl.getBoundingClientRect();
+        const arenaRect = dom.arena.getBoundingClientRect();
+        const lx = ((rect.left - arenaRect.left + rect.width / 2) / arenaRect.width) * LOGICAL_W;
+        const ly = ((rect.top - arenaRect.top) / arenaRect.height) * LOGICAL_H;
+        showSquashEffect(lx, ly, msg.playerColor);
+        showParticleBurst(lx, ly, '#a855f7');
+        showImpactRing(lx, ly, '#a855f7');
+      }
+      removeBugElement(msg.bugId, true);
+      // Rebuild tether with one less node
+      rebuildDependencyTether(msg.chainId);
+      updateHUD(msg.score);
+      if (clientState.players[msg.playerId]) {
+        clientState.players[msg.playerId].score = msg.playerScore;
+      }
+      break;
+    }
+
+    case 'dependency-chain-resolved': {
+      // All bugs in chain squashed in order — show bonus effect
+      removeDependencyTether(msg.chainId);
+      // Find any remaining bug position for the effect, or use center
+      showDependencyChainResolvedEffect();
+      updateHUD(msg.score);
+      if (clientState.players[msg.playerId]) {
+        clientState.players[msg.playerId].score = msg.playerScore;
+      }
+      break;
+    }
+
+    case 'dependency-chain-reset': {
+      // Wrong order clicked — all bugs teleport to new positions
+      for (const [bid, pos] of Object.entries(msg.positions)) {
+        const bugEl = clientState.bugs[bid];
+        if (bugEl) {
+          bugEl.style.transition = 'none';
+          const pxPos = logicalToPixel(pos.x, pos.y);
+          bugEl.style.left = pxPos.x + 'px';
+          bugEl.style.top = pxPos.y + 'px';
+          requestAnimationFrame(() => { bugEl.style.transition = ''; });
+          // Flash red to indicate error
+          bugEl.classList.add('dependency-reset');
+          setTimeout(() => bugEl.classList.remove('dependency-reset'), 500);
+        }
+      }
+      rebuildDependencyTether(msg.chainId);
+      showDependencyChainResetEffect();
+      shakeArena('light');
+      break;
+    }
+
+    case 'dependency-chain-escaped': {
+      for (const bid of msg.bugIds) {
+        removeBugElement(bid);
+      }
+      removeDependencyTether(msg.chainId);
       updateHUD(undefined, undefined, msg.hp);
       showDamageVignette();
       shakeArena('medium');
