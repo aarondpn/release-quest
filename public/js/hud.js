@@ -71,6 +71,132 @@ export function renderScoreboard(container, playerList) {
 }
 
 /* ══════════════════════════════════════════════════
+   LIVE IN-GAME DASHBOARD
+   ══════════════════════════════════════════════════ */
+
+let dashRafPending = false;
+
+export function updateLiveDashboard() {
+  if (dashRafPending) return;
+  dashRafPending = true;
+  requestAnimationFrame(() => {
+    dashRafPending = false;
+    renderLiveDashboard();
+  });
+}
+
+function renderLiveDashboard() {
+  const container = dom.liveDashboard;
+  if (!container || container.classList.contains('hidden')) return;
+
+  const players = Object.values(clientState.players);
+  if (!players.length) return;
+
+  const sorted = players.slice().sort((a, b) => (b.score || 0) - (a.score || 0));
+
+  // Capture old positions (FLIP step 1: First)
+  const existingRows = container.querySelectorAll('.live-dash-row');
+  const oldPositions = {};
+  existingRows.forEach(row => {
+    oldPositions[row.dataset.playerId] = row.getBoundingClientRect();
+  });
+
+  // Build or reuse rows
+  const rowMap = {};
+  existingRows.forEach(row => { rowMap[row.dataset.playerId] = row; });
+
+  // Remove rows for players no longer present
+  const currentIds = new Set(sorted.map(p => p.id));
+  existingRows.forEach(row => {
+    if (!currentIds.has(row.dataset.playerId)) row.remove();
+  });
+
+  sorted.forEach((p, i) => {
+    let row = rowMap[p.id];
+    const rank = i + 1;
+    const isMe = p.id === clientState.myId;
+    const score = p.score || 0;
+
+    if (!row) {
+      row = document.createElement('div');
+      row.className = 'live-dash-row';
+      row.dataset.playerId = p.id;
+      row.dataset.prevScore = score;
+
+      row.innerHTML =
+        '<span class="live-dash-rank"></span>' +
+        '<span class="live-dash-name">' +
+          '<span class="live-dash-icon"></span>' +
+          '<span class="live-dash-name-text"></span>' +
+        '</span>' +
+        '<span class="live-dash-score"></span>';
+      container.appendChild(row);
+    }
+
+    // Update rank
+    row.querySelector('.live-dash-rank').textContent = rank;
+
+    // Update name & icon
+    row.querySelector('.live-dash-icon').textContent = p.icon || '';
+    row.querySelector('.live-dash-name-text').textContent = escapeHtml(p.name);
+
+    // Score change detection
+    const prevScore = parseInt(row.dataset.prevScore) || 0;
+    const scoreEl = row.querySelector('.live-dash-score');
+    scoreEl.textContent = score;
+
+    if (score > prevScore && prevScore > 0) {
+      // Pop animation
+      scoreEl.classList.remove('score-pop');
+      void scoreEl.offsetWidth;
+      scoreEl.classList.add('score-pop');
+
+      // Floating delta
+      const delta = score - prevScore;
+      const deltaEl = document.createElement('span');
+      deltaEl.className = 'live-dash-delta';
+      deltaEl.textContent = '+' + delta;
+      row.appendChild(deltaEl);
+      setTimeout(() => deltaEl.remove(), 800);
+    }
+    row.dataset.prevScore = score;
+
+    // Highlight current player
+    row.classList.toggle('is-me', isMe);
+
+    // Ensure correct DOM order
+    container.appendChild(row);
+  });
+
+  // FLIP step 2: Last — get new positions, then Invert + Play
+  const newRows = container.querySelectorAll('.live-dash-row');
+  newRows.forEach(row => {
+    const pid = row.dataset.playerId;
+    const oldPos = oldPositions[pid];
+    if (oldPos) {
+      const newPos = row.getBoundingClientRect();
+      const dy = oldPos.top - newPos.top;
+      if (Math.abs(dy) > 1) {
+        row.style.transition = 'none';
+        row.style.transform = 'translateY(' + dy + 'px)';
+        void row.offsetWidth;
+        row.style.transition = 'transform 0.3s ease';
+        row.style.transform = 'translateY(0)';
+      }
+    }
+  });
+}
+
+export function showLiveDashboard() {
+  if (dom.liveDashboard) dom.liveDashboard.classList.remove('hidden');
+  updateLiveDashboard();
+}
+
+export function hideLiveDashboard() {
+  if (dom.liveDashboard) dom.liveDashboard.classList.add('hidden');
+}
+
+/* ══════════════════════════════════════════════════
    LOBBY WAITING SCREEN INTERACTIVE ELEMENTS
    ══════════════════════════════════════════════════ */
 

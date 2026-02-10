@@ -1,7 +1,7 @@
 import { LOGICAL_W, LOGICAL_H } from './config.js';
 import { dom, clientState } from './state.js';
 import { logicalToPixel } from './coordinates.js';
-import { updateHUD, updatePlayerCount, hideAllScreens, showStartScreen, showGameOverScreen, showWinScreen, showLevelScreen, updateLobbyRoster } from './hud.js';
+import { updateHUD, updatePlayerCount, hideAllScreens, showStartScreen, showGameOverScreen, showWinScreen, showLevelScreen, updateLobbyRoster, updateLiveDashboard, showLiveDashboard, hideLiveDashboard } from './hud.js';
 import { createBugElement, removeBugElement, clearAllBugs, showSquashEffect, removeMergeTether, removePipelineTether, rebuildPipelineTether } from './bugs.js';
 import { createBossElement, updateBossHp, removeBossElement, showBossHitEffect, formatTime } from './boss.js';
 import { addRemoteCursor, removeRemoteCursor, updateRemoteCursor, clearRemoteCursors } from './players.js';
@@ -180,10 +180,10 @@ function handleMessage(msg) {
       if (msg.phase === 'boss') dom.levelEl.textContent = 'BOSS';
       clientState.currentPhase = msg.phase;
 
-      if (msg.phase === 'lobby') showStartScreen();
-      else if (msg.phase === 'gameover') showGameOverScreen(msg.score, msg.level, msg.players || []);
-      else if (msg.phase === 'win') showWinScreen(msg.score, msg.players || []);
-      else hideAllScreens();
+      if (msg.phase === 'lobby') { showStartScreen(); hideLiveDashboard(); }
+      else if (msg.phase === 'gameover') { showGameOverScreen(msg.score, msg.level, msg.players || []); hideLiveDashboard(); }
+      else if (msg.phase === 'win') { showWinScreen(msg.score, msg.players || []); hideLiveDashboard(); }
+      else { hideAllScreens(); showLiveDashboard(); }
       break;
     }
 
@@ -197,6 +197,7 @@ function handleMessage(msg) {
       removeDuckBuffOverlay();
       clearRemoteCursors();
       hideAllScreens();
+      hideLiveDashboard();
       updateHUD(0, 1, 100);
       updatePlayerCount();
       document.getElementById('hud-leave-btn').classList.add('hidden');
@@ -217,6 +218,7 @@ function handleMessage(msg) {
       if (p.id !== clientState.myId) addRemoteCursor(p.id, p.name, p.color, p.icon);
       updatePlayerCount();
       updateLobbyRoster();
+      updateLiveDashboard();
       break;
     }
 
@@ -225,6 +227,7 @@ function handleMessage(msg) {
       removeRemoteCursor(msg.playerId);
       updatePlayerCount();
       updateLobbyRoster();
+      updateLiveDashboard();
       break;
     }
 
@@ -246,12 +249,14 @@ function handleMessage(msg) {
       if (msg.players) {
         msg.players.forEach(p => { if (clientState.players[p.id]) clientState.players[p.id].score = p.score; });
       }
+      showLiveDashboard();
       break;
     }
 
     case 'level-start': {
       hideAllScreens();
       updateHUD(msg.score, msg.level, msg.hp);
+      showLiveDashboard();
       break;
     }
 
@@ -309,6 +314,7 @@ function handleMessage(msg) {
       if (clientState.players[msg.playerId]) {
         clientState.players[msg.playerId].score = msg.playerScore;
       }
+      updateLiveDashboard();
       break;
     }
 
@@ -401,6 +407,7 @@ function handleMessage(msg) {
       if (clientState.players[msg.playerId]) {
         clientState.players[msg.playerId].score = msg.playerScore;
       }
+      updateLiveDashboard();
       showDuckBuffOverlay(msg.buffDuration);
       break;
     }
@@ -427,6 +434,7 @@ function handleMessage(msg) {
       if (clientState.players[msg.playerId]) {
         clientState.players[msg.playerId].score = msg.playerScore;
       }
+      updateLiveDashboard();
       showHammerShockwave(msg.playerColor);
       break;
     }
@@ -477,6 +485,7 @@ function handleMessage(msg) {
           if (clientState.players[pid]) clientState.players[pid].score = score;
         }
       }
+      updateLiveDashboard();
       break;
     }
 
@@ -526,6 +535,7 @@ function handleMessage(msg) {
       if (clientState.players[msg.playerId]) {
         clientState.players[msg.playerId].score = msg.playerScore;
       }
+      updateLiveDashboard();
       break;
     }
 
@@ -538,6 +548,7 @@ function handleMessage(msg) {
       if (clientState.players[msg.playerId]) {
         clientState.players[msg.playerId].score = msg.playerScore;
       }
+      updateLiveDashboard();
       break;
     }
 
@@ -578,6 +589,7 @@ function handleMessage(msg) {
       removeBossElement();
       removeDuckElement();
       removeDuckBuffOverlay();
+      hideLiveDashboard();
       shakeArena('heavy');
       showGameOverScreen(msg.score, msg.level, msg.players || []);
       break;
@@ -585,6 +597,7 @@ function handleMessage(msg) {
 
     case 'game-win': {
       clearAllBugs();
+      hideLiveDashboard();
       showWinScreen(msg.score, msg.players || []);
       break;
     }
@@ -594,6 +607,7 @@ function handleMessage(msg) {
       dom.levelEl.textContent = 'BOSS';
       createBossElement(msg.boss.x, msg.boss.y, msg.boss.hp, msg.boss.maxHp, msg.boss.enraged, msg.timeRemaining);
       updateHUD(msg.score, undefined, msg.hp);
+      showLiveDashboard();
       break;
     }
 
@@ -621,6 +635,7 @@ function handleMessage(msg) {
         clientState.players[msg.playerId].score = msg.playerScore;
       }
       clientState.bossEnraged = msg.enraged;
+      updateLiveDashboard();
       break;
     }
 
@@ -655,6 +670,7 @@ function handleMessage(msg) {
         msg.players.forEach(p => { if (clientState.players[p.id]) clientState.players[p.id].score = p.score; });
       }
       updateHUD(msg.score);
+      updateLiveDashboard();
       break;
     }
 
@@ -663,6 +679,7 @@ function handleMessage(msg) {
       removeBossElement();
       removeDuckElement();
       removeDuckBuffOverlay();
+      hideLiveDashboard();
       showStartScreen();
       updateHUD(0, 1, 100);
       break;

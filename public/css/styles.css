@@ -435,6 +435,104 @@ header p {
   color: var(--yellow);
 }
 
+/* ── Live In-Game Dashboard ── */
+.live-dashboard {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 160px;
+  max-height: 40%;
+  overflow-y: auto;
+  background: rgba(15,14,23,0.75);
+  backdrop-filter: blur(4px);
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  padding: 6px;
+  pointer-events: none;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: 'Press Start 2P', monospace;
+}
+.live-dashboard.hidden { display: none; }
+
+.live-dash-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.03);
+  transition: transform 0.3s ease;
+  position: relative;
+}
+.live-dash-row.is-me {
+  border-left: 2px solid var(--teal);
+  background: rgba(78,205,196,0.08);
+}
+
+.live-dash-rank {
+  font-size: 5px;
+  color: var(--muted);
+  width: 10px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.live-dash-row:first-child .live-dash-rank {
+  color: var(--yellow);
+}
+
+.live-dash-name {
+  font-size: 5px;
+  color: var(--muted);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.live-dash-icon {
+  font-size: 10px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.live-dash-score {
+  font-size: 5px;
+  color: var(--yellow);
+  flex-shrink: 0;
+  position: relative;
+}
+.live-dash-score.score-pop {
+  animation: live-score-pop 0.3s ease-out;
+}
+
+.live-dash-delta {
+  position: absolute;
+  right: 0;
+  top: -8px;
+  font-size: 5px;
+  color: var(--teal);
+  pointer-events: none;
+  white-space: nowrap;
+  animation: live-delta-rise 0.8s ease-out forwards;
+}
+
+@keyframes live-score-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.5); color: var(--teal); }
+  100% { transform: scale(1); }
+}
+
+@keyframes live-delta-rise {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-12px); opacity: 0; }
+}
+
 /* ── Name entry screen ── */
 .name-entry {
   position: fixed;
