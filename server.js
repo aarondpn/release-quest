@@ -29,6 +29,7 @@ const MIME = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.ico': 'image/x-icon',
+  '.svg': 'image/svg+xml',
 };
 
 // ── HTTP server ──
