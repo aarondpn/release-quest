@@ -1,306 +1,363 @@
+/* ══════════════════════════════════════════════════
+   GAME WIKI — Overview Page
+   CRT terminal / in-game codex aesthetic
+   ══════════════════════════════════════════════════ */
+
 /* Override main page overflow hidden to allow scrolling */
 body {
   overflow-y: auto !important;
   overflow-x: hidden;
+  cursor: default;
 }
 
-/* Overview Page Styles */
-
+/* ── Wrapper ── */
 .overview-wrapper {
-  max-width: 1200px;
+  max-width: 960px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 32px 24px 48px;
   min-height: 100vh;
 }
 
+/* ── Header ── */
 .overview-header {
   text-align: center;
-  margin-bottom: 3rem;
-  padding: 2rem;
-  background: rgba(0, 0, 0, 0.3);
+  margin-bottom: 48px;
+  padding: 32px 24px 28px;
+  background:
+    linear-gradient(180deg, rgba(78,205,196,0.06) 0%, transparent 100%),
+    var(--surface);
   border: 2px solid var(--teal);
   border-radius: 8px;
   position: relative;
 }
 
+.overview-header::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 8px;
+  box-shadow: 0 0 24px rgba(78,205,196,0.15), inset 0 0 24px rgba(78,205,196,0.05);
+  pointer-events: none;
+}
+
 .overview-header h1 {
-  font-size: 1.8rem;
+  font-size: 22px;
   color: var(--teal);
-  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
-  margin: 0 0 0.5rem 0;
-  line-height: 1.4;
+  text-shadow: 0 0 20px rgba(78,205,196,0.5);
+  margin: 0 0 8px 0;
+  line-height: 1.6;
+  letter-spacing: 2px;
 }
 
 .overview-header p {
-  font-size: 0.7rem;
-  color: var(--gray-light);
-  margin: 0 0 1.5rem 0;
-  line-height: 1.4;
+  font-size: 8px;
+  color: var(--muted);
+  margin: 0 0 20px 0;
+  line-height: 1.8;
+  letter-spacing: 1px;
 }
 
 .btn-back {
   display: inline-block;
-  margin-top: 1rem;
+  font-size: 8px;
+  padding: 10px 20px;
 }
 
+/* ── Content ── */
 .overview-content {
   display: flex;
   flex-direction: column;
-  gap: 3rem;
+  gap: 40px;
 }
 
-/* Sections */
+/* ── Sections ── */
 .overview-section {
-  background: rgba(0, 0, 0, 0.2);
-  border: 2px solid var(--gray);
+  background: rgba(0, 0, 0, 0.25);
+  border: 2px solid #2a2a4a;
   border-radius: 8px;
-  padding: 2rem;
+  padding: 28px 24px;
+  position: relative;
 }
 
 .section-title {
-  font-size: 1.2rem;
+  font-size: 14px;
   color: var(--yellow);
   text-align: center;
-  margin: 0 0 2rem 0;
-  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
-  line-height: 1.4;
+  margin: 0 0 28px 0;
+  text-shadow: 0 0 16px rgba(255,230,109,0.4);
+  line-height: 1.6;
+  letter-spacing: 2px;
 }
 
-/* Grid layouts */
+/* Per-section border accent colors */
+.overview-section:nth-child(1) { border-color: var(--red); }
+.overview-section:nth-child(2) { border-color: var(--purple); }
+.overview-section:nth-child(3) { border-color: var(--yellow); }
+.overview-section:nth-child(4) { border-color: var(--teal); }
+.overview-section:nth-child(5) { border-color: var(--muted); }
+
+/* Section-specific title colors */
+.overview-section:nth-child(1) .section-title {
+  color: var(--red);
+  text-shadow: 0 0 16px rgba(255,107,107,0.4);
+}
+.overview-section:nth-child(2) .section-title {
+  color: var(--purple);
+  text-shadow: 0 0 16px rgba(168,85,247,0.4);
+}
+.overview-section:nth-child(4) .section-title {
+  color: var(--teal);
+  text-shadow: 0 0 16px rgba(78,205,196,0.4);
+}
+
+/* ── Grid layouts ── */
 .overview-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 20px;
 }
 
 .mechanics-grid {
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
 }
 
-/* Cards */
+/* ── Cards ── */
 .overview-card {
-  background: rgba(0, 0, 0, 0.4);
-  border: 2px solid var(--gray);
+  background: var(--surface);
+  border: 2px solid #2a2a4a;
   border-radius: 6px;
-  padding: 1.5rem;
-  transition: all 0.3s ease;
+  padding: 20px;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   position: relative;
 }
 
 .overview-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-3px);
   border-color: var(--teal);
-  box-shadow: 0 4px 12px rgba(78, 205, 196, 0.3);
+  box-shadow: 0 4px 16px rgba(78,205,196,0.2);
 }
 
+/* Card type accents */
 .overview-card.special {
-  border-color: var(--purple);
+  border-color: rgba(168,85,247,0.4);
 }
-
 .overview-card.special:hover {
   border-color: var(--purple);
-  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4);
+  box-shadow: 0 4px 16px rgba(168,85,247,0.25);
 }
 
+.overview-card.boss-minion {
+  border-color: rgba(255,230,109,0.3);
+}
+.overview-card.boss-minion:hover {
+  border-color: var(--yellow);
+  box-shadow: 0 4px 16px rgba(255,230,109,0.25);
+}
+
+.overview-card.powerup {
+  border-color: rgba(255,230,109,0.3);
+}
+.overview-card.powerup:hover {
+  border-color: var(--yellow);
+  box-shadow: 0 4px 16px rgba(255,230,109,0.25);
+}
+
+/* ── Boss card — featured layout ── */
 .overview-card.boss {
   border-color: var(--red);
   grid-column: 1 / -1;
-  max-width: 100%;
-  padding: 1.5rem;
-  display: block;
+  padding: 24px;
+  background:
+    linear-gradient(135deg, rgba(255,107,107,0.04) 0%, transparent 50%),
+    var(--surface);
 }
 
 .overview-card.boss:hover {
   border-color: var(--red);
-  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
-  transform: translateY(-4px);
+  box-shadow: 0 4px 20px rgba(255,107,107,0.3);
+  transform: translateY(-3px);
+}
+
+.overview-card.boss .card-icon {
+  margin-bottom: 12px;
+}
+
+.overview-card.boss .card-title {
+  font-size: 14px;
+  margin-bottom: 12px;
+  color: var(--red);
+}
+
+.overview-card.boss .card-badge {
+  margin-bottom: 16px;
+  background: var(--red);
+}
+
+.overview-card.boss .card-description {
+  margin: 12px 0;
 }
 
 .overview-card.boss .card-stats {
-  display: block;
-  margin-bottom: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0;
+  margin-bottom: 16px;
 }
 
 .overview-card.boss .card-stats .stat {
-  display: block;
-  padding: 0.4rem 0;
+  padding: 5px 0;
 }
 
 .overview-card.boss .card-phases {
-  display: block;
-  margin: 1rem 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin: 16px 0;
 }
 
-.overview-card.boss .card-phases .phase {
-  margin-bottom: 1rem;
-  width: 100%;
-}
-
-@media (min-width: 900px) {
+@media (min-width: 700px) {
   .overview-card.boss .card-phases {
-    display: flex;
-    gap: 1rem;
-  }
-  .overview-card.boss .card-phases .phase {
-    flex: 1;
-    min-width: 0;
-    margin-bottom: 0;
+    grid-template-columns: 1fr 1fr;
   }
 }
 
-.overview-card.boss-minion {
-  border-color: var(--yellow);
-}
-
-.overview-card.boss-minion:hover {
-  border-color: var(--yellow);
-  box-shadow: 0 4px 12px rgba(255, 230, 109, 0.4);
-}
-
-.overview-card.powerup {
-  border-color: var(--yellow);
-}
-
-.overview-card.powerup:hover {
-  border-color: var(--yellow);
-  box-shadow: 0 4px 12px rgba(255, 230, 109, 0.4);
-}
-
+/* ── Card elements ── */
 .card-icon {
-  font-size: 2.5rem;
+  font-size: 36px;
   text-align: center;
-  margin-bottom: 1rem;
-  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.5));
+  margin-bottom: 12px;
+  filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.5));
   line-height: 1;
 }
 
 .boss-icon {
-  font-size: 3rem;
-}
-
-.overview-card.boss .card-icon {
-  margin-bottom: 1rem;
-}
-
-.overview-card.boss .card-title {
-  margin-bottom: 1rem;
-}
-
-.overview-card.boss .card-description {
-  margin: 1rem 0;
-}
-
-.overview-card.boss .card-badge {
-  margin-bottom: 1rem;
+  font-size: 48px;
 }
 
 .card-title {
-  font-size: 0.9rem;
+  font-size: 11px;
   color: var(--teal);
   text-align: center;
-  margin: 0 0 1rem 0;
+  margin: 0 0 12px 0;
   text-transform: uppercase;
-  line-height: 1.4;
+  line-height: 1.6;
+  letter-spacing: 1px;
 }
 
 .card-badge {
   background: var(--purple);
   color: white;
-  padding: 0.3rem 0.8rem;
+  padding: 5px 12px;
   border-radius: 12px;
-  font-size: 0.6rem;
+  font-size: 7px;
   text-align: center;
-  margin-bottom: 1rem;
+  margin-bottom: 14px;
   font-weight: bold;
-  line-height: 1.4;
+  line-height: 1.6;
+  letter-spacing: 0.5px;
 }
 
 .card-stats {
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.35);
   border-radius: 4px;
-  padding: 1rem;
-  margin-bottom: 1rem;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border-left: 3px solid #2a2a4a;
 }
 
 .stat {
-  padding: 0.3rem 0;
-  color: var(--gray-light);
-  font-size: 0.65rem;
+  padding: 4px 0;
+  color: var(--muted);
+  font-size: 8px;
   word-wrap: break-word;
-  line-height: 1.5;
+  line-height: 1.8;
   overflow-wrap: break-word;
 }
 
 .card-description {
-  color: var(--gray-light);
-  line-height: 1.6;
-  margin: 0.5rem 0;
+  color: var(--muted);
+  line-height: 1.9;
+  margin: 8px 0;
   word-wrap: break-word;
   overflow-wrap: break-word;
-  font-size: 0.65rem;
+  font-size: 8px;
 }
 
+.card-description strong {
+  color: var(--yellow);
+}
+
+/* ── Phase blocks ── */
 .card-phases {
-  margin: 1rem 0;
+  margin: 14px 0;
   display: grid;
-  gap: 1rem;
+  gap: 12px;
 }
 
 .phase {
-  background: rgba(0, 0, 0, 0.5);
-  padding: 1rem;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 14px 16px;
   border-left: 4px solid var(--red);
   border-radius: 4px;
-  display: block;
-  width: 100%;
   box-sizing: border-box;
 }
 
 .phase strong {
   color: var(--yellow);
   display: block;
-  margin-bottom: 0.5rem;
-  font-size: 0.7rem;
-  line-height: 1.4;
+  margin-bottom: 8px;
+  font-size: 9px;
+  line-height: 1.6;
 }
 
 .phase ul {
-  margin: 0.5rem 0 0 0;
-  padding-left: 1rem;
-  color: var(--gray-light);
-  list-style-position: inside;
+  margin: 6px 0 0 0;
+  padding-left: 8px;
+  color: var(--muted);
+  list-style: none;
 }
 
 .phase li {
-  margin: 0.4rem 0;
-  line-height: 1.6;
+  margin: 5px 0;
+  line-height: 1.8;
   word-wrap: break-word;
   overflow-wrap: break-word;
-  font-size: 0.6rem;
+  font-size: 8px;
+  padding-left: 12px;
+  position: relative;
 }
 
+.phase li::before {
+  content: '>';
+  position: absolute;
+  left: 0;
+  color: var(--red);
+  opacity: 0.6;
+}
+
+/* ── Tip callout ── */
 .card-tip {
-  background: rgba(255, 230, 109, 0.15);
+  background: rgba(255,230,109,0.08);
   border-left: 3px solid var(--yellow);
-  padding: 1rem;
-  margin-top: 1rem;
+  padding: 14px 16px;
+  margin-top: 14px;
   border-radius: 4px;
-  color: var(--gray-light);
-  font-size: 0.65rem;
-  line-height: 1.6;
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.9;
 }
 
 .card-tip strong {
   color: var(--yellow);
 }
 
-/* Mechanics Cards */
+/* ── Mechanics Cards ── */
 .mechanics-card {
-  background: rgba(0, 0, 0, 0.4);
-  border: 2px solid var(--gray);
+  background: var(--surface);
+  border: 2px solid #2a2a4a;
   border-radius: 6px;
-  padding: 1.5rem;
-  transition: all 0.3s ease;
+  padding: 20px;
+  transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
 .mechanics-card:hover {
@@ -310,100 +367,112 @@ body {
 
 .mechanics-card h3 {
   color: var(--teal);
-  font-size: 0.8rem;
-  margin: 0 0 1rem 0;
+  font-size: 10px;
+  margin: 0 0 14px 0;
   text-align: center;
-  line-height: 1.4;
+  line-height: 1.6;
+  letter-spacing: 1px;
 }
 
 .mechanics-card p {
-  color: var(--gray-light);
-  margin: 0.5rem 0;
-  line-height: 1.6;
-  font-size: 0.6rem;
+  color: var(--muted);
+  margin: 6px 0;
+  line-height: 1.9;
+  font-size: 8px;
 }
 
 .mechanics-card strong {
   color: white;
 }
 
-/* Tips Container */
+/* ── Tips Grid ── */
 .tips-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
 }
 
 .tip-card {
-  background: rgba(0, 0, 0, 0.4);
-  border: 2px solid var(--gray);
+  background: var(--surface);
+  border: 2px solid #2a2a4a;
   border-radius: 6px;
-  padding: 1.5rem;
+  padding: 20px 16px;
   text-align: center;
-  transition: all 0.3s ease;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .tip-card:hover {
   transform: translateY(-2px);
   border-color: var(--yellow);
-  box-shadow: 0 4px 12px rgba(255, 230, 109, 0.3);
+  box-shadow: 0 4px 12px rgba(255,230,109,0.15);
 }
 
 .tip-icon {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.5));
+  font-size: 28px;
+  margin-bottom: 8px;
+  filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.5));
   line-height: 1;
 }
 
 .tip-card h4 {
   color: var(--yellow);
-  font-size: 0.7rem;
-  margin: 0.5rem 0;
-  line-height: 1.4;
+  font-size: 9px;
+  margin: 8px 0;
+  line-height: 1.6;
+  letter-spacing: 0.5px;
 }
 
 .tip-card p {
-  color: var(--gray-light);
-  line-height: 1.6;
-  margin: 0.5rem 0 0 0;
-  font-size: 0.6rem;
+  color: var(--muted);
+  line-height: 1.9;
+  margin: 8px 0 0 0;
+  font-size: 8px;
 }
 
-/* Footer */
+/* ── Footer ── */
 .overview-footer {
   text-align: center;
-  margin-top: 3rem;
-  padding: 2rem;
-  background: rgba(0, 0, 0, 0.3);
-  border-top: 2px solid var(--teal);
+  margin-top: 48px;
+  padding: 28px 24px;
+  background: var(--surface);
+  border: 2px solid #2a2a4a;
+  border-top-color: var(--teal);
   border-radius: 8px;
 }
 
 .overview-footer p {
-  color: var(--gray-light);
+  color: var(--muted);
   font-style: italic;
-  margin: 0 0 1rem 0;
-  font-size: 0.65rem;
-  line-height: 1.6;
+  margin: 0 0 16px 0;
+  font-size: 8px;
+  line-height: 1.9;
+  opacity: 0.7;
 }
 
-/* Responsive Design */
+.overview-footer .btn {
+  font-size: 8px;
+  padding: 10px 20px;
+}
+
+/* ══════════════════════════════════════════════════
+   Responsive
+   ══════════════════════════════════════════════════ */
 @media (max-width: 768px) {
   .overview-wrapper {
-    padding: 1rem;
+    padding: 20px 16px 40px;
+  }
+
+  .overview-header {
+    padding: 24px 16px 20px;
+    margin-bottom: 32px;
   }
 
   .overview-header h1 {
-    font-size: 1.4rem;
-  }
-
-  .overview-header p {
-    font-size: 0.6rem;
+    font-size: 16px;
   }
 
   .section-title {
-    font-size: 1rem;
+    font-size: 12px;
   }
 
   .overview-grid {
@@ -418,59 +487,56 @@ body {
     grid-template-columns: 1fr;
   }
 
-  .card-icon {
-    font-size: 2rem;
-  }
-
-  .boss-icon {
-    font-size: 2.5rem;
+  .overview-card.boss .card-stats {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 480px) {
+  .overview-wrapper {
+    padding: 16px 12px 32px;
+  }
+
   .overview-header {
-    padding: 1rem;
+    padding: 20px 12px 16px;
   }
 
   .overview-header h1 {
-    font-size: 1.1rem;
+    font-size: 13px;
   }
 
   .overview-header p {
-    font-size: 0.55rem;
+    font-size: 7px;
   }
 
   .overview-section {
-    padding: 1rem;
+    padding: 20px 16px;
   }
 
   .section-title {
-    font-size: 0.9rem;
+    font-size: 10px;
+    margin-bottom: 20px;
   }
 
   .overview-card,
   .mechanics-card,
   .tip-card {
-    padding: 1rem;
+    padding: 16px;
   }
 
   .overview-card.boss {
-    padding: 1rem;
-  }
-
-  .phase {
-    padding: 0.8rem;
+    padding: 16px;
   }
 
   .card-title {
-    font-size: 0.75rem;
+    font-size: 9px;
   }
 
-  .stat,
-  .card-description,
-  .card-tip,
-  .mechanics-card p,
-  .tip-card p {
-    font-size: 0.55rem;
+  .card-icon {
+    font-size: 28px;
+  }
+
+  .boss-icon {
+    font-size: 36px;
   }
 }
