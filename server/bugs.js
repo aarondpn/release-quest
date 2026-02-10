@@ -276,10 +276,11 @@ function spawnDependencyChain(ctx, cfg, game, chainLength) {
     chainBugs.push(bug);
   }
 
-  // Snake movement — continuous slithering
-  const snakeSpeed = 40;
+  // Snake movement — smooth continuous slithering
+  const snakeSpeed = 30;
   const snakeTickMs = 350;
-  let snakeAngle = angle + Math.PI; // start heading opposite to tail direction
+  let snakeAngle = angle + Math.PI;
+  const margin = 100;
 
   const chainWanderInterval = setInterval(() => {
     if (state.phase !== 'playing' || state.hammerStunActive) return;
@@ -295,20 +296,22 @@ function spawnDependencyChain(ctx, cfg, game, chainLength) {
       oldPos[bid] = { x: b.x, y: b.y };
     }
 
-    // Head slithers forward: random turn + wall bounce
-    chain.snakeAngle += (Math.random() - 0.5) * 0.8;
+    // Gentle random wander
+    chain.snakeAngle += (Math.random() - 0.5) * 0.5;
+
+    // Smooth wall avoidance — steer toward center when near edges
     const head = state.bugs[alive[0]];
-    let nx = head.x + Math.cos(chain.snakeAngle) * snakeSpeed;
-    let ny = head.y + Math.sin(chain.snakeAngle) * snakeSpeed;
+    if (head.x < margin || head.x > LOGICAL_W - margin ||
+        head.y < margin || head.y > LOGICAL_H - margin) {
+      const toCenter = Math.atan2(LOGICAL_H / 2 - head.y, LOGICAL_W / 2 - head.x);
+      let diff = toCenter - chain.snakeAngle;
+      while (diff > Math.PI) diff -= 2 * Math.PI;
+      while (diff < -Math.PI) diff += 2 * Math.PI;
+      chain.snakeAngle += diff * 0.15;
+    }
 
-    // Bounce off walls
-    if (nx < pad) { chain.snakeAngle = Math.PI - chain.snakeAngle; nx = pad; }
-    else if (nx > LOGICAL_W - pad) { chain.snakeAngle = Math.PI - chain.snakeAngle; nx = LOGICAL_W - pad; }
-    if (ny < pad) { chain.snakeAngle = -chain.snakeAngle; ny = pad; }
-    else if (ny > LOGICAL_H - pad) { chain.snakeAngle = -chain.snakeAngle; ny = LOGICAL_H - pad; }
-
-    head.x = nx;
-    head.y = ny;
+    head.x = Math.max(pad, Math.min(LOGICAL_W - pad, head.x + Math.cos(chain.snakeAngle) * snakeSpeed));
+    head.y = Math.max(pad, Math.min(LOGICAL_H - pad, head.y + Math.sin(chain.snakeAngle) * snakeSpeed));
 
     // Each subsequent bug follows the previous one
     for (let i = 1; i < alive.length; i++) {
