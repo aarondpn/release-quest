@@ -80,12 +80,15 @@
   <div id="lobby-list-panel">
     <div class="lobby-create-form">
       <input class="lobby-name-input" id="lobby-name-input" type="text" placeholder="Lobby name..." maxlength="32" autocomplete="off" spellcheck="false">
-      <select class="lobby-max-players" id="lobby-max-players">
-        <option value="2">2 players</option>
-        <option value="4" selected>4 players</option>
-        <option value="6">6 players</option>
-        <option value="8">8 players</option>
-      </select>
+      <div class="custom-select" id="lobby-max-players" data-value="4">
+        <div class="custom-select-trigger">4 players ▾</div>
+        <div class="custom-select-options">
+          <div class="custom-select-option" data-value="2">2 players</div>
+          <div class="custom-select-option selected" data-value="4">4 players</div>
+          <div class="custom-select-option" data-value="6">6 players</div>
+          <div class="custom-select-option" data-value="8">8 players</div>
+        </div>
+      </div>
       <button class="btn btn-small" id="create-lobby-btn">CREATE</button>
     </div>
 
