@@ -1149,13 +1149,26 @@ header p {
 .lobby-max-players {
   font-family: 'Press Start 2P', monospace;
   font-size: 7px;
-  padding: 10px 8px;
+  padding: 10px 28px 10px 14px;
   background: var(--surface);
   border: 2px solid var(--purple);
   border-radius: 6px;
   color: var(--yellow);
   outline: none;
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23ffe66d'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.lobby-max-players:focus {
+  border-color: var(--yellow);
+  box-shadow: 0 0 12px rgba(255,230,109,0.2);
+}
+.lobby-max-players option {
+  background: var(--surface);
+  color: var(--yellow);
 }
 
 .btn-small {
