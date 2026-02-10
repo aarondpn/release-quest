@@ -464,8 +464,8 @@ wss.on('connection', (ws) => {
             else game.checkGameState(ctx);
           } else {
             // Wrong order — respawn all remaining bugs in snake formation
-            chain.nextIndex = 0;
             const remaining = chain.bugIds.filter(bid => st.bugs[bid]);
+            chain.nextIndex = Math.min(...remaining.map(bid => st.bugs[bid].chainIndex));
             const startPos = randomPosition();
             const angle = Math.random() * Math.PI * 2;
             chain.snakeAngle = angle + Math.PI; // reset heading
