@@ -1,4 +1,4 @@
-const { HP_DAMAGE, BOSS_CONFIG, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG } = require('./config');
+const { HP_DAMAGE, BOSS_CONFIG, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG, PIPELINE_BUG_CONFIG, LOGICAL_W, LOGICAL_H } = require('./config');
 const { randomPosition, currentLevelConfig } = require('./state');
 const network = require('./network');
 
@@ -126,6 +126,22 @@ function spawnBug(ctx) {
   const game = require('./game');
   const playerCount = Object.keys(state.players).length;
 
+  // Roll for pipeline chain (level 2+, needs room for 3+ bugs)
+  const minChain = PIPELINE_BUG_CONFIG.minChainLength;
+  if (state.level >= PIPELINE_BUG_CONFIG.startLevel
+    && Object.keys(state.bugs).length + minChain <= cfg.maxOnScreen + minChain
+    && state.bugsSpawned + minChain <= cfg.bugsTotal
+    && Math.random() < PIPELINE_BUG_CONFIG.chance) {
+    const maxLen = Math.min(
+      PIPELINE_BUG_CONFIG.maxChainLength,
+      cfg.bugsTotal - state.bugsSpawned
+    );
+    if (maxLen >= minChain) {
+      spawnPipelineChain(ctx, cfg, game, minChain + Math.floor(Math.random() * (maxLen - minChain + 1)));
+      return;
+    }
+  }
+
   // Roll for merge conflict (2+ players, needs room for 2 bugs)
   if (playerCount >= MERGE_CONFLICT_CONFIG.minPlayers
     && Object.keys(state.bugs).length + 2 <= cfg.maxOnScreen
@@ -231,6 +247,130 @@ function spawnMergeConflict(ctx, cfg, game) {
   bug2.escapeTimer = bug1.escapeTimer;
 }
 
+function spawnPipelineChain(ctx, cfg, game, chainLength) {
+  const { lobbyId, state, counters } = ctx;
+  const chainId = 'chain_' + (counters.nextChainId++);
+  const escapeTime = cfg.escapeTime * PIPELINE_BUG_CONFIG.escapeTimeMultiplier;
+  const pad = 40;
+
+  state.bugsSpawned += chainLength;
+
+  // Position bugs in a snake-like line
+  const startPos = randomPosition();
+  const angle = Math.random() * Math.PI * 2;
+  const spacing = 40;
+
+  const bugIds = [];
+  const chainBugs = [];
+  for (let i = 0; i < chainLength; i++) {
+    const id = 'bug_' + (counters.nextBugId++);
+    const x = Math.max(pad, Math.min(LOGICAL_W - pad, startPos.x + Math.cos(angle) * spacing * i));
+    const y = Math.max(pad, Math.min(LOGICAL_H - pad, startPos.y + Math.sin(angle) * spacing * i));
+    const bug = {
+      id, x, y, escapeTimer: null, wanderInterval: null,
+      isPipeline: true, chainId, chainIndex: i, chainLength,
+      escapeTime, escapeStartedAt: Date.now(),
+    };
+    state.bugs[id] = bug;
+    bugIds.push(id);
+    chainBugs.push(bug);
+  }
+
+  // Snake movement — smooth continuous slithering
+  const snakeSpeed = 30;
+  const snakeTickMs = 350;
+  let snakeAngle = angle + Math.PI;
+  const margin = 100;
+
+  const chainWanderInterval = setInterval(() => {
+    if (state.phase !== 'playing' || state.hammerStunActive) return;
+    const chain = state.pipelineChains[chainId];
+    if (!chain) { clearInterval(chainWanderInterval); return; }
+    const alive = chain.bugIds.filter(bid => state.bugs[bid]);
+    if (alive.length === 0) { clearInterval(chainWanderInterval); return; }
+
+    // Store old positions
+    const oldPos = {};
+    for (const bid of alive) {
+      const b = state.bugs[bid];
+      oldPos[bid] = { x: b.x, y: b.y };
+    }
+
+    // Gentle random wander
+    chain.snakeAngle += (Math.random() - 0.5) * 0.5;
+
+    // Smooth wall avoidance — steer toward center when near edges
+    const head = state.bugs[alive[0]];
+    if (head.x < margin || head.x > LOGICAL_W - margin ||
+        head.y < margin || head.y > LOGICAL_H - margin) {
+      const toCenter = Math.atan2(LOGICAL_H / 2 - head.y, LOGICAL_W / 2 - head.x);
+      let diff = toCenter - chain.snakeAngle;
+      while (diff > Math.PI) diff -= 2 * Math.PI;
+      while (diff < -Math.PI) diff += 2 * Math.PI;
+      chain.snakeAngle += diff * 0.15;
+    }
+
+    head.x = Math.max(pad, Math.min(LOGICAL_W - pad, head.x + Math.cos(chain.snakeAngle) * snakeSpeed));
+    head.y = Math.max(pad, Math.min(LOGICAL_H - pad, head.y + Math.sin(chain.snakeAngle) * snakeSpeed));
+
+    // Each subsequent bug follows the previous one
+    for (let i = 1; i < alive.length; i++) {
+      const b = state.bugs[alive[i]];
+      b.x = oldPos[alive[i - 1]].x;
+      b.y = oldPos[alive[i - 1]].y;
+    }
+
+    // Broadcast all position updates
+    for (const bid of alive) {
+      const b = state.bugs[bid];
+      network.broadcastToLobby(lobbyId, { type: 'bug-wander', bugId: bid, x: b.x, y: b.y });
+    }
+  }, snakeTickMs);
+
+  state.pipelineChains[chainId] = {
+    bugIds, nextIndex: 0, length: chainLength,
+    wanderInterval: chainWanderInterval,
+    snakeAngle,
+  };
+
+  // Broadcast all spawns
+  for (const bug of chainBugs) {
+    network.broadcastToLobby(lobbyId, { type: 'bug-spawned', bug: {
+      id: bug.id, x: bug.x, y: bug.y,
+      isPipeline: true, chainId, chainIndex: bug.chainIndex, chainLength,
+    }});
+  }
+
+  // Shared escape timer
+  const escapeHandler = () => {
+    const chain = state.pipelineChains[chainId];
+    if (!chain) return;
+    clearInterval(chain.wanderInterval);
+    const remaining = bugIds.filter(bid => state.bugs[bid]);
+    if (remaining.length === 0) return;
+    const damage = HP_DAMAGE * remaining.length;
+    for (const bid of remaining) {
+      if (state.bugs[bid]) delete state.bugs[bid];
+    }
+    delete state.pipelineChains[chainId];
+    state.hp -= damage;
+    if (state.hp < 0) state.hp = 0;
+    if (ctx.matchLog) {
+      ctx.matchLog.log('escape', { chainId, type: 'pipeline-chain', bugsLost: remaining.length, hp: state.hp });
+    }
+    network.broadcastToLobby(lobbyId, {
+      type: 'pipeline-chain-escaped', chainId, bugIds: remaining, hp: state.hp,
+    });
+    if (state.phase === 'boss') game.checkBossGameState(ctx);
+    else game.checkGameState(ctx);
+  };
+
+  const timer = setTimeout(escapeHandler, escapeTime);
+  for (const bug of chainBugs) {
+    bug.escapeTimer = timer;
+  }
+}
+
 function spawnMinion(ctx) {
   const { state } = ctx;
   if (state.phase !== 'boss') return;
@@ -256,6 +396,10 @@ function spawnMinion(ctx) {
 
 function clearAllBugs(ctx) {
   const { state } = ctx;
+  for (const chainId of Object.keys(state.pipelineChains)) {
+    const chain = state.pipelineChains[chainId];
+    if (chain.wanderInterval) clearInterval(chain.wanderInterval);
+  }
   for (const id of Object.keys(state.bugs)) {
     const bug = state.bugs[id];
     clearTimeout(bug.escapeTimer);
@@ -263,6 +407,7 @@ function clearAllBugs(ctx) {
     if (bug.mergeResetTimer) clearTimeout(bug.mergeResetTimer);
   }
   state.bugs = {};
+  state.pipelineChains = {};
 }
 
 function clearSpawnTimer(ctx) {
