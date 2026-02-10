@@ -1,0 +1,476 @@
+/* Override main page overflow hidden to allow scrolling */
+body {
+  overflow-y: auto !important;
+  overflow-x: hidden;
+}
+
+/* Overview Page Styles */
+
+.overview-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  min-height: 100vh;
+}
+
+.overview-header {
+  text-align: center;
+  margin-bottom: 3rem;
+  padding: 2rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid var(--teal);
+  border-radius: 8px;
+  position: relative;
+}
+
+.overview-header h1 {
+  font-size: 1.8rem;
+  color: var(--teal);
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+  margin: 0 0 0.5rem 0;
+  line-height: 1.4;
+}
+
+.overview-header p {
+  font-size: 0.7rem;
+  color: var(--gray-light);
+  margin: 0 0 1.5rem 0;
+  line-height: 1.4;
+}
+
+.btn-back {
+  display: inline-block;
+  margin-top: 1rem;
+}
+
+.overview-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+/* Sections */
+.overview-section {
+  background: rgba(0, 0, 0, 0.2);
+  border: 2px solid var(--gray);
+  border-radius: 8px;
+  padding: 2rem;
+}
+
+.section-title {
+  font-size: 1.2rem;
+  color: var(--yellow);
+  text-align: center;
+  margin: 0 0 2rem 0;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+  line-height: 1.4;
+}
+
+/* Grid layouts */
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.mechanics-grid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+/* Cards */
+.overview-card {
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid var(--gray);
+  border-radius: 6px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.overview-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--teal);
+  box-shadow: 0 4px 12px rgba(78, 205, 196, 0.3);
+}
+
+.overview-card.special {
+  border-color: var(--purple);
+}
+
+.overview-card.special:hover {
+  border-color: var(--purple);
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4);
+}
+
+.overview-card.boss {
+  border-color: var(--red);
+  grid-column: 1 / -1;
+  max-width: 100%;
+  padding: 1.5rem;
+  display: block;
+}
+
+.overview-card.boss:hover {
+  border-color: var(--red);
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+  transform: translateY(-4px);
+}
+
+.overview-card.boss .card-stats {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.overview-card.boss .card-stats .stat {
+  display: block;
+  padding: 0.4rem 0;
+}
+
+.overview-card.boss .card-phases {
+  display: block;
+  margin: 1rem 0;
+}
+
+.overview-card.boss .card-phases .phase {
+  margin-bottom: 1rem;
+  width: 100%;
+}
+
+@media (min-width: 900px) {
+  .overview-card.boss .card-phases {
+    display: flex;
+    gap: 1rem;
+  }
+  .overview-card.boss .card-phases .phase {
+    flex: 1;
+    min-width: 0;
+    margin-bottom: 0;
+  }
+}
+
+.overview-card.boss-minion {
+  border-color: var(--yellow);
+}
+
+.overview-card.boss-minion:hover {
+  border-color: var(--yellow);
+  box-shadow: 0 4px 12px rgba(255, 230, 109, 0.4);
+}
+
+.overview-card.powerup {
+  border-color: var(--yellow);
+}
+
+.overview-card.powerup:hover {
+  border-color: var(--yellow);
+  box-shadow: 0 4px 12px rgba(255, 230, 109, 0.4);
+}
+
+.card-icon {
+  font-size: 2.5rem;
+  text-align: center;
+  margin-bottom: 1rem;
+  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.5));
+  line-height: 1;
+}
+
+.boss-icon {
+  font-size: 3rem;
+}
+
+.overview-card.boss .card-icon {
+  margin-bottom: 1rem;
+}
+
+.overview-card.boss .card-title {
+  margin-bottom: 1rem;
+}
+
+.overview-card.boss .card-description {
+  margin: 1rem 0;
+}
+
+.overview-card.boss .card-badge {
+  margin-bottom: 1rem;
+}
+
+.card-title {
+  font-size: 0.9rem;
+  color: var(--teal);
+  text-align: center;
+  margin: 0 0 1rem 0;
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+
+.card-badge {
+  background: var(--purple);
+  color: white;
+  padding: 0.3rem 0.8rem;
+  border-radius: 12px;
+  font-size: 0.6rem;
+  text-align: center;
+  margin-bottom: 1rem;
+  font-weight: bold;
+  line-height: 1.4;
+}
+
+.card-stats {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.stat {
+  padding: 0.3rem 0;
+  color: var(--gray-light);
+  font-size: 0.65rem;
+  word-wrap: break-word;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+}
+
+.card-description {
+  color: var(--gray-light);
+  line-height: 1.6;
+  margin: 0.5rem 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  font-size: 0.65rem;
+}
+
+.card-phases {
+  margin: 1rem 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.phase {
+  background: rgba(0, 0, 0, 0.5);
+  padding: 1rem;
+  border-left: 4px solid var(--red);
+  border-radius: 4px;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.phase strong {
+  color: var(--yellow);
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.phase ul {
+  margin: 0.5rem 0 0 0;
+  padding-left: 1rem;
+  color: var(--gray-light);
+  list-style-position: inside;
+}
+
+.phase li {
+  margin: 0.4rem 0;
+  line-height: 1.6;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  font-size: 0.6rem;
+}
+
+.card-tip {
+  background: rgba(255, 230, 109, 0.15);
+  border-left: 3px solid var(--yellow);
+  padding: 1rem;
+  margin-top: 1rem;
+  border-radius: 4px;
+  color: var(--gray-light);
+  font-size: 0.65rem;
+  line-height: 1.6;
+}
+
+.card-tip strong {
+  color: var(--yellow);
+}
+
+/* Mechanics Cards */
+.mechanics-card {
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid var(--gray);
+  border-radius: 6px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.mechanics-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--teal);
+}
+
+.mechanics-card h3 {
+  color: var(--teal);
+  font-size: 0.8rem;
+  margin: 0 0 1rem 0;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.mechanics-card p {
+  color: var(--gray-light);
+  margin: 0.5rem 0;
+  line-height: 1.6;
+  font-size: 0.6rem;
+}
+
+.mechanics-card strong {
+  color: white;
+}
+
+/* Tips Container */
+.tips-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.tip-card {
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid var(--gray);
+  border-radius: 6px;
+  padding: 1.5rem;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.tip-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--yellow);
+  box-shadow: 0 4px 12px rgba(255, 230, 109, 0.3);
+}
+
+.tip-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.5));
+  line-height: 1;
+}
+
+.tip-card h4 {
+  color: var(--yellow);
+  font-size: 0.7rem;
+  margin: 0.5rem 0;
+  line-height: 1.4;
+}
+
+.tip-card p {
+  color: var(--gray-light);
+  line-height: 1.6;
+  margin: 0.5rem 0 0 0;
+  font-size: 0.6rem;
+}
+
+/* Footer */
+.overview-footer {
+  text-align: center;
+  margin-top: 3rem;
+  padding: 2rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-top: 2px solid var(--teal);
+  border-radius: 8px;
+}
+
+.overview-footer p {
+  color: var(--gray-light);
+  font-style: italic;
+  margin: 0 0 1rem 0;
+  font-size: 0.65rem;
+  line-height: 1.6;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .overview-wrapper {
+    padding: 1rem;
+  }
+
+  .overview-header h1 {
+    font-size: 1.4rem;
+  }
+
+  .overview-header p {
+    font-size: 0.6rem;
+  }
+
+  .section-title {
+    font-size: 1rem;
+  }
+
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mechanics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tips-container {
+    grid-template-columns: 1fr;
+  }
+
+  .card-icon {
+    font-size: 2rem;
+  }
+
+  .boss-icon {
+    font-size: 2.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .overview-header {
+    padding: 1rem;
+  }
+
+  .overview-header h1 {
+    font-size: 1.1rem;
+  }
+
+  .overview-header p {
+    font-size: 0.55rem;
+  }
+
+  .overview-section {
+    padding: 1rem;
+  }
+
+  .section-title {
+    font-size: 0.9rem;
+  }
+
+  .overview-card,
+  .mechanics-card,
+  .tip-card {
+    padding: 1rem;
+  }
+
+  .overview-card.boss {
+    padding: 1rem;
+  }
+
+  .phase {
+    padding: 0.8rem;
+  }
+
+  .card-title {
+    font-size: 0.75rem;
+  }
+
+  .stat,
+  .card-description,
+  .card-tip,
+  .mechanics-card p,
+  .tip-card p {
+    font-size: 0.55rem;
+  }
+}
