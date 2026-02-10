@@ -168,6 +168,7 @@ body {
   position: relative;
   width: auto;
   height: auto;
+  display: block;
   cursor: default;
   user-select: auto;
   z-index: auto;
