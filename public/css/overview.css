@@ -163,13 +163,25 @@ body {
 }
 
 /* ── Boss card — featured layout ── */
+/* Override .boss sprite styles from styles.css that leak onto this card */
 .overview-card.boss {
+  position: relative;
+  width: auto;
+  height: auto;
+  cursor: default;
+  user-select: auto;
+  z-index: auto;
+  animation: none;
   border-color: var(--red);
   grid-column: 1 / -1;
   padding: 24px;
   background:
     linear-gradient(135deg, rgba(255,107,107,0.04) 0%, transparent 50%),
     var(--surface);
+}
+
+.overview-card.boss:active {
+  transform: none;
 }
 
 .overview-card.boss:hover {
