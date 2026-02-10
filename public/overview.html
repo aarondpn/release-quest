@@ -96,6 +96,29 @@
           </p>
         </div>
 
+        <div class="overview-card special">
+          <div class="card-icon">🔗</div>
+          <h3 class="card-title">Pipeline Bug</h3>
+          <div class="card-badge">10% spawn chance (Level 2+)</div>
+          <div class="card-stats">
+            <div class="stat">🐍 Spawns in chains of 3-5 bugs</div>
+            <div class="stat">🔢 Must squash in order (1→2→3→...)</div>
+            <div class="stat">💰 15 points per bug + 40 chain bonus</div>
+            <div class="stat">💔 15 HP per bug if chain escapes</div>
+            <div class="stat">⏱️ 2x escape time</div>
+          </div>
+          <p class="card-description">
+            A chain of bugs connected by purple dotted lines, slithering across the arena
+            like a snake. You must squash them in order — click bug #1 first, then #2, then
+            #3, and so on. Clicking out of order resets the chain! Clear the whole chain
+            for a 40-point deployment bonus.
+          </p>
+          <div class="card-tip">
+            💡 <strong>Pro Tip:</strong> Follow the snake's head — bug #1 always leads.
+            Plan your clicks ahead since the chain keeps moving!
+          </div>
+        </div>
+
         <div class="overview-card boss-minion">
           <div class="card-icon">👶</div>
           <h3 class="card-title">Boss Minion</h3>
@@ -185,8 +208,29 @@
             Chase it down before it disappears - it wanders around the arena.
           </p>
           <div class="card-tip">
-            💡 <strong>Pro Tip:</strong> Save the rubber duck buff for when you have 
+            💡 <strong>Pro Tip:</strong> Save the rubber duck buff for when you have
             multiple bugs on screen or during boss fights for maximum points!
+          </div>
+        </div>
+
+        <div class="overview-card powerup">
+          <div class="card-icon">🔨</div>
+          <h3 class="card-title">Hotfix Hammer</h3>
+          <div class="card-badge">Random spawn</div>
+          <div class="card-stats">
+            <div class="stat">💰 15 points on collection</div>
+            <div class="stat">💥 Stuns all bugs and boss for 2 seconds</div>
+            <div class="stat">⏱️ Spawns every 25-40 seconds</div>
+            <div class="stat">⌛ Despawns after 8 seconds</div>
+          </div>
+          <p class="card-description">
+            A powerful emergency tool! Click it to release a shockwave that freezes every
+            bug and the boss in place for 2 seconds, giving your team breathing room.
+            Great for buying time when overwhelmed.
+          </p>
+          <div class="card-tip">
+            💡 <strong>Pro Tip:</strong> Use the hammer when the arena is full of bugs
+            or during boss enrage to safely deal damage without worrying about escapes!
           </div>
         </div>
 
@@ -211,6 +255,7 @@
           <p><strong>Starting HP:</strong> 100</p>
           <p><strong>Bug escape:</strong> -15 HP</p>
           <p><strong>Merge conflict escape:</strong> -30 HP</p>
+          <p><strong>Pipeline chain escape:</strong> -15 HP per bug</p>
           <p><strong>Feature bug clicked:</strong> -10 HP</p>
           <p><strong>Game Over:</strong> When HP reaches 0</p>
         </div>
@@ -228,7 +273,9 @@
           <p><strong>Normal bug:</strong> 10 points</p>
           <p><strong>Heisenbug:</strong> 30 points (3x)</p>
           <p><strong>Merge conflict resolved:</strong> +50 bonus</p>
+          <p><strong>Pipeline bug:</strong> 15 points each + 40 chain bonus</p>
           <p><strong>Rubber duck:</strong> 25 points + 2x buff</p>
+          <p><strong>Hotfix hammer:</strong> 15 points + stun</p>
           <p><strong>Boss click:</strong> 5 points</p>
           <p><strong>Boss defeated:</strong> 200 bonus</p>
           <p><strong>Level cleared:</strong> +100 XP</p>
@@ -258,6 +305,12 @@
           <div class="tip-icon">🔀</div>
           <h4>Merge Conflicts</h4>
           <p>In multiplayer, communicate to resolve merge conflicts together within the 1.5s window!</p>
+        </div>
+
+        <div class="tip-card">
+          <div class="tip-icon">🔗</div>
+          <h4>Pipeline Order</h4>
+          <p>Pipeline bugs must be squashed in order. Track the snake's head (#1) and click down the chain. Wrong clicks reset the whole thing!</p>
         </div>
 
         <div class="tip-card">

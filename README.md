@@ -56,10 +56,13 @@ Visit the **Game Wiki** (📚 button in the lobby browser or link on the start s
 | **Heisenbug** | Teal, shimmering | Flees from your cursor up to 4 times. 30 points. |
 | **Feature-Not-A-Bug** | Green with checkmark | Clicking it costs 10 HP. Let it leave on its own. |
 | **Merge Conflict** | Paired bugs with `<<<` / `>>>` | Two players must click both bugs within 1.5s. 50 bonus points. |
+| **Pipeline Bug** | Purple chain of 3-5 | Slithers like a snake. Must squash in order (1→2→3). 15 pts each + 40 bonus. |
 
 ### Powerups
 
 **Rubber Duck** -- appears randomly, click it for 2x points for 6 seconds.
+
+**Hotfix Hammer** -- appears randomly, click it to stun all bugs and the boss for 2 seconds.
 
 ### Boss Fight
 
