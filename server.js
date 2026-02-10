@@ -57,7 +57,14 @@ function getCtxForPlayer(pid) {
   if (!lobbyId) return null;
   const mem = lobby.getLobbyState(lobbyId);
   if (!mem) return null;
-  return { lobbyId, state: mem.state, counters: mem.counters, timers: mem.timers, playerInfo };
+  const ctx = { lobbyId, state: mem.state, counters: mem.counters, timers: mem.timers, playerInfo };
+  // matchLog must persist across ctx instances so logging survives level transitions
+  Object.defineProperty(ctx, 'matchLog', {
+    get() { return mem.timers._matchLog || null; },
+    set(v) { mem.timers._matchLog = v; },
+    enumerable: true,
+  });
+  return ctx;
 }
 
 // ── WebSocket server ──
@@ -380,6 +387,10 @@ wss.on('connection', (ws) => {
           st.hp -= CODE_REVIEW_CONFIG.hpPenalty;
           if (st.hp < 0) st.hp = 0;
 
+          if (ctx.matchLog) {
+            ctx.matchLog.log('squash', { bugId, type: 'feature', by: pid, activeBugs: Object.keys(st.bugs).length, hp: st.hp });
+          }
+
           network.broadcastToLobby(ctx.lobbyId, {
             type: 'feature-squashed',
             bugId,
@@ -419,6 +430,10 @@ wss.on('connection', (ws) => {
                 st.score += MERGE_CONFLICT_CONFIG.bonusPoints;
                 st.players[clickerId].bugsSquashed = (st.players[clickerId].bugsSquashed || 0) + 1;
               }
+            }
+
+            if (ctx.matchLog) {
+              ctx.matchLog.log('squash', { bugId, type: 'merge-conflict', by: [...clickers], activeBugs: Object.keys(st.bugs).length, score: st.score });
             }
 
             network.broadcastToLobby(ctx.lobbyId, {
@@ -468,6 +483,16 @@ wss.on('connection', (ws) => {
 
         st.score += points;
         player.score += points;
+
+        if (ctx.matchLog) {
+          ctx.matchLog.log('squash', {
+            bugId,
+            type: bug.isHeisenbug ? 'heisenbug' : (bug.isMinion ? 'minion' : 'normal'),
+            by: pid,
+            activeBugs: Object.keys(st.bugs).length,
+            score: st.score,
+          });
+        }
 
         network.broadcastToLobby(ctx.lobbyId, {
           type: 'bug-squashed',
@@ -542,6 +567,18 @@ wss.on('connection', (ws) => {
             b.y = newPos.y;
             b.fleesRemaining--;
             b.lastFleeTime = now;
+
+            // Reset wander timer so bug stays put at new position briefly
+            if (b.wanderInterval) {
+              clearInterval(b.wanderInterval);
+              b.wanderInterval = setInterval(() => {
+                if (!st.bugs[bid]) return;
+                const wp = randomPosition();
+                b.x = wp.x;
+                b.y = wp.y;
+                network.broadcastToLobby(lobbyId, { type: 'bug-wander', bugId: bid, x: wp.x, y: wp.y });
+              }, b.escapeTime * 0.45);
+            }
 
             network.broadcastToLobby(lobbyId, {
               type: 'bug-flee',

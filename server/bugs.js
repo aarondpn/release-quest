@@ -5,7 +5,16 @@ const network = require('./network');
 function spawnEntity(ctx, { phaseCheck, maxOnScreen, escapeTime, isMinion, onEscapeCheck, variant }) {
   const { lobbyId, state, counters } = ctx;
   if (state.phase !== phaseCheck) return false;
-  if (Object.keys(state.bugs).length >= maxOnScreen) return false;
+  if (Object.keys(state.bugs).length >= maxOnScreen) {
+    if (ctx.matchLog) {
+      ctx.matchLog.log(isMinion ? 'minion-spawn-skip' : 'spawn-skip', {
+        reason: 'max-on-screen',
+        activeBugs: Object.keys(state.bugs).length,
+        maxOnScreen,
+      });
+    }
+    return false;
+  }
 
   const id = 'bug_' + (counters.nextBugId++);
   const pos = randomPosition();
@@ -18,6 +27,19 @@ function spawnEntity(ctx, { phaseCheck, maxOnScreen, escapeTime, isMinion, onEsc
   bug.escapeStartedAt = Date.now();
 
   state.bugs[id] = bug;
+
+  if (ctx.matchLog) {
+    const logData = {
+      bugId: id,
+      type: isMinion ? 'minion' : (variant && variant.isHeisenbug ? 'heisenbug' : variant && variant.isFeature ? 'feature' : variant && variant.mergeConflict ? 'merge-conflict' : 'normal'),
+      activeBugs: Object.keys(state.bugs).length,
+    };
+    if (!isMinion) {
+      logData.bugsSpawned = state.bugsSpawned;
+      logData.bugsTotal = currentLevelConfig(state).bugsTotal;
+    }
+    ctx.matchLog.log(isMinion ? 'minion-spawn' : 'spawn', logData);
+  }
 
   const broadcastPayload = { id, x: bug.x, y: bug.y };
   if (isMinion) broadcastPayload.isMinion = true;
@@ -41,13 +63,16 @@ function spawnEntity(ctx, { phaseCheck, maxOnScreen, escapeTime, isMinion, onEsc
     network.broadcastToLobby(lobbyId, { type: 'bug-wander', bugId: id, x: newPos.x, y: newPos.y });
   }, escapeTime * 0.45);
 
-  bug.escapeTimer = setTimeout(() => {
+  bug._onEscape = () => {
     if (!state.bugs[id]) return;
     clearInterval(bug.wanderInterval);
 
     // Feature bugs escape peacefully
     if (bug.isFeature) {
       delete state.bugs[id];
+      if (ctx.matchLog) {
+        ctx.matchLog.log('escape', { bugId: id, type: 'feature', activeBugs: Object.keys(state.bugs).length });
+      }
       network.broadcastToLobby(lobbyId, { type: 'feature-escaped', bugId: id });
       onEscapeCheck();
       return;
@@ -65,6 +90,9 @@ function spawnEntity(ctx, { phaseCheck, maxOnScreen, escapeTime, isMinion, onEsc
       }
       state.hp -= damage;
       if (state.hp < 0) state.hp = 0;
+      if (ctx.matchLog) {
+        ctx.matchLog.log('escape', { bugId: id, type: 'merge-conflict', activeBugs: Object.keys(state.bugs).length, hp: state.hp });
+      }
       network.broadcastToLobby(lobbyId, { type: 'merge-conflict-escaped', bugId: id, partnerId: bug.mergePartner, hp: state.hp });
       onEscapeCheck();
       return;
@@ -74,9 +102,13 @@ function spawnEntity(ctx, { phaseCheck, maxOnScreen, escapeTime, isMinion, onEsc
     state.hp -= HP_DAMAGE;
     if (state.hp < 0) state.hp = 0;
 
+    if (ctx.matchLog) {
+      ctx.matchLog.log('escape', { bugId: id, activeBugs: Object.keys(state.bugs).length, hp: state.hp });
+    }
     network.broadcastToLobby(lobbyId, { type: 'bug-escaped', bugId: id, hp: state.hp });
     onEscapeCheck();
-  }, escapeTime);
+  };
+  bug.escapeTimer = setTimeout(bug._onEscape, escapeTime);
   return true;
 }
 
@@ -84,7 +116,12 @@ function spawnBug(ctx) {
   const { state, counters } = ctx;
   if (state.phase !== 'playing') return;
   const cfg = currentLevelConfig(state);
-  if (state.bugsSpawned >= cfg.bugsTotal) return;
+  if (state.bugsSpawned >= cfg.bugsTotal) {
+    if (ctx.matchLog) {
+      ctx.matchLog.log('spawn-skip', { reason: 'all-spawned', bugsSpawned: state.bugsSpawned, bugsTotal: cfg.bugsTotal });
+    }
+    return;
+  }
 
   const game = require('./game');
   const playerCount = Object.keys(state.players).length;
@@ -183,6 +220,9 @@ function spawnMergeConflict(ctx, cfg, game) {
     if (state.bugs[id2]) { clearTimeout(bug2.escapeTimer); clearInterval(bug2.wanderInterval); delete state.bugs[id2]; }
     state.hp -= damage;
     if (state.hp < 0) state.hp = 0;
+    if (ctx.matchLog) {
+      ctx.matchLog.log('escape', { bugId: id1, type: 'merge-conflict', activeBugs: Object.keys(state.bugs).length, hp: state.hp });
+    }
     network.broadcastToLobby(lobbyId, { type: 'merge-conflict-escaped', bugId: id1, partnerId: id2, hp: state.hp });
     game.checkGameState(ctx);
   }, escapeTime);
