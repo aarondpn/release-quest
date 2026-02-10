@@ -35,10 +35,10 @@ function currentLevelConfig() {
   const extra = Math.max(0, Object.keys(state.players).length - 1);
   if (extra === 0) return base;
   return {
-    bugsTotal: base.bugsTotal + extra * 4,
+    bugsTotal: base.bugsTotal + extra * 3,
     escapeTime: base.escapeTime,
-    spawnRate: Math.max(800, base.spawnRate - extra * 150),
-    maxOnScreen: base.maxOnScreen + 1 + Math.floor(extra / 2),
+    spawnRate: Math.max(800, base.spawnRate - extra * 50),
+    maxOnScreen: base.maxOnScreen,
   };
 }
 

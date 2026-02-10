@@ -2,7 +2,7 @@ import { LOGICAL_W, LOGICAL_H } from './config.js';
 import { dom, clientState } from './state.js';
 import { logicalToPixel } from './coordinates.js';
 import { updateHUD, updatePlayerCount, hideAllScreens, showStartScreen, showGameOverScreen, showWinScreen, showLevelScreen } from './hud.js';
-import { createBugElement, removeBugElement, clearAllBugs, showSquashEffect, updateMergeTether, removeMergeTether } from './bugs.js';
+import { createBugElement, removeBugElement, clearAllBugs, showSquashEffect, removeMergeTether } from './bugs.js';
 import { createBossElement, updateBossHp, removeBossElement, showBossHitEffect, formatTime } from './boss.js';
 import { addRemoteCursor, removeRemoteCursor, updateRemoteCursor } from './players.js';
 import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, showEnrageFlash, showLevelFlash, showEscalationWarning, showBossRegenNumber, showHeisenbugFleeEffect, showFeaturePenaltyEffect, showDuckBuffOverlay, removeDuckBuffOverlay, showMergeResolvedEffect } from './vfx.js';
@@ -167,15 +167,6 @@ function handleMessage(msg) {
         el.style.top = pos.y + 'px';
       }
 
-      // Update merge tethers
-      if (clientState.mergeTethers) {
-        for (const cid of Object.keys(clientState.mergeTethers)) {
-          const t = clientState.mergeTethers[cid];
-          if (t.bug1 === msg.bugId || t.bug2 === msg.bugId) {
-            setTimeout(() => updateMergeTether(cid), 50);
-          }
-        }
-      }
       break;
     }
 

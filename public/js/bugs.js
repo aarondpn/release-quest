@@ -76,6 +76,7 @@ export function createMergeTether(bugId1, bugId2, conflictId) {
   clientState.mergeTethers = clientState.mergeTethers || {};
   clientState.mergeTethers[conflictId] = { svg, line, bug1: bugId1, bug2: bugId2 };
   updateMergeTether(conflictId);
+  startTetherTracking();
 }
 
 export function updateMergeTether(conflictId) {
@@ -84,20 +85,45 @@ export function updateMergeTether(conflictId) {
   const el1 = clientState.bugs[t.bug1];
   const el2 = clientState.bugs[t.bug2];
   if (!el1 || !el2) return;
-  const x1 = parseFloat(el1.style.left) + 24;
-  const y1 = parseFloat(el1.style.top) + 24;
-  const x2 = parseFloat(el2.style.left) + 24;
-  const y2 = parseFloat(el2.style.top) + 24;
+  const arenaRect = dom.arena.getBoundingClientRect();
+  const r1 = el1.getBoundingClientRect();
+  const r2 = el2.getBoundingClientRect();
+  const x1 = r1.left - arenaRect.left + r1.width / 2;
+  const y1 = r1.top - arenaRect.top + r1.height / 2;
+  const x2 = r2.left - arenaRect.left + r2.width / 2;
+  const y2 = r2.top - arenaRect.top + r2.height / 2;
   t.line.setAttribute('x1', x1);
   t.line.setAttribute('y1', y1);
   t.line.setAttribute('x2', x2);
   t.line.setAttribute('y2', y2);
 }
 
+let tetherRafId = null;
+
+function tickTethers() {
+  if (!clientState.mergeTethers || Object.keys(clientState.mergeTethers).length === 0) {
+    tetherRafId = null;
+    return;
+  }
+  for (const cid of Object.keys(clientState.mergeTethers)) {
+    updateMergeTether(cid);
+  }
+  tetherRafId = requestAnimationFrame(tickTethers);
+}
+
+export function startTetherTracking() {
+  if (!tetherRafId) tetherRafId = requestAnimationFrame(tickTethers);
+}
+
+export function stopTetherTracking() {
+  if (tetherRafId) { cancelAnimationFrame(tetherRafId); tetherRafId = null; }
+}
+
 export function removeMergeTether(conflictId) {
   if (!clientState.mergeTethers || !clientState.mergeTethers[conflictId]) return;
   clientState.mergeTethers[conflictId].svg.remove();
   delete clientState.mergeTethers[conflictId];
+  if (Object.keys(clientState.mergeTethers).length === 0) stopTetherTracking();
 }
 
 export function removeBugElement(bugId, animate) {
@@ -118,6 +144,7 @@ export function clearAllBugs() {
   }
   clientState.bugs = {};
   // Clear merge tethers
+  stopTetherTracking();
   if (clientState.mergeTethers) {
     for (const cid of Object.keys(clientState.mergeTethers)) {
       clientState.mergeTethers[cid].svg.remove();
