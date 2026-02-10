@@ -276,7 +276,7 @@ function handleMessage(msg) {
       if (el) {
         const pos = logicalToPixel(msg.x, msg.y);
         let dur;
-        if (el.classList.contains('dependency-bug')) {
+        if (el.classList.contains('pipeline-bug')) {
           dur = 330; // fast tick for snake slither
         } else if (dom.levelEl.textContent === 'BOSS') {
           dur = 3500 * 0.4;
@@ -552,8 +552,8 @@ function handleMessage(msg) {
           bugEl.style.top = pxPos.y + 'px';
           requestAnimationFrame(() => { bugEl.style.transition = ''; });
           // Flash red to indicate error
-          bugEl.classList.add('dependency-reset');
-          setTimeout(() => bugEl.classList.remove('dependency-reset'), 500);
+          bugEl.classList.add('pipeline-reset');
+          setTimeout(() => bugEl.classList.remove('pipeline-reset'), 500);
         }
       }
       rebuildDependencyTether(msg.chainId);

@@ -34,7 +34,7 @@ export function createBugElement(bugId, lx, ly, variant) {
       }
     }
     if (variant.isDependency) {
-      el.classList.add('dependency-bug');
+      el.classList.add('pipeline-bug');
       el.dataset.chainId = variant.chainId;
       el.dataset.chainIndex = variant.chainIndex;
       el.dataset.chainLength = variant.chainLength;
