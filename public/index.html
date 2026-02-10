@@ -21,21 +21,21 @@
 <div class="name-entry" id="name-entry">
   <div class="name-entry-title">BUG HUNTER</div>
   <div class="name-entry-sub">Choose your name &amp; icon</div>
+  <input class="name-input" id="name-input" type="text" placeholder="Your name..." maxlength="16" autocomplete="off" spellcheck="false">
+  <div class="icon-picker" id="icon-picker">
+    <div class="icon-picker-label">Pick your hunter</div>
+  </div>
+  <button class="btn btn-play" id="join-btn">PLAY</button>
   <div class="auth-status" id="auth-status">
     <span class="auth-guest-view">
+      <span class="auth-or">Have an account?</span>
       <button class="btn btn-link" id="auth-show-login-btn">LOG IN</button>
-      <span class="auth-or">or play as guest</span>
     </span>
     <span class="auth-logged-in-view hidden">
       Logged in as <span class="auth-username" id="auth-username"></span>
       <button class="btn btn-link" id="auth-logout-btn">LOG OUT</button>
     </span>
   </div>
-  <input class="name-input" id="name-input" type="text" placeholder="Your name..." maxlength="16" autocomplete="off" spellcheck="false">
-  <div class="icon-picker" id="icon-picker">
-    <div class="icon-picker-label">Pick your hunter</div>
-  </div>
-  <button class="btn" id="join-btn">JOIN</button>
 </div>
 
 <!-- Auth overlay -->
