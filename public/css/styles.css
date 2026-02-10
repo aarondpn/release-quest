@@ -58,6 +58,7 @@ header {
   border: 2px solid var(--purple);
   border-radius: 8px;
   flex-shrink: 0;
+  position: relative;
 }
 header h1 {
   font-size: 18px;
@@ -69,6 +70,39 @@ header p {
   font-size: 7px;
   color: var(--muted);
   letter-spacing: 1px;
+}
+.header-encyclopedia-link {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  font-size: 8px;
+  color: var(--teal);
+  text-decoration: none;
+  padding: 8px 12px;
+  border: 2px solid var(--teal);
+  border-radius: 4px;
+  background: rgba(78, 205, 196, 0.1);
+  transition: all 0.2s;
+  letter-spacing: 0.5px;
+}
+.header-encyclopedia-link:hover {
+  background: var(--teal);
+  color: var(--bg);
+  transform: translateY(-50%) scale(1.05);
+  box-shadow: 0 0 12px rgba(78,205,196,0.4);
+}
+
+/* Wiki link in start screen */
+.wiki-link {
+  color: var(--teal);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(78,205,196,0.4);
+  padding-bottom: 1px;
+  transition: border-color 0.2s;
+}
+.wiki-link:hover {
+  border-bottom-color: var(--teal);
 }
 
 /* ── HUD ── */
@@ -1493,6 +1527,16 @@ header p {
 }
 .lobby-tab:hover:not(.active) {
   border-color: var(--muted);
+}
+.lobby-tab-link {
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lobby-tab-link:hover {
+  border-color: var(--teal);
+  color: var(--teal);
 }
 
 #lobby-list-panel.hidden { display: none; }
