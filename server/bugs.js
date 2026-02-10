@@ -1,4 +1,4 @@
-const { HP_DAMAGE, BOSS_CONFIG, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG, PIPELINE_BUG_CONFIG, LOGICAL_W, LOGICAL_H } = require('./config');
+const { HP_DAMAGE, BOSS_CONFIG, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG, PIPELINE_BUG_CONFIG, MEMORY_LEAK_CONFIG, LOGICAL_W, LOGICAL_H } = require('./config');
 const { randomPosition, currentLevelConfig } = require('./state');
 const network = require('./network');
 
@@ -31,7 +31,7 @@ function spawnEntity(ctx, { phaseCheck, maxOnScreen, escapeTime, isMinion, onEsc
   if (ctx.matchLog) {
     const logData = {
       bugId: id,
-      type: isMinion ? 'minion' : (variant && variant.isHeisenbug ? 'heisenbug' : variant && variant.isFeature ? 'feature' : variant && variant.mergeConflict ? 'merge-conflict' : 'normal'),
+      type: isMinion ? 'minion' : (variant && variant.isHeisenbug ? 'heisenbug' : variant && variant.isMemoryLeak ? 'memory-leak' : variant && variant.isFeature ? 'feature' : variant && variant.mergeConflict ? 'merge-conflict' : 'normal'),
       activeBugs: Object.keys(state.bugs).length,
     };
     if (!isMinion) {
@@ -46,6 +46,7 @@ function spawnEntity(ctx, { phaseCheck, maxOnScreen, escapeTime, isMinion, onEsc
   if (variant) {
     if (variant.isHeisenbug) { broadcastPayload.isHeisenbug = true; broadcastPayload.fleesRemaining = variant.fleesRemaining; }
     if (variant.isFeature) broadcastPayload.isFeature = true;
+    if (variant.isMemoryLeak) { broadcastPayload.isMemoryLeak = true; broadcastPayload.growthStage = variant.growthStage; }
     if (variant.mergeConflict) {
       broadcastPayload.mergeConflict = variant.mergeConflict;
       broadcastPayload.mergePartner = variant.mergePartner;
@@ -54,6 +55,17 @@ function spawnEntity(ctx, { phaseCheck, maxOnScreen, escapeTime, isMinion, onEsc
   }
 
   network.broadcastToLobby(lobbyId, { type: 'bug-spawned', bug: broadcastPayload });
+
+  // Memory leak growth interval
+  if (variant && variant.isMemoryLeak) {
+    bug.growthInterval = setInterval(() => {
+      if (state.phase !== phaseCheck || !state.bugs[id]) return;
+      if (bug.growthStage < MEMORY_LEAK_CONFIG.maxGrowthStage) {
+        bug.growthStage++;
+        network.broadcastToLobby(lobbyId, { type: 'memory-leak-grow', bugId: id, growthStage: bug.growthStage });
+      }
+    }, MEMORY_LEAK_CONFIG.growthInterval);
+  }
 
   bug.wanderInterval = setInterval(() => {
     if (state.phase !== phaseCheck || !state.bugs[id] || state.hammerStunActive) return;
@@ -66,6 +78,7 @@ function spawnEntity(ctx, { phaseCheck, maxOnScreen, escapeTime, isMinion, onEsc
   bug._onEscape = () => {
     if (!state.bugs[id]) return;
     clearInterval(bug.wanderInterval);
+    if (bug.growthInterval) clearInterval(bug.growthInterval);
 
     // Feature bugs escape peacefully
     if (bug.isFeature) {
@@ -74,6 +87,21 @@ function spawnEntity(ctx, { phaseCheck, maxOnScreen, escapeTime, isMinion, onEsc
         ctx.matchLog.log('escape', { bugId: id, type: 'feature', activeBugs: Object.keys(state.bugs).length });
       }
       network.broadcastToLobby(lobbyId, { type: 'feature-escaped', bugId: id });
+      onEscapeCheck();
+      return;
+    }
+
+    // Memory leak: damage scales with growth stage
+    if (bug.isMemoryLeak) {
+      if (bug.completionTimer) clearTimeout(bug.completionTimer);
+      const damage = MEMORY_LEAK_CONFIG.damageByStage[bug.growthStage] || HP_DAMAGE;
+      delete state.bugs[id];
+      state.hp -= damage;
+      if (state.hp < 0) state.hp = 0;
+      if (ctx.matchLog) {
+        ctx.matchLog.log('escape', { bugId: id, type: 'memory-leak', growthStage: bug.growthStage, damage, activeBugs: Object.keys(state.bugs).length, hp: state.hp });
+      }
+      network.broadcastToLobby(lobbyId, { type: 'memory-leak-escaped', bugId: id, growthStage: bug.growthStage, damage, hp: state.hp });
       onEscapeCheck();
       return;
     }
@@ -157,6 +185,10 @@ function spawnBug(ctx) {
   if (Math.random() < HEISENBUG_CONFIG.chance) {
     variant = { isHeisenbug: true, fleesRemaining: HEISENBUG_CONFIG.maxFlees, lastFleeTime: 0 };
   }
+  // Memory leak: any level
+  else if (Math.random() < MEMORY_LEAK_CONFIG.chance) {
+    variant = { isMemoryLeak: true, growthStage: 0 };
+  }
   // Feature-not-a-bug: level 2+
   else if (state.level >= CODE_REVIEW_CONFIG.startLevel && Math.random() < CODE_REVIEW_CONFIG.featureChance) {
     variant = { isFeature: true };
@@ -164,7 +196,9 @@ function spawnBug(ctx) {
 
   const escapeTime = variant && variant.isHeisenbug
     ? cfg.escapeTime * HEISENBUG_CONFIG.escapeTimeMultiplier
-    : cfg.escapeTime;
+    : (variant && variant.isMemoryLeak
+      ? cfg.escapeTime * MEMORY_LEAK_CONFIG.escapeTimeMultiplier
+      : cfg.escapeTime);
 
   const spawned = spawnEntity(ctx, {
     phaseCheck: 'playing',
@@ -404,6 +438,7 @@ function clearAllBugs(ctx) {
     const bug = state.bugs[id];
     clearTimeout(bug.escapeTimer);
     clearInterval(bug.wanderInterval);
+    if (bug.growthInterval) clearInterval(bug.growthInterval);
     if (bug.mergeResetTimer) clearTimeout(bug.mergeResetTimer);
   }
   state.bugs = {};

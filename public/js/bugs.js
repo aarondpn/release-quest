@@ -20,6 +20,10 @@ export function createBugElement(bugId, lx, ly, variant) {
     if (variant.isHeisenbug) {
       el.classList.add('heisenbug');
     }
+    if (variant.isMemoryLeak) {
+      el.classList.add('memory-leak');
+      el.dataset.growthStage = variant.growthStage || 0;
+    }
     if (variant.isFeature) {
       // Delayed checkmark reveal (600ms ambiguity)
       setTimeout(() => {
@@ -45,12 +49,60 @@ export function createBugElement(bugId, lx, ly, variant) {
   el.style.left = pos.x + 'px';
   el.style.top = pos.y + 'px';
 
-  el.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (clientState.ws && clientState.ws.readyState === 1) {
-      clientState.ws.send(JSON.stringify({ type: 'click-bug', bugId }));
-    }
-  });
+  // Memory leak requires hold mechanic
+  if (variant && variant.isMemoryLeak) {
+    let holdTimer = null;
+    let holdStartTime = null;
+
+    const handleMouseDown = (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      if (clientState.ws && clientState.ws.readyState === 1) {
+        holdStartTime = Date.now();
+        clientState.ws.send(JSON.stringify({ type: 'click-memory-leak-start', bugId }));
+      }
+    };
+
+    const handleMouseUp = (e) => {
+      e.stopPropagation();
+      if (clientState.ws && clientState.ws.readyState === 1 && holdStartTime) {
+        clientState.ws.send(JSON.stringify({ type: 'click-memory-leak-complete', bugId }));
+        holdStartTime = null;
+      }
+    };
+
+    const handleMouseLeave = (e) => {
+      // Cancel hold if mouse leaves
+      if (holdStartTime) {
+        if (clientState.ws && clientState.ws.readyState === 1) {
+          clientState.ws.send(JSON.stringify({ type: 'click-memory-leak-complete', bugId }));
+        }
+        holdStartTime = null;
+      }
+    };
+
+    el.addEventListener('mousedown', handleMouseDown);
+    el.addEventListener('mouseup', handleMouseUp);
+    el.addEventListener('mouseleave', handleMouseLeave);
+    
+    // Store handlers for cleanup
+    el._memoryLeakHandlers = {
+      mousedown: handleMouseDown,
+      mouseup: handleMouseUp,
+      mouseleave: handleMouseLeave
+    };
+  } else {
+    // Normal click for other bugs
+    const handleClick = (e) => {
+      e.stopPropagation();
+      if (clientState.ws && clientState.ws.readyState === 1) {
+        clientState.ws.send(JSON.stringify({ type: 'click-bug', bugId }));
+      }
+    };
+    
+    el.addEventListener('click', handleClick);
+    el._clickHandler = handleClick;
+  }
 
   dom.arena.appendChild(el);
   clientState.bugs[bugId] = el;
@@ -225,6 +277,19 @@ export function rebuildPipelineTether(chainId) {
 export function removeBugElement(bugId, animate) {
   const el = clientState.bugs[bugId];
   if (!el) return;
+  
+  // Clean up event listeners to prevent memory leaks
+  if (el._memoryLeakHandlers) {
+    el.removeEventListener('mousedown', el._memoryLeakHandlers.mousedown);
+    el.removeEventListener('mouseup', el._memoryLeakHandlers.mouseup);
+    el.removeEventListener('mouseleave', el._memoryLeakHandlers.mouseleave);
+    delete el._memoryLeakHandlers;
+  }
+  if (el._clickHandler) {
+    el.removeEventListener('click', el._clickHandler);
+    delete el._clickHandler;
+  }
+  
   delete clientState.bugs[bugId];
   if (animate) {
     el.classList.add('popping');
@@ -236,7 +301,19 @@ export function removeBugElement(bugId, animate) {
 
 export function clearAllBugs() {
   for (const id of Object.keys(clientState.bugs)) {
-    clientState.bugs[id].remove();
+    const el = clientState.bugs[id];
+    // Clean up event listeners
+    if (el._memoryLeakHandlers) {
+      el.removeEventListener('mousedown', el._memoryLeakHandlers.mousedown);
+      el.removeEventListener('mouseup', el._memoryLeakHandlers.mouseup);
+      el.removeEventListener('mouseleave', el._memoryLeakHandlers.mouseleave);
+      delete el._memoryLeakHandlers;
+    }
+    if (el._clickHandler) {
+      el.removeEventListener('click', el._clickHandler);
+      delete el._clickHandler;
+    }
+    el.remove();
   }
   clientState.bugs = {};
   // Clear merge tethers

@@ -195,6 +195,11 @@ function stunAllBugs(ctx) {
       clearInterval(bug.wanderInterval);
       bug.wanderInterval = null;
     }
+    if (bug.growthInterval) {
+      clearInterval(bug.growthInterval);
+      bug.growthInterval = null;
+      bug.growthPaused = true;
+    }
   }
 }
 
@@ -208,8 +213,10 @@ function resumeAllBugs(ctx) {
       bug.escapeStartedAt = Date.now();
       const actualEscapeTime = bug.remainingEscapeTime || bug.escapeTime;
       
-      // Restart escape timer
-      bug.escapeTimer = setTimeout(bug._onEscape, actualEscapeTime);
+      // Restart escape timer (only if _onEscape exists)
+      if (bug._onEscape && typeof bug._onEscape === 'function') {
+        bug.escapeTimer = setTimeout(bug._onEscape, actualEscapeTime);
+      }
       
       // Restart wandering
       bug.wanderInterval = setInterval(() => {
@@ -219,6 +226,19 @@ function resumeAllBugs(ctx) {
         bug.y = newPos.y;
         network.broadcastToLobby(lobbyId, { type: 'bug-wander', bugId, x: newPos.x, y: newPos.y });
       }, bug.escapeTime * 0.45);
+      
+      // Restart growth interval for memory leaks
+      if (bug.growthPaused && bug.isMemoryLeak) {
+        const MEMORY_LEAK_CONFIG = require('./config').MEMORY_LEAK_CONFIG;
+        bug.growthPaused = false;
+        bug.growthInterval = setInterval(() => {
+          if (state.phase !== phaseCheck || !state.bugs[bugId]) return;
+          if (bug.growthStage < MEMORY_LEAK_CONFIG.maxGrowthStage) {
+            bug.growthStage++;
+            network.broadcastToLobby(lobbyId, { type: 'memory-leak-grow', bugId, growthStage: bug.growthStage });
+          }
+        }, MEMORY_LEAK_CONFIG.growthInterval);
+      }
     }
   }
 }

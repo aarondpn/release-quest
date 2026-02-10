@@ -80,7 +80,29 @@
         </div>
 
         <div class="overview-card special">
-          <div class="card-icon">🔀</div>
+          <div class="card-icon">�</div>
+          <h3 class="card-title">Memory Leak</h3>
+          <div class="card-badge">12% spawn chance</div>
+          <div class="card-stats">
+            <div class="stat">🖱️ Click & HOLD to clear (0.8-2s)</div>
+            <div class="stat">� Multiple holders = faster progress!</div>
+            <div class="stat">📈 Grows while being held!</div>
+            <div class="stat">💰 25→20→15→10 points (start early!)</div>
+            <div class="stat">💔 5→10→15→20 HP damage (stage-based)</div>
+            <div class="stat">⏱️ 30% slower escape time</div>
+          </div>
+          <p class="card-description">
+            A dangerous bug that grows every 0.5 seconds. You must CLICK AND HOLD 
+            to free the memory - but it keeps growing while you hold! Hold time 
+            increases with each stage (0.8s/1.2s/1.6s/2s). In multiplayer, multiple 
+            players can hold simultaneously - each additional player multiplies the 
+            progress speed! All holders share the points reward. Release too early 
+            and you'll have to start over.
+          </p>
+        </div>
+
+        <div class="overview-card special">
+          <div class="card-icon">�🔀</div>
           <h3 class="card-title">Merge Conflict</h3>
           <div class="card-badge">8% spawn chance (2+ players)</div>
           <div class="card-stats">
@@ -254,6 +276,7 @@
           <h3>❤️ Health System</h3>
           <p><strong>Starting HP:</strong> 100</p>
           <p><strong>Bug escape:</strong> -15 HP</p>
+          <p><strong>Memory leak escape:</strong> -5/-10/-15/-20 HP (stage-based)</p>
           <p><strong>Merge conflict escape:</strong> -30 HP</p>
           <p><strong>Pipeline chain escape:</strong> -15 HP per bug</p>
           <p><strong>Feature bug clicked:</strong> -10 HP</p>
@@ -272,6 +295,7 @@
           <h3>🎯 Scoring</h3>
           <p><strong>Normal bug:</strong> 10 points</p>
           <p><strong>Heisenbug:</strong> 30 points (3x)</p>
+          <p><strong>Memory leak:</strong> 25/20/15/10 points (earlier = better)</p>
           <p><strong>Merge conflict resolved:</strong> +50 bonus</p>
           <p><strong>Pipeline bug:</strong> 15 points each + 40 chain bonus</p>
           <p><strong>Rubber duck:</strong> 25 points + 2x buff</p>
@@ -302,7 +326,13 @@
         </div>
 
         <div class="tip-card">
-          <div class="tip-icon">🔀</div>
+          <div class="tip-icon">�</div>
+          <h4>Memory Leaks = Teamwork!</h4>
+          <p>Purple bugs require click-and-hold. In multiplayer, work together - each extra player makes it faster! They grow while held, so commit early!</p>
+        </div>
+
+        <div class="tip-card">
+          <div class="tip-icon">�🔀</div>
           <h4>Merge Conflicts</h4>
           <p>In multiplayer, communicate to resolve merge conflicts together within the 1.5s window!</p>
         </div>

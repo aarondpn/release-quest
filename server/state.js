@@ -72,6 +72,7 @@ function getStateSnapshot(state) {
       id: b.id, x: b.x, y: b.y,
       ...(b.isHeisenbug ? { isHeisenbug: true, fleesRemaining: b.fleesRemaining } : {}),
       ...(b.isFeature ? { isFeature: true } : {}),
+      ...(b.isMemoryLeak ? { isMemoryLeak: true, growthStage: b.growthStage } : {}),
       ...(b.mergeConflict ? { mergeConflict: b.mergeConflict, mergePartner: b.mergePartner, mergeSide: b.mergeSide } : {}),
       ...(b.isPipeline ? { isPipeline: true, chainId: b.chainId, chainIndex: b.chainIndex, chainLength: b.chainLength } : {}),
     })),

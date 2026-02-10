@@ -116,6 +116,16 @@ const HOTFIX_HAMMER_CONFIG = {
   hammerPoints: 15,
 };
 
+const MEMORY_LEAK_CONFIG = {
+  chance: 0.12,
+  growthInterval: 500,
+  maxGrowthStage: 3,
+  damageByStage: [5, 10, 15, 20],
+  pointsByStage: [10, 15, 20, 25],
+  escapeTimeMultiplier: 1.3,
+  holdTimeByStage: [800, 1200, 1600, 2000],
+};
+
 const AUTH_CONFIG = {
   saltRounds: 10,
   sessionDurationDays: 30,
@@ -128,4 +138,5 @@ module.exports = {
   SERVER_CONFIG, DATABASE_CONFIG, LOBBY_CONFIG, AUTH_CONFIG,
   LOGICAL_W, LOGICAL_H, COLORS, ICONS, LEVEL_CONFIG, BOSS_CONFIG, MAX_LEVEL, HP_DAMAGE, BUG_POINTS,
   HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, RUBBER_DUCK_CONFIG, MERGE_CONFLICT_CONFIG, PIPELINE_BUG_CONFIG, HOTFIX_HAMMER_CONFIG,
+  MEMORY_LEAK_CONFIG,
 };
