@@ -407,11 +407,17 @@ wss.on('connection', (ws) => {
 
         // Merge conflict logic
         if (bug.mergeConflict) {
+          const partner = st.bugs[bug.mergePartner];
+
+          // Same player can't resolve both sides — ignore the click
+          if (partner && partner.mergeClicked && partner.mergeClickedBy === pid) {
+            break;
+          }
+
           bug.mergeClicked = true;
           bug.mergeClickedBy = pid;
           bug.mergeClickedAt = Date.now();
 
-          const partner = st.bugs[bug.mergePartner];
           if (partner && partner.mergeClicked && (Date.now() - partner.mergeClickedAt) < MERGE_CONFLICT_CONFIG.resolveWindow) {
             // Both clicked in time — resolve!
             clearTimeout(bug.escapeTimer);
