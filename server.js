@@ -3,11 +3,15 @@ const fs = require('fs');
 const path = require('path');
 const { WebSocketServer } = require('ws');
 
-const { LOGICAL_W, LOGICAL_H, COLORS, ICONS, BUG_POINTS } = require('./server/config');
-const { state, counters, getStateSnapshot } = require('./server/state');
+const { LOGICAL_W, LOGICAL_H, COLORS, ICONS, BUG_POINTS, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG } = require('./server/config');
+const { state, counters, randomPosition, getStateSnapshot } = require('./server/state');
 const network = require('./server/network');
 const boss = require('./server/boss');
 const game = require('./server/game');
+
+// Lazy-loaded modules (created after game starts)
+let powerups;
+function getPowerups() { if (!powerups) powerups = require('./server/powerups'); return powerups; }
 
 const PORT = process.env.PORT || 3000;
 
@@ -108,20 +112,113 @@ wss.on('connection', (ws) => {
         const bug = state.bugs[bugId];
         if (!bug) break;
 
+        const player = state.players[pid];
+        if (!player) break;
+
+        // Feature-not-a-bug: penalize player
+        if (bug.isFeature) {
+          clearTimeout(bug.escapeTimer);
+          clearInterval(bug.wanderInterval);
+          delete state.bugs[bugId];
+
+          state.hp -= CODE_REVIEW_CONFIG.hpPenalty;
+          if (state.hp < 0) state.hp = 0;
+
+          network.broadcast({
+            type: 'feature-squashed',
+            bugId,
+            playerId: pid,
+            playerColor: player.color,
+            hp: state.hp,
+          });
+
+          if (state.phase === 'boss') game.checkBossGameState();
+          else game.checkGameState();
+          break;
+        }
+
+        // Merge conflict logic
+        if (bug.mergeConflict) {
+          bug.mergeClicked = true;
+          bug.mergeClickedBy = pid;
+          bug.mergeClickedAt = Date.now();
+
+          const partner = state.bugs[bug.mergePartner];
+          if (partner && partner.mergeClicked && (Date.now() - partner.mergeClickedAt) < MERGE_CONFLICT_CONFIG.resolveWindow) {
+            // Both clicked in time — resolve!
+            clearTimeout(bug.escapeTimer);
+            clearInterval(bug.wanderInterval);
+            clearTimeout(partner.escapeTimer);
+            clearInterval(partner.wanderInterval);
+            if (bug.mergeResetTimer) clearTimeout(bug.mergeResetTimer);
+            if (partner.mergeResetTimer) clearTimeout(partner.mergeResetTimer);
+            delete state.bugs[bugId];
+            delete state.bugs[partner.id];
+
+            // Award bonus to both clickers
+            const clickers = new Set([pid, partner.mergeClickedBy]);
+            for (const clickerId of clickers) {
+              if (state.players[clickerId]) {
+                state.players[clickerId].score += MERGE_CONFLICT_CONFIG.bonusPoints;
+                state.score += MERGE_CONFLICT_CONFIG.bonusPoints;
+              }
+            }
+
+            network.broadcast({
+              type: 'merge-conflict-resolved',
+              bugId,
+              partnerId: partner.id,
+              clickers: [...clickers],
+              score: state.score,
+              players: Object.fromEntries(
+                [...clickers].filter(c => state.players[c]).map(c => [c, state.players[c].score])
+              ),
+            });
+
+            if (state.phase === 'boss') game.checkBossGameState();
+            else game.checkGameState();
+          } else {
+            // Only one clicked — set timeout for reset
+            network.broadcast({ type: 'merge-conflict-halfclick', bugId });
+            bug.mergeResetTimer = setTimeout(() => {
+              if (state.bugs[bugId]) {
+                bug.mergeClicked = false;
+                bug.mergeClickedBy = null;
+                bug.mergeClickedAt = 0;
+              }
+            }, MERGE_CONFLICT_CONFIG.resolveWindow);
+          }
+          break;
+        }
+
+        // Normal bug / Heisenbug / Clone squash
         clearTimeout(bug.escapeTimer);
         clearInterval(bug.wanderInterval);
         delete state.bugs[bugId];
 
-        state.score += BUG_POINTS;
-        state.players[pid].score += BUG_POINTS;
+        // Calculate points
+        let points = BUG_POINTS;
+        if (bug.isHeisenbug) {
+          points = BUG_POINTS * HEISENBUG_CONFIG.pointsMultiplier;
+        }
+
+        // Duck buff: double points
+        if (getPowerups().isDuckBuffActive()) {
+          points *= 2;
+        }
+
+        state.score += points;
+        player.score += points;
 
         network.broadcast({
           type: 'bug-squashed',
           bugId,
           playerId: pid,
-          playerColor: state.players[pid].color,
+          playerColor: player.color,
           score: state.score,
-          playerScore: state.players[pid].score,
+          playerScore: player.score,
+          isHeisenbug: bug.isHeisenbug || false,
+          points,
         });
 
         if (state.phase === 'boss') {
@@ -137,6 +234,11 @@ wss.on('connection', (ws) => {
         break;
       }
 
+      case 'click-duck': {
+        getPowerups().collectDuck(pid);
+        break;
+      }
+
       case 'cursor-move': {
         const player = state.players[pid];
         if (!player) break;
@@ -148,6 +250,34 @@ wss.on('connection', (ws) => {
           x: msg.x,
           y: msg.y,
         }, ws);
+
+        // Heisenbug flee check
+        const now = Date.now();
+        for (const bid of Object.keys(state.bugs)) {
+          const b = state.bugs[bid];
+          if (!b || !b.isHeisenbug || b.fleesRemaining <= 0) continue;
+          if (now - b.lastFleeTime < HEISENBUG_CONFIG.fleeCooldown) continue;
+
+          const dx = b.x - msg.x;
+          const dy = b.y - msg.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < HEISENBUG_CONFIG.fleeRadius) {
+            const newPos = randomPosition();
+            b.x = newPos.x;
+            b.y = newPos.y;
+            b.fleesRemaining--;
+            b.lastFleeTime = now;
+
+            network.broadcast({
+              type: 'bug-flee',
+              bugId: bid,
+              x: newPos.x,
+              y: newPos.y,
+              fleesRemaining: b.fleesRemaining,
+            });
+          }
+        }
+
         break;
       }
 

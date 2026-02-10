@@ -100,3 +100,54 @@ export function showBossRegenNumber(amount) {
   dom.arena.appendChild(el);
   setTimeout(() => el.remove(), 850);
 }
+
+// ── Heisenbug flee effect ──
+export function showHeisenbugFleeEffect(bugEl) {
+  if (!bugEl) return;
+  const ghost = document.createElement('div');
+  ghost.className = 'heisenbug-ghost';
+  ghost.style.left = bugEl.style.left;
+  ghost.style.top = bugEl.style.top;
+  ghost.textContent = '?';
+  dom.arena.appendChild(ghost);
+  setTimeout(() => ghost.remove(), 400);
+}
+
+// ── Feature penalty effect ──
+export function showFeaturePenaltyEffect(lx, ly) {
+  const pos = logicalToPixel(lx, ly);
+  const el = document.createElement('div');
+  el.className = 'feature-penalty-text';
+  el.style.left = pos.x + 'px';
+  el.style.top = pos.y + 'px';
+  el.textContent = 'THAT WAS A FEATURE!';
+  dom.arena.appendChild(el);
+  setTimeout(() => el.remove(), 1200);
+}
+
+// ── Duck buff overlay ──
+export function showDuckBuffOverlay(duration) {
+  removeDuckBuffOverlay();
+  const el = document.createElement('div');
+  el.className = 'duck-buff-overlay';
+  el.id = 'duck-buff-overlay';
+  dom.arena.appendChild(el);
+  setTimeout(() => el.remove(), duration);
+}
+
+export function removeDuckBuffOverlay() {
+  const existing = document.getElementById('duck-buff-overlay');
+  if (existing) existing.remove();
+}
+
+// ── Merge conflict resolved effect ──
+export function showMergeResolvedEffect(lx, ly) {
+  const pos = logicalToPixel(lx, ly);
+  const el = document.createElement('div');
+  el.className = 'merge-resolved-text';
+  el.style.left = pos.x + 'px';
+  el.style.top = pos.y + 'px';
+  el.textContent = 'MERGED!';
+  dom.arena.appendChild(el);
+  setTimeout(() => el.remove(), 1000);
+}

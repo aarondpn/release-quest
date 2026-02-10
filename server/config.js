@@ -33,4 +33,42 @@ const MAX_LEVEL = 3;
 const HP_DAMAGE = 15;
 const BUG_POINTS = 10;
 
-module.exports = { LOGICAL_W, LOGICAL_H, COLORS, ICONS, LEVEL_CONFIG, BOSS_CONFIG, MAX_LEVEL, HP_DAMAGE, BUG_POINTS };
+const HEISENBUG_CONFIG = {
+  chance: 0.15,
+  escapeTimeMultiplier: 0.65,
+  pointsMultiplier: 3,
+  fleeRadius: 100,
+  fleeCooldown: 800,
+  maxFlees: 4,
+};
+
+const CODE_REVIEW_CONFIG = {
+  featureChance: 0.12,
+  hpPenalty: 10,
+  startLevel: 2,
+  bossPhaseChance: 0.08,
+};
+
+const RUBBER_DUCK_CONFIG = {
+  spawnIntervalMin: 20000,
+  spawnIntervalMax: 30000,
+  despawnTime: 5000,
+  buffDuration: 6000,
+  pointsMultiplier: 2,
+  duckPoints: 25,
+  wanderInterval: 1200,
+};
+
+const MERGE_CONFLICT_CONFIG = {
+  chance: 0.08,
+  resolveWindow: 1500,
+  bonusPoints: 50,
+  doubleDamage: true,
+  escapeTimeMultiplier: 1.2,
+  minPlayers: 2,
+};
+
+module.exports = {
+  LOGICAL_W, LOGICAL_H, COLORS, ICONS, LEVEL_CONFIG, BOSS_CONFIG, MAX_LEVEL, HP_DAMAGE, BUG_POINTS,
+  HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, RUBBER_DUCK_CONFIG, MERGE_CONFLICT_CONFIG,
+};

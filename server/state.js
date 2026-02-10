@@ -10,12 +10,16 @@ const state = {
   bugs: {},
   players: {},
   boss: null,
+  rubberDuck: null,
+  duckBuff: null,
 };
 
 const counters = {
   nextBugId: 1,
   nextPlayerId: 1,
   colorIndex: 0,
+  nextDuckId: 1,
+  nextConflictId: 1,
 };
 
 function randomPosition() {
@@ -55,7 +59,14 @@ function getStateSnapshot() {
     hp: state.hp,
     level: state.level,
     bugsRemaining: currentLevelConfig().bugsTotal - state.bugsSpawned + Object.keys(state.bugs).length,
-    bugs: Object.values(state.bugs).map(b => ({ id: b.id, x: b.x, y: b.y })),
+    bugs: Object.values(state.bugs).map(b => ({
+      id: b.id, x: b.x, y: b.y,
+      ...(b.isHeisenbug ? { isHeisenbug: true, fleesRemaining: b.fleesRemaining } : {}),
+      ...(b.isFeature ? { isFeature: true } : {}),
+      ...(b.mergeConflict ? { mergeConflict: b.mergeConflict, mergePartner: b.mergePartner, mergeSide: b.mergeSide } : {}),
+    })),
+    rubberDuck: state.rubberDuck ? { id: state.rubberDuck.id, x: state.rubberDuck.x, y: state.rubberDuck.y } : null,
+    duckBuff: state.duckBuff ? { expiresAt: state.duckBuff.expiresAt } : null,
     players: getPlayerScores(),
     boss: state.boss ? {
       hp: state.boss.hp,
