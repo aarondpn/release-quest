@@ -1,10 +1,9 @@
 const { HP_DAMAGE, BOSS_CONFIG, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG } = require('./config');
-const { state, counters, randomPosition, currentLevelConfig } = require('./state');
+const { randomPosition, currentLevelConfig } = require('./state');
 const network = require('./network');
 
-let spawnTimer = null;
-
-function spawnEntity({ phaseCheck, maxOnScreen, escapeTime, isMinion, onEscapeCheck, variant }) {
+function spawnEntity(ctx, { phaseCheck, maxOnScreen, escapeTime, isMinion, onEscapeCheck, variant }) {
+  const { lobbyId, state, counters } = ctx;
   if (state.phase !== phaseCheck) return false;
   if (Object.keys(state.bugs).length >= maxOnScreen) return false;
 
@@ -32,14 +31,14 @@ function spawnEntity({ phaseCheck, maxOnScreen, escapeTime, isMinion, onEscapeCh
     }
   }
 
-  network.broadcast({ type: 'bug-spawned', bug: broadcastPayload });
+  network.broadcastToLobby(lobbyId, { type: 'bug-spawned', bug: broadcastPayload });
 
   bug.wanderInterval = setInterval(() => {
     if (state.phase !== phaseCheck || !state.bugs[id]) return;
     const newPos = randomPosition();
     bug.x = newPos.x;
     bug.y = newPos.y;
-    network.broadcast({ type: 'bug-wander', bugId: id, x: newPos.x, y: newPos.y });
+    network.broadcastToLobby(lobbyId, { type: 'bug-wander', bugId: id, x: newPos.x, y: newPos.y });
   }, escapeTime * 0.45);
 
   bug.escapeTimer = setTimeout(() => {
@@ -49,7 +48,7 @@ function spawnEntity({ phaseCheck, maxOnScreen, escapeTime, isMinion, onEscapeCh
     // Feature bugs escape peacefully
     if (bug.isFeature) {
       delete state.bugs[id];
-      network.broadcast({ type: 'feature-escaped', bugId: id });
+      network.broadcastToLobby(lobbyId, { type: 'feature-escaped', bugId: id });
       onEscapeCheck();
       return;
     }
@@ -66,7 +65,7 @@ function spawnEntity({ phaseCheck, maxOnScreen, escapeTime, isMinion, onEscapeCh
       }
       state.hp -= damage;
       if (state.hp < 0) state.hp = 0;
-      network.broadcast({ type: 'merge-conflict-escaped', bugId: id, partnerId: bug.mergePartner, hp: state.hp });
+      network.broadcastToLobby(lobbyId, { type: 'merge-conflict-escaped', bugId: id, partnerId: bug.mergePartner, hp: state.hp });
       onEscapeCheck();
       return;
     }
@@ -75,15 +74,16 @@ function spawnEntity({ phaseCheck, maxOnScreen, escapeTime, isMinion, onEscapeCh
     state.hp -= HP_DAMAGE;
     if (state.hp < 0) state.hp = 0;
 
-    network.broadcast({ type: 'bug-escaped', bugId: id, hp: state.hp });
+    network.broadcastToLobby(lobbyId, { type: 'bug-escaped', bugId: id, hp: state.hp });
     onEscapeCheck();
   }, escapeTime);
   return true;
 }
 
-function spawnBug() {
+function spawnBug(ctx) {
+  const { state, counters } = ctx;
   if (state.phase !== 'playing') return;
-  const cfg = currentLevelConfig();
+  const cfg = currentLevelConfig(state);
   if (state.bugsSpawned >= cfg.bugsTotal) return;
 
   const game = require('./game');
@@ -93,7 +93,7 @@ function spawnBug() {
   if (playerCount >= MERGE_CONFLICT_CONFIG.minPlayers
     && Object.keys(state.bugs).length + 2 <= cfg.maxOnScreen
     && Math.random() < MERGE_CONFLICT_CONFIG.chance) {
-    spawnMergeConflict(cfg, game);
+    spawnMergeConflict(ctx, cfg, game);
     return;
   }
 
@@ -113,18 +113,19 @@ function spawnBug() {
     ? cfg.escapeTime * HEISENBUG_CONFIG.escapeTimeMultiplier
     : cfg.escapeTime;
 
-  const spawned = spawnEntity({
+  const spawned = spawnEntity(ctx, {
     phaseCheck: 'playing',
     maxOnScreen: cfg.maxOnScreen,
     escapeTime,
     isMinion: false,
-    onEscapeCheck: () => game.checkGameState(),
+    onEscapeCheck: () => game.checkGameState(ctx),
     variant,
   });
   if (spawned) state.bugsSpawned++;
 }
 
-function spawnMergeConflict(cfg, game) {
+function spawnMergeConflict(ctx, cfg, game) {
+  const { lobbyId, state, counters } = ctx;
   const conflictId = 'conflict_' + (counters.nextConflictId++);
   const escapeTime = cfg.escapeTime * MERGE_CONFLICT_CONFIG.escapeTimeMultiplier;
   const id1 = 'bug_' + (counters.nextBugId++);
@@ -152,10 +153,10 @@ function spawnMergeConflict(cfg, game) {
   state.bugs[id1] = bug1;
   state.bugs[id2] = bug2;
 
-  network.broadcast({ type: 'bug-spawned', bug: {
+  network.broadcastToLobby(lobbyId, { type: 'bug-spawned', bug: {
     id: id1, x: bug1.x, y: bug1.y, mergeConflict: conflictId, mergePartner: id2, mergeSide: 'left',
   }});
-  network.broadcast({ type: 'bug-spawned', bug: {
+  network.broadcastToLobby(lobbyId, { type: 'bug-spawned', bug: {
     id: id2, x: bug2.x, y: bug2.y, mergeConflict: conflictId, mergePartner: id1, mergeSide: 'right',
   }});
 
@@ -164,14 +165,14 @@ function spawnMergeConflict(cfg, game) {
     if (state.phase !== 'playing' || !state.bugs[id1]) return;
     const np = randomPosition();
     bug1.x = np.x; bug1.y = np.y;
-    network.broadcast({ type: 'bug-wander', bugId: id1, x: np.x, y: np.y });
+    network.broadcastToLobby(lobbyId, { type: 'bug-wander', bugId: id1, x: np.x, y: np.y });
   }, escapeTime * 0.45);
 
   bug2.wanderInterval = setInterval(() => {
     if (state.phase !== 'playing' || !state.bugs[id2]) return;
     const np = randomPosition();
     bug2.x = np.x; bug2.y = np.y;
-    network.broadcast({ type: 'bug-wander', bugId: id2, x: np.x, y: np.y });
+    network.broadcastToLobby(lobbyId, { type: 'bug-wander', bugId: id2, x: np.x, y: np.y });
   }, escapeTime * 0.45);
 
   // Shared escape timer on bug1 — bug1's escape handler handles both
@@ -182,19 +183,20 @@ function spawnMergeConflict(cfg, game) {
     if (state.bugs[id2]) { clearTimeout(bug2.escapeTimer); clearInterval(bug2.wanderInterval); delete state.bugs[id2]; }
     state.hp -= damage;
     if (state.hp < 0) state.hp = 0;
-    network.broadcast({ type: 'merge-conflict-escaped', bugId: id1, partnerId: id2, hp: state.hp });
-    game.checkGameState();
+    network.broadcastToLobby(lobbyId, { type: 'merge-conflict-escaped', bugId: id1, partnerId: id2, hp: state.hp });
+    game.checkGameState(ctx);
   }, escapeTime);
 
   // bug2 shares the same escape time
   bug2.escapeTimer = bug1.escapeTimer;
 }
 
-function spawnMinion() {
+function spawnMinion(ctx) {
+  const { state } = ctx;
   if (state.phase !== 'boss') return;
   const bossModule = require('./boss');
   const game = require('./game');
-  const maxOnScreen = bossModule.getEffectiveMaxOnScreen();
+  const maxOnScreen = bossModule.getEffectiveMaxOnScreen(ctx);
 
   // Roll for feature variant during boss phase
   let variant = null;
@@ -202,17 +204,18 @@ function spawnMinion() {
     variant = { isFeature: true };
   }
 
-  spawnEntity({
+  spawnEntity(ctx, {
     phaseCheck: 'boss',
     maxOnScreen,
     escapeTime: BOSS_CONFIG.minionEscapeTime,
     isMinion: true,
-    onEscapeCheck: () => game.checkBossGameState(),
+    onEscapeCheck: () => game.checkBossGameState(ctx),
     variant,
   });
 }
 
-function clearAllBugs() {
+function clearAllBugs(ctx) {
+  const { state } = ctx;
   for (const id of Object.keys(state.bugs)) {
     const bug = state.bugs[id];
     clearTimeout(bug.escapeTimer);
@@ -222,16 +225,16 @@ function clearAllBugs() {
   state.bugs = {};
 }
 
-function clearSpawnTimer() {
-  if (spawnTimer) {
-    clearInterval(spawnTimer);
-    spawnTimer = null;
+function clearSpawnTimer(ctx) {
+  if (ctx.timers.spawnTimer) {
+    clearInterval(ctx.timers.spawnTimer);
+    ctx.timers.spawnTimer = null;
   }
 }
 
-function startSpawning(rate) {
-  spawnTimer = setInterval(spawnBug, rate);
-  spawnBug();
+function startSpawning(ctx, rate) {
+  ctx.timers.spawnTimer = setInterval(() => spawnBug(ctx), rate);
+  spawnBug(ctx);
 }
 
 module.exports = { spawnBug, spawnMinion, spawnMergeConflict, clearAllBugs, clearSpawnTimer, startSpawning, spawnEntity };

@@ -1,25 +1,21 @@
 const { RUBBER_DUCK_CONFIG, BUG_POINTS } = require('./config');
-const { state, counters, randomPosition } = require('./state');
+const { randomPosition } = require('./state');
 const network = require('./network');
 
-let duckSpawnTimer = null;
-let duckWanderTimer = null;
-let duckDespawnTimer = null;
-let duckBuffTimer = null;
-
-function startDuckSpawning() {
-  scheduleDuckSpawn();
+function startDuckSpawning(ctx) {
+  scheduleDuckSpawn(ctx);
 }
 
-function scheduleDuckSpawn() {
+function scheduleDuckSpawn(ctx) {
   const delay = RUBBER_DUCK_CONFIG.spawnIntervalMin +
     Math.random() * (RUBBER_DUCK_CONFIG.spawnIntervalMax - RUBBER_DUCK_CONFIG.spawnIntervalMin);
-  duckSpawnTimer = setTimeout(spawnDuck, delay);
+  ctx.timers.duckSpawn = setTimeout(() => spawnDuck(ctx), delay);
 }
 
-function spawnDuck() {
+function spawnDuck(ctx) {
+  const { lobbyId, state, counters } = ctx;
   if (state.phase !== 'playing' && state.phase !== 'boss') {
-    scheduleDuckSpawn();
+    scheduleDuckSpawn(ctx);
     return;
   }
   if (state.rubberDuck) return; // one at a time
@@ -29,39 +25,39 @@ function spawnDuck() {
 
   state.rubberDuck = { id, x: pos.x, y: pos.y };
 
-  network.broadcast({
+  network.broadcastToLobby(lobbyId, {
     type: 'duck-spawn',
     duck: { id, x: pos.x, y: pos.y },
   });
 
   // Wander
-  duckWanderTimer = setInterval(() => {
+  ctx.timers.duckWander = setInterval(() => {
     if (!state.rubberDuck) return;
     const np = randomPosition();
     state.rubberDuck.x = np.x;
     state.rubberDuck.y = np.y;
-    network.broadcast({ type: 'duck-wander', x: np.x, y: np.y });
+    network.broadcastToLobby(lobbyId, { type: 'duck-wander', x: np.x, y: np.y });
   }, RUBBER_DUCK_CONFIG.wanderInterval);
 
   // Despawn after timeout
-  duckDespawnTimer = setTimeout(() => {
+  ctx.timers.duckDespawn = setTimeout(() => {
     if (!state.rubberDuck) return;
-    clearInterval(duckWanderTimer);
-    duckWanderTimer = null;
+    if (ctx.timers.duckWander) { clearInterval(ctx.timers.duckWander); ctx.timers.duckWander = null; }
     state.rubberDuck = null;
-    network.broadcast({ type: 'duck-despawn' });
-    scheduleDuckSpawn();
+    network.broadcastToLobby(lobbyId, { type: 'duck-despawn' });
+    scheduleDuckSpawn(ctx);
   }, RUBBER_DUCK_CONFIG.despawnTime);
 }
 
-function collectDuck(pid) {
+function collectDuck(ctx, pid) {
+  const { lobbyId, state } = ctx;
   if (!state.rubberDuck) return;
   const player = state.players[pid];
   if (!player) return;
 
   // Clear duck timers
-  if (duckWanderTimer) { clearInterval(duckWanderTimer); duckWanderTimer = null; }
-  if (duckDespawnTimer) { clearTimeout(duckDespawnTimer); duckDespawnTimer = null; }
+  if (ctx.timers.duckWander) { clearInterval(ctx.timers.duckWander); ctx.timers.duckWander = null; }
+  if (ctx.timers.duckDespawn) { clearTimeout(ctx.timers.duckDespawn); ctx.timers.duckDespawn = null; }
 
   // Award points
   state.score += RUBBER_DUCK_CONFIG.duckPoints;
@@ -72,7 +68,7 @@ function collectDuck(pid) {
   // Start buff
   state.duckBuff = { expiresAt: Date.now() + RUBBER_DUCK_CONFIG.buffDuration };
 
-  network.broadcast({
+  network.broadcastToLobby(lobbyId, {
     type: 'duck-collected',
     playerId: pid,
     playerColor: player.color,
@@ -81,24 +77,26 @@ function collectDuck(pid) {
     buffDuration: RUBBER_DUCK_CONFIG.buffDuration,
   });
 
-  duckBuffTimer = setTimeout(() => {
+  ctx.timers.duckBuff = setTimeout(() => {
     state.duckBuff = null;
-    network.broadcast({ type: 'duck-buff-expired' });
+    network.broadcastToLobby(lobbyId, { type: 'duck-buff-expired' });
   }, RUBBER_DUCK_CONFIG.buffDuration);
 
   // Schedule next duck
-  scheduleDuckSpawn();
+  scheduleDuckSpawn(ctx);
 }
 
-function isDuckBuffActive() {
+function isDuckBuffActive(ctx) {
+  const { state } = ctx;
   return state.duckBuff && Date.now() < state.duckBuff.expiresAt;
 }
 
-function clearDuck() {
-  if (duckSpawnTimer) { clearTimeout(duckSpawnTimer); duckSpawnTimer = null; }
-  if (duckWanderTimer) { clearInterval(duckWanderTimer); duckWanderTimer = null; }
-  if (duckDespawnTimer) { clearTimeout(duckDespawnTimer); duckDespawnTimer = null; }
-  if (duckBuffTimer) { clearTimeout(duckBuffTimer); duckBuffTimer = null; }
+function clearDuck(ctx) {
+  const { state } = ctx;
+  if (ctx.timers.duckSpawn) { clearTimeout(ctx.timers.duckSpawn); ctx.timers.duckSpawn = null; }
+  if (ctx.timers.duckWander) { clearInterval(ctx.timers.duckWander); ctx.timers.duckWander = null; }
+  if (ctx.timers.duckDespawn) { clearTimeout(ctx.timers.duckDespawn); ctx.timers.duckDespawn = null; }
+  if (ctx.timers.duckBuff) { clearTimeout(ctx.timers.duckBuff); ctx.timers.duckBuff = null; }
   state.rubberDuck = null;
   state.duckBuff = null;
 }

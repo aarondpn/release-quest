@@ -1,0 +1,17 @@
+{
+  "server": {
+    "port": 3000
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "database": "release_quest",
+    "user": "release_quest",
+    "password": "release_quest"
+  },
+  "lobby": {
+    "maxLobbies": 10,
+    "defaultMaxPlayers": 4,
+    "maxPlayersLimit": 8
+  }
+}

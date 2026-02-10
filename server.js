@@ -3,17 +3,21 @@ const fs = require('fs');
 const path = require('path');
 const { WebSocketServer } = require('ws');
 
-const { LOGICAL_W, LOGICAL_H, COLORS, ICONS, BUG_POINTS, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG } = require('./server/config');
-const { state, counters, randomPosition, getStateSnapshot } = require('./server/state');
+const { SERVER_CONFIG, LOGICAL_W, LOGICAL_H, COLORS, ICONS, BUG_POINTS, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG } = require('./server/config');
+const { randomPosition, getStateSnapshot } = require('./server/state');
 const network = require('./server/network');
+const db = require('./server/db');
+const lobby = require('./server/lobby');
 const boss = require('./server/boss');
 const game = require('./server/game');
+const powerups = require('./server/powerups');
 
-// Lazy-loaded modules (created after game starts)
-let powerups;
-function getPowerups() { if (!powerups) powerups = require('./server/powerups'); return powerups; }
+// Global counters for unique player IDs/colors across all lobbies
+let nextPlayerId = 1;
+let colorIndex = 0;
 
-const PORT = process.env.PORT || 3000;
+// Pre-lobby player info: playerId -> { name, color, icon }
+const playerInfo = new Map();
 
 // ── MIME types for static file serving ──
 const MIME = {
@@ -27,7 +31,7 @@ const MIME = {
 };
 
 // ── HTTP server ──
-const server = http.createServer((req, res) => {
+const httpServer = http.createServer((req, res) => {
   const urlPath = req.url.split('?')[0];
   let filePath = urlPath === '/' ? '/index.html' : urlPath;
   filePath = path.join(__dirname, 'public', filePath);
@@ -46,48 +50,40 @@ const server = http.createServer((req, res) => {
   });
 });
 
+// ── Helper to get lobby context for a player ──
+function getCtxForPlayer(pid) {
+  const lobbyId = lobby.getLobbyForPlayer(pid);
+  if (!lobbyId) return null;
+  const mem = lobby.getLobbyState(lobbyId);
+  if (!mem) return null;
+  return { lobbyId, state: mem.state, counters: mem.counters, timers: mem.timers };
+}
+
 // ── WebSocket server ──
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ server: httpServer });
 network.init(wss);
 
 // ── WebSocket connection handling ──
 wss.on('connection', (ws) => {
-  const playerId = 'player_' + (counters.nextPlayerId++);
-  const color = COLORS[counters.colorIndex % COLORS.length];
-  const icon = ICONS[counters.colorIndex % ICONS.length];
-  counters.colorIndex++;
+  const playerId = 'player_' + (nextPlayerId++);
+  const color = COLORS[colorIndex % COLORS.length];
+  const icon = ICONS[colorIndex % ICONS.length];
+  colorIndex++;
   const name = 'Player ' + playerId.split('_')[1];
 
-  state.players[playerId] = {
-    id: playerId,
-    name,
-    color,
-    icon,
-    x: LOGICAL_W / 2,
-    y: LOGICAL_H / 2,
-    score: 0,
-  };
-
+  playerInfo.set(playerId, { name, color, icon });
   network.wsToPlayer.set(ws, playerId);
 
-  // Send welcome with full state
+  // Send welcome — no game state yet, player must join a lobby first
   network.send(ws, {
     type: 'welcome',
     playerId,
     name,
     color,
     icon,
-    ...getStateSnapshot(),
   });
 
-  // Notify others
-  network.broadcast({
-    type: 'player-joined',
-    player: { id: playerId, name, color, icon, score: 0 },
-    playerCount: Object.keys(state.players).length,
-  }, ws);
-
-  ws.on('message', (raw) => {
+  ws.on('message', async (raw) => {
     let msg;
     try {
       msg = JSON.parse(raw);
@@ -99,41 +95,167 @@ wss.on('connection', (ws) => {
     if (!pid) return;
 
     switch (msg.type) {
+      case 'set-name': {
+        const info = playerInfo.get(pid);
+        if (!info) break;
+        const newName = String(msg.name || '').trim().slice(0, 16);
+        if (newName) info.name = newName;
+        if (msg.icon && ICONS.includes(msg.icon)) info.icon = msg.icon;
+
+        // If already in a lobby, update there too
+        const ctx = getCtxForPlayer(pid);
+        if (ctx) {
+          const player = ctx.state.players[pid];
+          if (player) {
+            if (newName) player.name = newName;
+            if (msg.icon && ICONS.includes(msg.icon)) player.icon = msg.icon;
+            network.broadcastToLobby(ctx.lobbyId, {
+              type: 'player-joined',
+              player: { id: pid, name: player.name, color: player.color, icon: player.icon, score: player.score },
+              playerCount: Object.keys(ctx.state.players).length,
+            });
+          }
+        }
+        break;
+      }
+
+      case 'list-lobbies': {
+        lobby.listLobbies().then(lobbies => {
+          network.send(ws, { type: 'lobby-list', lobbies });
+        }).catch(err => {
+          network.send(ws, { type: 'lobby-error', message: 'Failed to list lobbies' });
+        });
+        break;
+      }
+
+      case 'create-lobby': {
+        const lobbyName = String(msg.name || '').trim().slice(0, 32) || 'Game Lobby';
+        const maxPlayers = parseInt(msg.maxPlayers, 10) || undefined;
+
+        lobby.createLobby(lobbyName, maxPlayers).then(result => {
+          if (result.error) {
+            network.send(ws, { type: 'lobby-error', message: result.error });
+            return;
+          }
+          network.send(ws, { type: 'lobby-created', lobby: result.lobby });
+          // Broadcast updated lobby list to all unattached clients
+          broadcastLobbyList();
+        }).catch(err => {
+          network.send(ws, { type: 'lobby-error', message: 'Failed to create lobby' });
+        });
+        break;
+      }
+
+      case 'join-lobby': {
+        const lobbyId = parseInt(msg.lobbyId, 10);
+        if (!lobbyId) {
+          network.send(ws, { type: 'lobby-error', message: 'Invalid lobby ID' });
+          break;
+        }
+
+        // Leave current lobby if in one
+        const currentLobbyId = lobby.getLobbyForPlayer(pid);
+        if (currentLobbyId) {
+          await handleLeaveLobby(ws, pid, currentLobbyId);
+        }
+
+        const info = playerInfo.get(pid);
+        if (!info) break;
+
+        const playerData = {
+          id: pid,
+          name: info.name,
+          color: info.color,
+          icon: info.icon,
+          x: LOGICAL_W / 2,
+          y: LOGICAL_H / 2,
+          score: 0,
+        };
+
+        lobby.joinLobby(lobbyId, pid, playerData).then(result => {
+          if (result.error) {
+            network.send(ws, { type: 'lobby-error', message: result.error });
+            return;
+          }
+
+          network.wsToLobby.set(ws, lobbyId);
+
+          const ctx = getCtxForPlayer(pid);
+          if (!ctx) return;
+
+          // Send lobby-joined with full game state
+          network.send(ws, {
+            type: 'lobby-joined',
+            lobbyId,
+            lobbyName: result.lobby.name,
+            lobbyCode: result.lobby.code,
+            ...getStateSnapshot(ctx.state),
+          });
+
+          // Notify others in the lobby
+          network.broadcastToLobby(lobbyId, {
+            type: 'player-joined',
+            player: { id: pid, name: info.name, color: info.color, icon: info.icon, score: 0 },
+            playerCount: Object.keys(ctx.state.players).length,
+          }, ws);
+
+          broadcastLobbyList();
+        }).catch(err => {
+          network.send(ws, { type: 'lobby-error', message: 'Failed to join lobby' });
+        });
+        break;
+      }
+
+      case 'leave-lobby': {
+        const currentLobbyId = lobby.getLobbyForPlayer(pid);
+        if (currentLobbyId) {
+          await handleLeaveLobby(ws, pid, currentLobbyId);
+          network.send(ws, { type: 'lobby-left' });
+          broadcastLobbyList();
+        }
+        break;
+      }
+
       case 'start-game': {
-        if (state.phase === 'lobby' || state.phase === 'gameover' || state.phase === 'win') {
-          game.startGame();
+        const ctx = getCtxForPlayer(pid);
+        if (!ctx) break;
+        if (ctx.state.phase === 'lobby' || ctx.state.phase === 'gameover' || ctx.state.phase === 'win') {
+          game.startGame(ctx);
         }
         break;
       }
 
       case 'click-bug': {
-        if (state.phase !== 'playing' && state.phase !== 'boss') break;
+        const ctx = getCtxForPlayer(pid);
+        if (!ctx) break;
+        const { state: st } = ctx;
+        if (st.phase !== 'playing' && st.phase !== 'boss') break;
         const bugId = msg.bugId;
-        const bug = state.bugs[bugId];
+        const bug = st.bugs[bugId];
         if (!bug) break;
 
-        const player = state.players[pid];
+        const player = st.players[pid];
         if (!player) break;
 
         // Feature-not-a-bug: penalize player
         if (bug.isFeature) {
           clearTimeout(bug.escapeTimer);
           clearInterval(bug.wanderInterval);
-          delete state.bugs[bugId];
+          delete st.bugs[bugId];
 
-          state.hp -= CODE_REVIEW_CONFIG.hpPenalty;
-          if (state.hp < 0) state.hp = 0;
+          st.hp -= CODE_REVIEW_CONFIG.hpPenalty;
+          if (st.hp < 0) st.hp = 0;
 
-          network.broadcast({
+          network.broadcastToLobby(ctx.lobbyId, {
             type: 'feature-squashed',
             bugId,
             playerId: pid,
             playerColor: player.color,
-            hp: state.hp,
+            hp: st.hp,
           });
 
-          if (state.phase === 'boss') game.checkBossGameState();
-          else game.checkGameState();
+          if (st.phase === 'boss') game.checkBossGameState(ctx);
+          else game.checkGameState(ctx);
           break;
         }
 
@@ -143,7 +265,7 @@ wss.on('connection', (ws) => {
           bug.mergeClickedBy = pid;
           bug.mergeClickedAt = Date.now();
 
-          const partner = state.bugs[bug.mergePartner];
+          const partner = st.bugs[bug.mergePartner];
           if (partner && partner.mergeClicked && (Date.now() - partner.mergeClickedAt) < MERGE_CONFLICT_CONFIG.resolveWindow) {
             // Both clicked in time — resolve!
             clearTimeout(bug.escapeTimer);
@@ -152,36 +274,36 @@ wss.on('connection', (ws) => {
             clearInterval(partner.wanderInterval);
             if (bug.mergeResetTimer) clearTimeout(bug.mergeResetTimer);
             if (partner.mergeResetTimer) clearTimeout(partner.mergeResetTimer);
-            delete state.bugs[bugId];
-            delete state.bugs[partner.id];
+            delete st.bugs[bugId];
+            delete st.bugs[partner.id];
 
             // Award bonus to both clickers
             const clickers = new Set([pid, partner.mergeClickedBy]);
             for (const clickerId of clickers) {
-              if (state.players[clickerId]) {
-                state.players[clickerId].score += MERGE_CONFLICT_CONFIG.bonusPoints;
-                state.score += MERGE_CONFLICT_CONFIG.bonusPoints;
+              if (st.players[clickerId]) {
+                st.players[clickerId].score += MERGE_CONFLICT_CONFIG.bonusPoints;
+                st.score += MERGE_CONFLICT_CONFIG.bonusPoints;
               }
             }
 
-            network.broadcast({
+            network.broadcastToLobby(ctx.lobbyId, {
               type: 'merge-conflict-resolved',
               bugId,
               partnerId: partner.id,
               clickers: [...clickers],
-              score: state.score,
+              score: st.score,
               players: Object.fromEntries(
-                [...clickers].filter(c => state.players[c]).map(c => [c, state.players[c].score])
+                [...clickers].filter(c => st.players[c]).map(c => [c, st.players[c].score])
               ),
             });
 
-            if (state.phase === 'boss') game.checkBossGameState();
-            else game.checkGameState();
+            if (st.phase === 'boss') game.checkBossGameState(ctx);
+            else game.checkGameState(ctx);
           } else {
             // Only one clicked — set timeout for reset
-            network.broadcast({ type: 'merge-conflict-halfclick', bugId });
+            network.broadcastToLobby(ctx.lobbyId, { type: 'merge-conflict-halfclick', bugId });
             bug.mergeResetTimer = setTimeout(() => {
-              if (state.bugs[bugId]) {
+              if (st.bugs[bugId]) {
                 bug.mergeClicked = false;
                 bug.mergeClickedBy = null;
                 bug.mergeClickedAt = 0;
@@ -194,7 +316,7 @@ wss.on('connection', (ws) => {
         // Normal bug / Heisenbug / Clone squash
         clearTimeout(bug.escapeTimer);
         clearInterval(bug.wanderInterval);
-        delete state.bugs[bugId];
+        delete st.bugs[bugId];
 
         // Calculate points
         let points = BUG_POINTS;
@@ -203,48 +325,55 @@ wss.on('connection', (ws) => {
         }
 
         // Duck buff: double points
-        if (getPowerups().isDuckBuffActive()) {
+        if (powerups.isDuckBuffActive(ctx)) {
           points *= 2;
         }
 
-        state.score += points;
+        st.score += points;
         player.score += points;
 
-        network.broadcast({
+        network.broadcastToLobby(ctx.lobbyId, {
           type: 'bug-squashed',
           bugId,
           playerId: pid,
           playerColor: player.color,
-          score: state.score,
+          score: st.score,
           playerScore: player.score,
           isHeisenbug: bug.isHeisenbug || false,
           points,
         });
 
-        if (state.phase === 'boss') {
-          game.checkBossGameState();
+        if (st.phase === 'boss') {
+          game.checkBossGameState(ctx);
         } else {
-          game.checkGameState();
+          game.checkGameState(ctx);
         }
         break;
       }
 
       case 'click-boss': {
-        boss.handleBossClick(pid);
+        const ctx = getCtxForPlayer(pid);
+        if (!ctx) break;
+        boss.handleBossClick(ctx, pid);
         break;
       }
 
       case 'click-duck': {
-        getPowerups().collectDuck(pid);
+        const ctx = getCtxForPlayer(pid);
+        if (!ctx) break;
+        powerups.collectDuck(ctx, pid);
         break;
       }
 
       case 'cursor-move': {
-        const player = state.players[pid];
+        const ctx = getCtxForPlayer(pid);
+        if (!ctx) break;
+        const { state: st, lobbyId } = ctx;
+        const player = st.players[pid];
         if (!player) break;
         player.x = msg.x;
         player.y = msg.y;
-        network.broadcast({
+        network.broadcastToLobby(lobbyId, {
           type: 'player-cursor',
           playerId: pid,
           x: msg.x,
@@ -253,8 +382,8 @@ wss.on('connection', (ws) => {
 
         // Heisenbug flee check
         const now = Date.now();
-        for (const bid of Object.keys(state.bugs)) {
-          const b = state.bugs[bid];
+        for (const bid of Object.keys(st.bugs)) {
+          const b = st.bugs[bid];
           if (!b || !b.isHeisenbug || b.fleesRemaining <= 0) continue;
           if (now - b.lastFleeTime < HEISENBUG_CONFIG.fleeCooldown) continue;
 
@@ -268,7 +397,7 @@ wss.on('connection', (ws) => {
             b.fleesRemaining--;
             b.lastFleeTime = now;
 
-            network.broadcast({
+            network.broadcastToLobby(lobbyId, {
               type: 'bug-flee',
               bugId: bid,
               x: newPos.x,
@@ -280,43 +409,81 @@ wss.on('connection', (ws) => {
 
         break;
       }
-
-      case 'set-name': {
-        const player = state.players[pid];
-        if (!player) break;
-        const newName = String(msg.name || '').trim().slice(0, 16);
-        if (newName) player.name = newName;
-        if (msg.icon && ICONS.includes(msg.icon)) player.icon = msg.icon;
-        if (newName || msg.icon) {
-          network.broadcast({
-            type: 'player-joined',
-            player: { id: pid, name: player.name, color: player.color, icon: player.icon, score: player.score },
-            playerCount: Object.keys(state.players).length,
-          });
-        }
-        break;
-      }
     }
   });
 
-  ws.on('close', () => {
+  ws.on('close', async () => {
     const pid = network.wsToPlayer.get(ws);
     network.wsToPlayer.delete(ws);
-    if (pid) {
-      delete state.players[pid];
-      network.broadcast({
-        type: 'player-left',
-        playerId: pid,
-        playerCount: Object.keys(state.players).length,
-      });
+    network.wsToLobby.delete(ws);
 
-      if (Object.keys(state.players).length === 0) {
-        game.resetToLobby();
+    if (pid) {
+      const currentLobbyId = lobby.getLobbyForPlayer(pid);
+      if (currentLobbyId) {
+        await handleLeaveLobby(ws, pid, currentLobbyId);
+        broadcastLobbyList();
       }
+      playerInfo.delete(pid);
     }
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`Release Quest running on http://localhost:${PORT}`);
-});
+async function handleLeaveLobby(ws, pid, lobbyId) {
+  const mem = lobby.getLobbyState(lobbyId);
+  network.wsToLobby.delete(ws);
+
+  try {
+    await lobby.leaveLobby(lobbyId, pid);
+  } catch (err) {
+    console.error('Error leaving lobby:', err);
+  }
+
+  if (mem) {
+    const remaining = Object.keys(mem.state.players).length;
+    // Notify remaining players
+    network.broadcastToLobby(lobbyId, {
+      type: 'player-left',
+      playerId: pid,
+      playerCount: remaining,
+    });
+
+    // Reset game if lobby is now empty (destroyLobby already called by leaveLobby)
+    if (remaining === 0) {
+      game.resetToLobby({ lobbyId, state: mem.state, counters: mem.counters, timers: mem.timers });
+    }
+  }
+}
+
+function broadcastLobbyList() {
+  lobby.listLobbies().then(lobbies => {
+    // Send to all clients not in a lobby
+    const data = JSON.stringify({ type: 'lobby-list', lobbies });
+    wss.clients.forEach(client => {
+      if (client.readyState === 1 && !network.wsToLobby.has(client)) {
+        client.send(data);
+      }
+    });
+  }).catch(() => {});
+}
+
+// ── Startup ──
+async function start() {
+  try {
+    await db.initialize();
+    console.log('Database initialized');
+  } catch (err) {
+    console.error('Database initialization failed:', err.message);
+    console.log('Starting without database — lobby persistence disabled');
+  }
+
+  // Periodic sweep: destroy any lobbies with 0 members every 30s
+  setInterval(() => {
+    lobby.sweepEmptyLobbies().then(() => broadcastLobbyList()).catch(() => {});
+  }, 30_000);
+
+  httpServer.listen(SERVER_CONFIG.port, () => {
+    console.log(`Release Quest running on http://localhost:${SERVER_CONFIG.port}`);
+  });
+}
+
+start();
