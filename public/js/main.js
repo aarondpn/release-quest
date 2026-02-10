@@ -51,7 +51,7 @@ dom.nameInput.addEventListener('keydown', (e) => {
 // ── Lobby create handler ──
 dom.createLobbyBtn.addEventListener('click', () => {
   const name = dom.lobbyNameInput.value.trim().slice(0, 32) || 'Game Lobby';
-  const maxPlayers = parseInt(dom.lobbyMaxPlayers.value, 10) || 4;
+  const maxPlayers = parseInt(dom.lobbyMaxPlayers.dataset.value, 10) || 4;
   sendMessage({ type: 'create-lobby', name, maxPlayers });
   dom.lobbyNameInput.value = '';
 });
@@ -59,6 +59,22 @@ dom.createLobbyBtn.addEventListener('click', () => {
 dom.lobbyNameInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') dom.createLobbyBtn.click();
 });
+
+// ── Custom select dropdown ──
+dom.lobbyMaxPlayers.querySelector('.custom-select-trigger').addEventListener('click', (e) => {
+  e.stopPropagation();
+  dom.lobbyMaxPlayers.classList.toggle('open');
+});
+dom.lobbyMaxPlayers.querySelector('.custom-select-options').addEventListener('click', (e) => {
+  const opt = e.target.closest('.custom-select-option');
+  if (!opt) return;
+  dom.lobbyMaxPlayers.dataset.value = opt.dataset.value;
+  dom.lobbyMaxPlayers.querySelector('.custom-select-trigger').textContent = opt.textContent + ' \u25BE';
+  dom.lobbyMaxPlayers.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('selected'));
+  opt.classList.add('selected');
+  dom.lobbyMaxPlayers.classList.remove('open');
+});
+document.addEventListener('click', () => dom.lobbyMaxPlayers.classList.remove('open'));
 
 // Cursor broadcasting
 dom.arena.addEventListener('mousemove', (e) => {

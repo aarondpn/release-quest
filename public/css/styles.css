@@ -1146,28 +1146,52 @@ header p {
   box-shadow: 0 0 12px rgba(255,230,109,0.2);
 }
 
-.lobby-max-players {
+.custom-select {
+  position: relative;
   font-family: 'Press Start 2P', monospace;
   font-size: 7px;
-  padding: 10px 28px 10px 14px;
+  cursor: pointer;
+  user-select: none;
+}
+.custom-select-trigger {
+  padding: 10px 14px;
   background: var(--surface);
   border: 2px solid var(--purple);
   border-radius: 6px;
   color: var(--yellow);
-  outline: none;
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23ffe66d'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
+  white-space: nowrap;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
-.lobby-max-players:focus {
+.custom-select.open .custom-select-trigger {
   border-color: var(--yellow);
   box-shadow: 0 0 12px rgba(255,230,109,0.2);
 }
-.lobby-max-players option {
+.custom-select-options {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
   background: var(--surface);
+  border: 2px solid var(--purple);
+  border-radius: 6px;
+  overflow: hidden;
+  z-index: 100;
+}
+.custom-select.open .custom-select-options {
+  display: block;
+}
+.custom-select-option {
+  padding: 8px 14px;
+  color: var(--muted);
+  transition: background 0.1s, color 0.1s;
+  white-space: nowrap;
+}
+.custom-select-option:hover {
+  background: var(--purple);
+  color: var(--yellow);
+}
+.custom-select-option.selected {
   color: var(--yellow);
 }
 
