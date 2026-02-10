@@ -4,6 +4,7 @@ import { pixelToLogical } from './coordinates.js';
 import { updateHUD } from './hud.js';
 import { connect, sendMessage } from './network.js';
 import { showLobbyBrowser, initLobbySend } from './lobby-ui.js';
+import { initAuthSend, showAuthOverlay, hideAuthOverlay, switchTab, submitLogin, submitRegister, submitLogout } from './auth-ui.js';
 
 initDom();
 
@@ -23,10 +24,17 @@ clientState.selectedIcon = PLAYER_ICONS[0];
 
 function submitJoin() {
   if (!clientState.ws || clientState.ws.readyState !== 1) return;
-  const name = dom.nameInput.value.trim().slice(0, 16) || clientState.myName || 'Anon';
+  let name, icon;
+  if (clientState.isLoggedIn && clientState.authUser) {
+    name = dom.nameInput.value.trim().slice(0, 16) || clientState.authUser.displayName;
+    icon = clientState.selectedIcon || clientState.authUser.icon;
+  } else {
+    name = dom.nameInput.value.trim().slice(0, 16) || clientState.myName || 'Anon';
+    icon = clientState.selectedIcon;
+  }
   clientState.myName = name;
-  clientState.myIcon = clientState.selectedIcon;
-  sendMessage({ type: 'set-name', name, icon: clientState.selectedIcon });
+  clientState.myIcon = icon;
+  sendMessage({ type: 'set-name', name, icon });
   clientState.hasJoined = true;
   dom.nameEntry.classList.add('hidden');
 
@@ -94,6 +102,30 @@ document.getElementById('hud-leave-btn').addEventListener('click', leaveLobby);
 
 // Initialize lobby send function (avoids circular dependency)
 initLobbySend(sendMessage);
+
+// Initialize auth send function
+initAuthSend(sendMessage);
+
+// ── Auth handlers ──
+dom.authShowLoginBtn.addEventListener('click', showAuthOverlay);
+
+dom.authLogoutBtn.addEventListener('click', submitLogout);
+
+dom.authBackBtn.addEventListener('click', hideAuthOverlay);
+
+dom.authTabs.querySelectorAll('.auth-tab').forEach(tab => {
+  tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+});
+
+dom.authLoginSubmit.addEventListener('click', submitLogin);
+dom.authLoginPassword.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') submitLogin();
+});
+
+dom.authRegSubmit.addEventListener('click', submitRegister);
+dom.authRegConfirm.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') submitRegister();
+});
 
 // Start
 connect();

@@ -26,7 +26,30 @@ async function initialize() {
     )
   `);
 
-  // Clean up stale data from previous runs
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      username VARCHAR(16) NOT NULL UNIQUE,
+      password_hash VARCHAR(72) NOT NULL,
+      display_name VARCHAR(16) NOT NULL,
+      icon VARCHAR(8) NOT NULL DEFAULT '🐱',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      token VARCHAR(64) PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '30 days')
+    )
+  `);
+
+  // Clean expired sessions
+  await pool.query(`DELETE FROM sessions WHERE expires_at < NOW()`);
+
+  // Clean up stale lobby data from previous runs
   await pool.query(`DELETE FROM lobby_players`);
   await pool.query(`DELETE FROM lobbies`);
 }
@@ -100,6 +123,42 @@ async function getActiveLobbyCount() {
   return result.rows[0].count;
 }
 
+// ── User & session queries ──
+
+async function createUser(username, passwordHash, displayName, icon) {
+  const result = await pool.query(
+    `INSERT INTO users (username, password_hash, display_name, icon) VALUES ($1, $2, $3, $4) RETURNING *`,
+    [username, passwordHash, displayName, icon]
+  );
+  return result.rows[0];
+}
+
+async function getUserByUsername(username) {
+  const result = await pool.query(`SELECT * FROM users WHERE username = $1`, [username]);
+  return result.rows[0] || null;
+}
+
+async function createSession(token, userId, expiresAt) {
+  await pool.query(
+    `INSERT INTO sessions (token, user_id, expires_at) VALUES ($1, $2, $3)`,
+    [token, userId, expiresAt]
+  );
+}
+
+async function getSessionWithUser(token) {
+  const result = await pool.query(
+    `SELECT s.token, s.expires_at, u.id AS user_id, u.username, u.display_name, u.icon
+     FROM sessions s JOIN users u ON s.user_id = u.id
+     WHERE s.token = $1 AND s.expires_at > NOW()`,
+    [token]
+  );
+  return result.rows[0] || null;
+}
+
+async function deleteSession(token) {
+  await pool.query(`DELETE FROM sessions WHERE token = $1`, [token]);
+}
+
 module.exports = {
   pool,
   initialize,
@@ -111,4 +170,9 @@ module.exports = {
   deleteLobby,
   getLobbyPlayerCount,
   getActiveLobbyCount,
+  createUser,
+  getUserByUsername,
+  createSession,
+  getSessionWithUser,
+  deleteSession,
 };
