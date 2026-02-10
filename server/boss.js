@@ -1,6 +1,7 @@
 const { BOSS_CONFIG, RUBBER_DUCK_CONFIG } = require('./config');
 const { randomPosition, getPlayerScores } = require('./state');
 const network = require('./network');
+const stats = require('./stats');
 
 function clearBossTimers(ctx) {
   if (ctx.timers.bossWander) { clearInterval(ctx.timers.bossWander); ctx.timers.bossWander = null; }
@@ -111,6 +112,7 @@ function bossTick(ctx) {
       level: state.level,
       players: getPlayerScores(state),
     });
+    if (ctx.playerInfo) stats.recordGameEnd(state, ctx.playerInfo, false);
   }
 }
 
@@ -195,6 +197,7 @@ function defeatBoss(ctx) {
     players: getPlayerScores(state),
   });
 
+  if (ctx.playerInfo) stats.recordGameEnd(state, ctx.playerInfo, true);
   state.boss = null;
 }
 

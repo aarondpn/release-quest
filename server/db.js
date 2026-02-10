@@ -46,6 +46,19 @@ async function initialize() {
     )
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_stats (
+      user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      games_played INTEGER NOT NULL DEFAULT 0,
+      games_won INTEGER NOT NULL DEFAULT 0,
+      games_lost INTEGER NOT NULL DEFAULT 0,
+      total_score BIGINT NOT NULL DEFAULT 0,
+      highest_score INTEGER NOT NULL DEFAULT 0,
+      bugs_squashed INTEGER NOT NULL DEFAULT 0,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
   // Clean expired sessions
   await pool.query(`DELETE FROM sessions WHERE expires_at < NOW()`);
 
@@ -159,6 +172,35 @@ async function deleteSession(token) {
   await pool.query(`DELETE FROM sessions WHERE token = $1`, [token]);
 }
 
+// ── Stats queries ──
+
+async function recordGameStats(userId, score, won, bugsSquashed) {
+  await pool.query(`
+    INSERT INTO user_stats (user_id, games_played, games_won, games_lost, total_score, highest_score, bugs_squashed, updated_at)
+    VALUES ($1, 1, $2, $3, $4::bigint, $5, $6, NOW())
+    ON CONFLICT (user_id) DO UPDATE SET
+      games_played = user_stats.games_played + 1,
+      games_won = user_stats.games_won + $2,
+      games_lost = user_stats.games_lost + $3,
+      total_score = user_stats.total_score + $4::bigint,
+      highest_score = GREATEST(user_stats.highest_score, $5),
+      bugs_squashed = user_stats.bugs_squashed + $6,
+      updated_at = NOW()
+  `, [userId, won ? 1 : 0, won ? 0 : 1, score, score, bugsSquashed]);
+}
+
+async function getLeaderboard(limit = 10) {
+  const result = await pool.query(`
+    SELECT u.display_name, u.icon, s.games_played, s.games_won, s.games_lost,
+           s.total_score, s.highest_score, s.bugs_squashed
+    FROM user_stats s
+    JOIN users u ON s.user_id = u.id
+    ORDER BY s.total_score DESC
+    LIMIT $1
+  `, [limit]);
+  return result.rows;
+}
+
 module.exports = {
   pool,
   initialize,
@@ -175,4 +217,6 @@ module.exports = {
   createSession,
   getSessionWithUser,
   deleteSession,
+  recordGameStats,
+  getLeaderboard,
 };

@@ -4,6 +4,7 @@ const network = require('./network');
 const bugs = require('./bugs');
 const boss = require('./boss');
 const powerups = require('./powerups');
+const stats = require('./stats');
 
 function startGame(ctx) {
   const { lobbyId, state } = ctx;
@@ -17,6 +18,7 @@ function startGame(ctx) {
 
   for (const pid of Object.keys(state.players)) {
     state.players[pid].score = 0;
+    state.players[pid].bugsSquashed = 0;
   }
 
   bugs.clearSpawnTimer(ctx);
@@ -69,6 +71,7 @@ function checkGameState(ctx) {
       level: state.level,
       players: getPlayerScores(state),
     });
+    if (ctx.playerInfo) stats.recordGameEnd(state, ctx.playerInfo, false);
     return;
   }
 
@@ -117,6 +120,7 @@ function checkBossGameState(ctx) {
       level: state.level,
       players: getPlayerScores(state),
     });
+    if (ctx.playerInfo) stats.recordGameEnd(state, ctx.playerInfo, false);
   }
 }
 

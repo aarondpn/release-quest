@@ -13,6 +13,11 @@ export function initLobbySend(fn) { _sendMessage = fn; }
 export function showLobbyBrowser() {
   dom.lobbyBrowser.classList.remove('hidden');
   dom.lobbyError.classList.add('hidden');
+  // Reset to lobbies tab
+  if (dom.lobbyListPanel) dom.lobbyListPanel.classList.remove('hidden');
+  if (dom.leaderboardPanel) dom.leaderboardPanel.classList.add('hidden');
+  if (dom.lobbiesTab) dom.lobbiesTab.classList.add('active');
+  if (dom.leaderboardTab) dom.leaderboardTab.classList.remove('active');
   if (_sendMessage) _sendMessage({ type: 'list-lobbies' });
 }
 
