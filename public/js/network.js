@@ -2,10 +2,10 @@ import { LOGICAL_W, LOGICAL_H } from './config.js';
 import { dom, clientState } from './state.js';
 import { logicalToPixel } from './coordinates.js';
 import { updateHUD, updatePlayerCount, hideAllScreens, showStartScreen, showGameOverScreen, showWinScreen, showLevelScreen, updateLobbyRoster } from './hud.js';
-import { createBugElement, removeBugElement, clearAllBugs, showSquashEffect, removeMergeTether, removeDependencyTether, rebuildDependencyTether } from './bugs.js';
+import { createBugElement, removeBugElement, clearAllBugs, showSquashEffect, removeMergeTether, removePipelineTether, rebuildPipelineTether } from './bugs.js';
 import { createBossElement, updateBossHp, removeBossElement, showBossHitEffect, formatTime } from './boss.js';
 import { addRemoteCursor, removeRemoteCursor, updateRemoteCursor, clearRemoteCursors } from './players.js';
-import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, showEnrageFlash, showLevelFlash, showEscalationWarning, showBossRegenNumber, showHeisenbugFleeEffect, showFeaturePenaltyEffect, showDuckBuffOverlay, removeDuckBuffOverlay, showMergeResolvedEffect, showDependencyChainResolvedEffect, showDependencyChainResetEffect } from './vfx.js';
+import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, showEnrageFlash, showLevelFlash, showEscalationWarning, showBossRegenNumber, showHeisenbugFleeEffect, showFeaturePenaltyEffect, showDuckBuffOverlay, removeDuckBuffOverlay, showMergeResolvedEffect, showPipelineChainResolvedEffect, showPipelineChainResetEffect } from './vfx.js';
 import { showLobbyBrowser, hideLobbyBrowser, renderLobbyList, showLobbyError } from './lobby-ui.js';
 import { updateAuthUI, hideAuthOverlay, showAuthError } from './auth-ui.js';
 import { renderLeaderboard } from './leaderboard-ui.js';
@@ -507,8 +507,8 @@ function handleMessage(msg) {
       break;
     }
 
-    // ── Dependency chain ──
-    case 'dependency-bug-squashed': {
+    // ── Pipeline chain ──
+    case 'pipeline-bug-squashed': {
       const bugEl = clientState.bugs[msg.bugId];
       if (bugEl) {
         const rect = bugEl.getBoundingClientRect();
@@ -521,7 +521,7 @@ function handleMessage(msg) {
       }
       removeBugElement(msg.bugId, true);
       // Rebuild tether with one less node
-      rebuildDependencyTether(msg.chainId);
+      rebuildPipelineTether(msg.chainId);
       updateHUD(msg.score);
       if (clientState.players[msg.playerId]) {
         clientState.players[msg.playerId].score = msg.playerScore;
@@ -529,11 +529,11 @@ function handleMessage(msg) {
       break;
     }
 
-    case 'dependency-chain-resolved': {
+    case 'pipeline-chain-resolved': {
       // All bugs in chain squashed in order — show bonus effect
-      removeDependencyTether(msg.chainId);
+      removePipelineTether(msg.chainId);
       // Find any remaining bug position for the effect, or use center
-      showDependencyChainResolvedEffect();
+      showPipelineChainResolvedEffect();
       updateHUD(msg.score);
       if (clientState.players[msg.playerId]) {
         clientState.players[msg.playerId].score = msg.playerScore;
@@ -541,7 +541,7 @@ function handleMessage(msg) {
       break;
     }
 
-    case 'dependency-chain-reset': {
+    case 'pipeline-chain-reset': {
       // Wrong order clicked — all bugs teleport to new positions
       for (const [bid, pos] of Object.entries(msg.positions)) {
         const bugEl = clientState.bugs[bid];
@@ -556,17 +556,17 @@ function handleMessage(msg) {
           setTimeout(() => bugEl.classList.remove('pipeline-reset'), 500);
         }
       }
-      rebuildDependencyTether(msg.chainId);
-      showDependencyChainResetEffect();
+      rebuildPipelineTether(msg.chainId);
+      showPipelineChainResetEffect();
       shakeArena('light');
       break;
     }
 
-    case 'dependency-chain-escaped': {
+    case 'pipeline-chain-escaped': {
       for (const bid of msg.bugIds) {
         removeBugElement(bid);
       }
-      removeDependencyTether(msg.chainId);
+      removePipelineTether(msg.chainId);
       updateHUD(undefined, undefined, msg.hp);
       showDamageVignette();
       shakeArena('medium');

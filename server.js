@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { WebSocketServer } = require('ws');
 
-const { SERVER_CONFIG, LOGICAL_W, LOGICAL_H, COLORS, ICONS, BUG_POINTS, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG, DEPENDENCY_BUG_CONFIG } = require('./server/config');
+const { SERVER_CONFIG, LOGICAL_W, LOGICAL_H, COLORS, ICONS, BUG_POINTS, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG, PIPELINE_BUG_CONFIG } = require('./server/config');
 const { randomPosition, getStateSnapshot } = require('./server/state');
 const network = require('./server/network');
 const db = require('./server/db');
@@ -405,9 +405,9 @@ wss.on('connection', (ws) => {
           break;
         }
 
-        // Dependency chain logic
-        if (bug.isDependency) {
-          const chain = st.dependencyChains[bug.chainId];
+        // Pipeline chain logic
+        if (bug.isPipeline) {
+          const chain = st.pipelineChains[bug.chainId];
           if (!chain) break;
 
           if (bug.chainIndex === chain.nextIndex) {
@@ -416,17 +416,17 @@ wss.on('connection', (ws) => {
             chain.nextIndex++;
 
             player.bugsSquashed = (player.bugsSquashed || 0) + 1;
-            let points = DEPENDENCY_BUG_CONFIG.pointsPerBug;
+            let points = PIPELINE_BUG_CONFIG.pointsPerBug;
             if (powerups.isDuckBuffActive(ctx)) points *= 2;
             st.score += points;
             player.score += points;
 
             if (ctx.matchLog) {
-              ctx.matchLog.log('squash', { bugId, type: 'dependency', chainId: bug.chainId, chainIndex: bug.chainIndex, by: pid, score: st.score });
+              ctx.matchLog.log('squash', { bugId, type: 'pipeline', chainId: bug.chainId, chainIndex: bug.chainIndex, by: pid, score: st.score });
             }
 
             network.broadcastToLobby(ctx.lobbyId, {
-              type: 'dependency-bug-squashed',
+              type: 'pipeline-bug-squashed',
               bugId, chainId: bug.chainId, chainIndex: bug.chainIndex,
               playerId: pid, playerColor: player.color,
               score: st.score, playerScore: player.score, points,
@@ -434,21 +434,21 @@ wss.on('connection', (ws) => {
 
             if (chain.nextIndex >= chain.length) {
               // Chain complete — bonus!
-              let bonus = DEPENDENCY_BUG_CONFIG.chainBonus;
+              let bonus = PIPELINE_BUG_CONFIG.chainBonus;
               if (powerups.isDuckBuffActive(ctx)) bonus *= 2;
               st.score += bonus;
               player.score += bonus;
 
               clearInterval(chain.wanderInterval);
               clearTimeout(bug.escapeTimer);
-              delete st.dependencyChains[bug.chainId];
+              delete st.pipelineChains[bug.chainId];
 
               if (ctx.matchLog) {
-                ctx.matchLog.log('squash', { type: 'dependency-chain-complete', chainId: bug.chainId, by: pid, score: st.score });
+                ctx.matchLog.log('squash', { type: 'pipeline-chain-complete', chainId: bug.chainId, by: pid, score: st.score });
               }
 
               network.broadcastToLobby(ctx.lobbyId, {
-                type: 'dependency-chain-resolved',
+                type: 'pipeline-chain-resolved',
                 chainId: bug.chainId,
                 playerId: pid, playerColor: player.color,
                 score: st.score, playerScore: player.score, bonus,
@@ -475,11 +475,11 @@ wss.on('connection', (ws) => {
             });
 
             if (ctx.matchLog) {
-              ctx.matchLog.log('dependency-reset', { chainId: bug.chainId, by: pid, remaining: remaining.length });
+              ctx.matchLog.log('pipeline-reset', { chainId: bug.chainId, by: pid, remaining: remaining.length });
             }
 
             network.broadcastToLobby(ctx.lobbyId, {
-              type: 'dependency-chain-reset',
+              type: 'pipeline-chain-reset',
               chainId: bug.chainId,
               positions: newPositions,
               playerId: pid,

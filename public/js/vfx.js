@@ -140,8 +140,8 @@ export function removeDuckBuffOverlay() {
   if (existing) existing.remove();
 }
 
-// ── Dependency chain resolved effect ──
-export function showDependencyChainResolvedEffect() {
+// ── Pipeline chain resolved effect ──
+export function showPipelineChainResolvedEffect() {
   const el = document.createElement('div');
   el.className = 'pipeline-resolved-text';
   el.style.left = '50%';
@@ -151,8 +151,8 @@ export function showDependencyChainResolvedEffect() {
   setTimeout(() => el.remove(), 1200);
 }
 
-// ── Dependency chain reset effect ──
-export function showDependencyChainResetEffect() {
+// ── Pipeline chain reset effect ──
+export function showPipelineChainResetEffect() {
   const el = document.createElement('div');
   el.className = 'pipeline-reset-text';
   el.style.left = '50%';

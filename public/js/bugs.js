@@ -33,7 +33,7 @@ export function createBugElement(bugId, lx, ly, variant) {
         el.classList.add('merge-right');
       }
     }
-    if (variant.isDependency) {
+    if (variant.isPipeline) {
       el.classList.add('pipeline-bug');
       el.dataset.chainId = variant.chainId;
       el.dataset.chainIndex = variant.chainIndex;
@@ -63,9 +63,9 @@ export function createBugElement(bugId, lx, ly, variant) {
     }
   }
 
-  // Dependency chain tether lines
-  if (variant && variant.isDependency) {
-    tryCreateDependencyTether(variant.chainId);
+  // Pipeline chain tether lines
+  if (variant && variant.isPipeline) {
+    tryCreatePipelineTether(variant.chainId);
   }
 }
 
@@ -113,7 +113,7 @@ let tetherRafId = null;
 
 function tickTethers() {
   const hasMerge = clientState.mergeTethers && Object.keys(clientState.mergeTethers).length > 0;
-  const hasDep = clientState.dependencyTethers && Object.keys(clientState.dependencyTethers).length > 0;
+  const hasDep = clientState.pipelineTethers && Object.keys(clientState.pipelineTethers).length > 0;
   if (!hasMerge && !hasDep) {
     tetherRafId = null;
     return;
@@ -124,8 +124,8 @@ function tickTethers() {
     }
   }
   if (hasDep) {
-    for (const cid of Object.keys(clientState.dependencyTethers)) {
-      updateDependencyTether(cid);
+    for (const cid of Object.keys(clientState.pipelineTethers)) {
+      updatePipelineTether(cid);
     }
   }
   tetherRafId = requestAnimationFrame(tickTethers);
@@ -144,14 +144,14 @@ export function removeMergeTether(conflictId) {
   clientState.mergeTethers[conflictId].svg.remove();
   delete clientState.mergeTethers[conflictId];
   if (Object.keys(clientState.mergeTethers).length === 0 &&
-      (!clientState.dependencyTethers || Object.keys(clientState.dependencyTethers).length === 0)) {
+      (!clientState.pipelineTethers || Object.keys(clientState.pipelineTethers).length === 0)) {
     stopTetherTracking();
   }
 }
 
-// ── Dependency chain tethers ──
+// ── Pipeline chain tethers ──
 
-function tryCreateDependencyTether(chainId) {
+function tryCreatePipelineTether(chainId) {
   // Collect all bugs belonging to this chain
   const chainBugs = [];
   for (const [bid, el] of Object.entries(clientState.bugs)) {
@@ -165,10 +165,10 @@ function tryCreateDependencyTether(chainId) {
   chainBugs.sort((a, b) => a.index - b.index);
 
   // Remove old tether if exists
-  removeDependencyTether(chainId);
+  removePipelineTether(chainId);
 
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.classList.add('dependency-tether');
+  svg.classList.add('pipeline-tether');
   svg.setAttribute('data-chain', chainId);
   svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9;';
 
@@ -184,15 +184,15 @@ function tryCreateDependencyTether(chainId) {
   }
 
   dom.arena.appendChild(svg);
-  clientState.dependencyTethers = clientState.dependencyTethers || {};
-  clientState.dependencyTethers[chainId] = { svg, lines, bugIds: chainBugs.map(b => b.id) };
-  updateDependencyTether(chainId);
+  clientState.pipelineTethers = clientState.pipelineTethers || {};
+  clientState.pipelineTethers[chainId] = { svg, lines, bugIds: chainBugs.map(b => b.id) };
+  updatePipelineTether(chainId);
   startTetherTracking();
 }
 
-export function updateDependencyTether(chainId) {
-  if (!clientState.dependencyTethers || !clientState.dependencyTethers[chainId]) return;
-  const t = clientState.dependencyTethers[chainId];
+export function updatePipelineTether(chainId) {
+  if (!clientState.pipelineTethers || !clientState.pipelineTethers[chainId]) return;
+  const t = clientState.pipelineTethers[chainId];
   const arenaRect = dom.arena.getBoundingClientRect();
   for (const seg of t.lines) {
     const el1 = clientState.bugs[seg.from];
@@ -207,19 +207,19 @@ export function updateDependencyTether(chainId) {
   }
 }
 
-export function removeDependencyTether(chainId) {
-  if (!clientState.dependencyTethers || !clientState.dependencyTethers[chainId]) return;
-  clientState.dependencyTethers[chainId].svg.remove();
-  delete clientState.dependencyTethers[chainId];
-  if (Object.keys(clientState.dependencyTethers).length === 0 &&
+export function removePipelineTether(chainId) {
+  if (!clientState.pipelineTethers || !clientState.pipelineTethers[chainId]) return;
+  clientState.pipelineTethers[chainId].svg.remove();
+  delete clientState.pipelineTethers[chainId];
+  if (Object.keys(clientState.pipelineTethers).length === 0 &&
       (!clientState.mergeTethers || Object.keys(clientState.mergeTethers).length === 0)) {
     stopTetherTracking();
   }
 }
 
-export function rebuildDependencyTether(chainId) {
-  removeDependencyTether(chainId);
-  tryCreateDependencyTether(chainId);
+export function rebuildPipelineTether(chainId) {
+  removePipelineTether(chainId);
+  tryCreatePipelineTether(chainId);
 }
 
 export function removeBugElement(bugId, animate) {
@@ -247,12 +247,12 @@ export function clearAllBugs() {
     }
     clientState.mergeTethers = {};
   }
-  // Clear dependency tethers
-  if (clientState.dependencyTethers) {
-    for (const cid of Object.keys(clientState.dependencyTethers)) {
-      clientState.dependencyTethers[cid].svg.remove();
+  // Clear pipeline tethers
+  if (clientState.pipelineTethers) {
+    for (const cid of Object.keys(clientState.pipelineTethers)) {
+      clientState.pipelineTethers[cid].svg.remove();
     }
-    clientState.dependencyTethers = {};
+    clientState.pipelineTethers = {};
   }
 }
 
