@@ -1,7 +1,7 @@
 import { LOGICAL_W, LOGICAL_H } from './config.js';
 import { dom, clientState } from './state.js';
 import { logicalToPixel } from './coordinates.js';
-import { updateHUD, updatePlayerCount, hideAllScreens, showStartScreen, showGameOverScreen, showWinScreen, showLevelScreen } from './hud.js';
+import { updateHUD, updatePlayerCount, hideAllScreens, showStartScreen, showGameOverScreen, showWinScreen, showLevelScreen, updateLobbyRoster } from './hud.js';
 import { createBugElement, removeBugElement, clearAllBugs, showSquashEffect, removeMergeTether } from './bugs.js';
 import { createBossElement, updateBossHp, removeBossElement, showBossHitEffect, formatTime } from './boss.js';
 import { addRemoteCursor, removeRemoteCursor, updateRemoteCursor, clearRemoteCursors } from './players.js';
@@ -210,6 +210,7 @@ function handleMessage(msg) {
       clientState.players[p.id] = p;
       if (p.id !== clientState.myId) addRemoteCursor(p.id, p.name, p.color, p.icon);
       updatePlayerCount();
+      updateLobbyRoster();
       break;
     }
 
@@ -217,6 +218,7 @@ function handleMessage(msg) {
       delete clientState.players[msg.playerId];
       removeRemoteCursor(msg.playerId);
       updatePlayerCount();
+      updateLobbyRoster();
       break;
     }
 
