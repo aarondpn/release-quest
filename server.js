@@ -75,6 +75,8 @@ wss.on('connection', (ws) => {
   playerInfo.set(playerId, { name, color, icon });
   network.wsToPlayer.set(ws, playerId);
 
+  console.log(`[connect] ${playerId} connected (${wss.clients.size} online)`);
+
   // Send welcome — no game state yet, player must join a lobby first
   network.send(ws, {
     type: 'welcome',
@@ -104,9 +106,11 @@ wss.on('connection', (ws) => {
 
         auth.register(username, password, displayName, icon).then(result => {
           if (result.error) {
+            console.log(`[auth] ${pid} register failed: ${result.error}`);
             network.send(ws, { type: 'auth-result', action: 'register', success: false, error: result.error });
             return;
           }
+          console.log(`[auth] ${pid} registered as "${result.user.username}"`);
           const info = playerInfo.get(pid);
           if (info) {
             info.name = result.user.displayName;
@@ -143,9 +147,11 @@ wss.on('connection', (ws) => {
 
         auth.login(username, password).then(result => {
           if (result.error) {
+            console.log(`[auth] ${pid} login failed for "${username}": ${result.error}`);
             network.send(ws, { type: 'auth-result', action: 'login', success: false, error: result.error });
             return;
           }
+          console.log(`[auth] ${pid} logged in as "${result.user.username}"`);
           const info = playerInfo.get(pid);
           if (info) {
             info.name = result.user.displayName;
@@ -179,6 +185,7 @@ wss.on('connection', (ws) => {
         const token = String(msg.token || '');
         auth.logout(token).then(() => {
           const info = playerInfo.get(pid);
+          console.log(`[auth] ${pid} logged out`);
           if (info) {
             delete info.userId;
           }
@@ -193,9 +200,11 @@ wss.on('connection', (ws) => {
         const token = String(msg.token || '');
         auth.validateSession(token).then(user => {
           if (!user) {
+            console.log(`[auth] ${pid} session resume failed (expired/invalid)`);
             network.send(ws, { type: 'auth-result', action: 'resume', success: false, error: 'Session expired' });
             return;
           }
+          console.log(`[auth] ${pid} resumed session as "${user.username}"`);
           const info = playerInfo.get(pid);
           if (info) {
             info.name = user.displayName;
@@ -251,9 +260,11 @@ wss.on('connection', (ws) => {
 
         lobby.createLobby(lobbyName, maxPlayers).then(result => {
           if (result.error) {
+            console.log(`[lobby] ${pid} create failed: ${result.error}`);
             network.send(ws, { type: 'lobby-error', message: result.error });
             return;
           }
+          console.log(`[lobby] ${pid} created lobby "${lobbyName}" (${result.lobby.code})`);
           network.send(ws, { type: 'lobby-created', lobby: result.lobby });
           // Broadcast updated lobby list to all unattached clients
           broadcastLobbyList();
@@ -291,6 +302,7 @@ wss.on('connection', (ws) => {
 
         lobby.joinLobby(lobbyId, pid, playerData).then(result => {
           if (result.error) {
+            console.log(`[lobby] ${pid} join failed (lobby ${lobbyId}): ${result.error}`);
             network.send(ws, { type: 'lobby-error', message: result.error });
             return;
           }
@@ -299,6 +311,8 @@ wss.on('connection', (ws) => {
 
           const ctx = getCtxForPlayer(pid);
           if (!ctx) return;
+
+          console.log(`[lobby] ${pid} joined lobby ${lobbyId} (${Object.keys(ctx.state.players).length} players)`);
 
           // Send lobby-joined with full game state
           network.send(ws, {
@@ -326,6 +340,7 @@ wss.on('connection', (ws) => {
       case 'leave-lobby': {
         const currentLobbyId = lobby.getLobbyForPlayer(pid);
         if (currentLobbyId) {
+          console.log(`[lobby] ${pid} left lobby ${currentLobbyId}`);
           await handleLeaveLobby(ws, pid, currentLobbyId);
           network.send(ws, { type: 'lobby-left' });
           broadcastLobbyList();
@@ -337,6 +352,7 @@ wss.on('connection', (ws) => {
         const ctx = getCtxForPlayer(pid);
         if (!ctx) break;
         if (ctx.state.phase === 'lobby' || ctx.state.phase === 'gameover' || ctx.state.phase === 'win') {
+          console.log(`[game] ${pid} started game in lobby ${ctx.lobbyId} (${Object.keys(ctx.state.players).length} players)`);
           game.startGame(ctx);
         }
         break;
@@ -537,10 +553,12 @@ wss.on('connection', (ws) => {
     if (pid) {
       const currentLobbyId = lobby.getLobbyForPlayer(pid);
       if (currentLobbyId) {
+        console.log(`[disconnect] ${pid} left lobby ${currentLobbyId} (disconnected)`);
         await handleLeaveLobby(ws, pid, currentLobbyId);
         broadcastLobbyList();
       }
       playerInfo.delete(pid);
+      console.log(`[disconnect] ${pid} disconnected (${wss.clients.size} online)`);
     }
   });
 });
