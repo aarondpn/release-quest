@@ -54,32 +54,39 @@ export function createBugElement(bugId, lx, ly, variant) {
     let holdTimer = null;
     let holdStartTime = null;
 
-    el.addEventListener('mousedown', (e) => {
+    const startHold = (e) => {
       e.stopPropagation();
       e.preventDefault();
       if (clientState.ws && clientState.ws.readyState === 1) {
         holdStartTime = Date.now();
         clientState.ws.send(JSON.stringify({ type: 'click-memory-leak-start', bugId }));
       }
-    });
+    };
 
-    el.addEventListener('mouseup', (e) => {
+    const endHold = (e) => {
       e.stopPropagation();
       if (clientState.ws && clientState.ws.readyState === 1 && holdStartTime) {
         clientState.ws.send(JSON.stringify({ type: 'click-memory-leak-complete', bugId }));
         holdStartTime = null;
       }
-    });
+    };
 
-    el.addEventListener('mouseleave', (e) => {
-      // Cancel hold if mouse leaves
+    const cancelHold = () => {
       if (holdStartTime) {
         if (clientState.ws && clientState.ws.readyState === 1) {
           clientState.ws.send(JSON.stringify({ type: 'click-memory-leak-complete', bugId }));
         }
         holdStartTime = null;
       }
-    });
+    };
+
+    el.addEventListener('mousedown', startHold);
+    el.addEventListener('mouseup', endHold);
+    el.addEventListener('mouseleave', cancelHold);
+
+    el.addEventListener('touchstart', startHold, { passive: false });
+    el.addEventListener('touchend', endHold);
+    el.addEventListener('touchcancel', cancelHold);
   } else {
     // Normal click for other bugs
     el.addEventListener('click', (e) => {

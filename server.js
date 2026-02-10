@@ -52,6 +52,67 @@ const httpServer = http.createServer((req, res) => {
   });
 });
 
+// ── Memory leak completion helper ──
+function completeMemoryLeak(ctx, bugId, bug) {
+  const { state: st } = ctx;
+
+  clearTimeout(bug.escapeTimer);
+  clearInterval(bug.wanderInterval);
+  if (bug.growthInterval) clearInterval(bug.growthInterval);
+  if (bug.autoCompleteTimer) clearTimeout(bug.autoCompleteTimer);
+
+  // Collect all holders for rewards
+  const allHolders = bug.holders ? Array.from(bug.holders.keys()) : [];
+  const holderCount = allHolders.length;
+  delete st.bugs[bugId];
+
+  // Award points to all holders
+  let points = MEMORY_LEAK_CONFIG.pointsByStage[bug.holdStartStage] || BUG_POINTS;
+
+  // Duck buff: double points
+  if (powerups.isDuckBuffActive(ctx)) {
+    points *= 2;
+  }
+
+  for (const holderId of allHolders) {
+    if (st.players[holderId]) {
+      st.players[holderId].bugsSquashed = (st.players[holderId].bugsSquashed || 0) + 1;
+      st.players[holderId].score += points;
+      st.score += points;
+    }
+  }
+
+  if (ctx.matchLog) {
+    ctx.matchLog.log('squash', {
+      bugId,
+      type: 'memory-leak',
+      by: allHolders,
+      growthStage: bug.holdStartStage,
+      holderCount,
+      activeBugs: Object.keys(st.bugs).length,
+      score: st.score,
+    });
+  }
+
+  network.broadcastToLobby(ctx.lobbyId, {
+    type: 'memory-leak-cleared',
+    bugId,
+    holders: allHolders,
+    holderCount,
+    score: st.score,
+    players: Object.fromEntries(
+      allHolders.filter(h => st.players[h]).map(h => [h, st.players[h].score])
+    ),
+    points,
+  });
+
+  if (st.phase === 'boss') {
+    game.checkBossGameState(ctx);
+  } else {
+    game.checkGameState(ctx);
+  }
+}
+
 // ── Helper to get lobby context for a player ──
 function getCtxForPlayer(pid) {
   const lobbyId = lobby.getLobbyForPlayer(pid);
@@ -558,7 +619,7 @@ wss.on('connection', (ws) => {
           break;
         }
 
-        // Normal bug / Heisenbug / Memory Leak / Clone squash
+        // Normal bug / Heisenbug / Clone squash
         clearTimeout(bug.escapeTimer);
         clearInterval(bug.wanderInterval);
         if (bug.growthInterval) clearInterval(bug.growthInterval);
@@ -570,10 +631,6 @@ wss.on('connection', (ws) => {
         let points = BUG_POINTS;
         if (bug.isHeisenbug) {
           points = BUG_POINTS * HEISENBUG_CONFIG.pointsMultiplier;
-        }
-        if (bug.isMemoryLeak) {
-          // Reward proactive clicking: earlier = more points
-          points = MEMORY_LEAK_CONFIG.pointsByStage[bug.growthStage] || BUG_POINTS;
         }
 
         // Duck buff: double points
@@ -587,11 +644,10 @@ wss.on('connection', (ws) => {
         if (ctx.matchLog) {
           ctx.matchLog.log('squash', {
             bugId,
-            type: bug.isHeisenbug ? 'heisenbug' : (bug.isMemoryLeak ? 'memory-leak' : (bug.isMinion ? 'minion' : 'normal')),
+            type: bug.isHeisenbug ? 'heisenbug' : (bug.isMinion ? 'minion' : 'normal'),
             by: pid,
             activeBugs: Object.keys(st.bugs).length,
             score: st.score,
-            ...(bug.isMemoryLeak ? { growthStage: bug.growthStage } : {}),
           });
         }
 
@@ -603,7 +659,6 @@ wss.on('connection', (ws) => {
           score: st.score,
           playerScore: player.score,
           isHeisenbug: bug.isHeisenbug || false,
-          isMemoryLeak: bug.isMemoryLeak || false,
           points,
         });
 
@@ -628,16 +683,30 @@ wss.on('connection', (ws) => {
         if (!bug.holders) {
           bug.holders = new Map();
           bug.holdStartStage = bug.growthStage;
-          bug.firstHolderStartTime = Date.now(); // Track when first holder started
+          bug.firstHolderStartTime = Date.now();
+          // Pause growth while being held
+          if (bug.growthInterval) {
+            clearInterval(bug.growthInterval);
+            bug.growthInterval = null;
+          }
         }
 
         // Add this player to holders
         if (!bug.holders.has(pid)) {
           bug.holders.set(pid, Date.now());
-          
+
           const elapsedSinceFirst = Date.now() - bug.firstHolderStartTime;
           const requiredTime = MEMORY_LEAK_CONFIG.holdTimeByStage[bug.holdStartStage];
-          
+          const effectiveRequiredTime = requiredTime / bug.holders.size;
+          const remaining = Math.max(0, effectiveRequiredTime - elapsedSinceFirst);
+
+          // Set/reset auto-complete timer
+          if (bug.autoCompleteTimer) clearTimeout(bug.autoCompleteTimer);
+          bug.autoCompleteTimer = setTimeout(() => {
+            if (!st.bugs[bugId] || !bug.holders) return;
+            completeMemoryLeak(ctx, bugId, bug);
+          }, remaining);
+
           // Broadcast hold update with sync info
           network.broadcastToLobby(ctx.lobbyId, {
             type: 'memory-leak-hold-update',
@@ -680,7 +749,7 @@ wss.on('connection', (ws) => {
         if (playerHoldDuration < effectiveRequiredTime) {
           // Released too early - remove this holder
           bug.holders.delete(pid);
-          
+
           network.broadcastToLobby(ctx.lobbyId, {
             type: 'memory-leak-hold-update',
             bugId,
@@ -690,12 +759,33 @@ wss.on('connection', (ws) => {
             elapsedTime: elapsedSinceFirst,
             dropOut: true,
           });
-          
+
           // If no holders left, reset completely
           if (bug.holders.size === 0) {
+            if (bug.autoCompleteTimer) { clearTimeout(bug.autoCompleteTimer); bug.autoCompleteTimer = null; }
             delete bug.holders;
             delete bug.holdStartStage;
             delete bug.firstHolderStartTime;
+            // Resume growth
+            if (!bug.growthInterval && bug.growthStage < MEMORY_LEAK_CONFIG.maxGrowthStage) {
+              const phaseCheck = st.phase;
+              bug.growthInterval = setInterval(() => {
+                if (st.phase !== phaseCheck || !st.bugs[bugId]) return;
+                if (bug.growthStage < MEMORY_LEAK_CONFIG.maxGrowthStage) {
+                  bug.growthStage++;
+                  network.broadcastToLobby(ctx.lobbyId, { type: 'memory-leak-grow', bugId, growthStage: bug.growthStage });
+                }
+              }, MEMORY_LEAK_CONFIG.growthInterval);
+            }
+          } else {
+            // Recalculate auto-complete timer with fewer holders
+            const newEffective = requiredTime / bug.holders.size;
+            const newRemaining = Math.max(0, newEffective - elapsedSinceFirst);
+            if (bug.autoCompleteTimer) clearTimeout(bug.autoCompleteTimer);
+            bug.autoCompleteTimer = setTimeout(() => {
+              if (!st.bugs[bugId] || !bug.holders) return;
+              completeMemoryLeak(ctx, bugId, bug);
+            }, newRemaining);
           }
           break;
         }
@@ -707,59 +797,7 @@ wss.on('connection', (ws) => {
         }
 
         // Success! Clear the leak
-        clearTimeout(bug.escapeTimer);
-        clearInterval(bug.wanderInterval);
-        if (bug.growthInterval) clearInterval(bug.growthInterval);
-        
-        // Collect all holders for rewards
-        const allHolders = Array.from(bug.holders.keys());
-        delete st.bugs[bugId];
-
-        // Award points to all holders
-        let points = MEMORY_LEAK_CONFIG.pointsByStage[bug.holdStartStage] || BUG_POINTS;
-        
-        // Duck buff: double points
-        if (powerups.isDuckBuffActive(ctx)) {
-          points *= 2;
-        }
-
-        for (const holderId of allHolders) {
-          if (st.players[holderId]) {
-            st.players[holderId].bugsSquashed = (st.players[holderId].bugsSquashed || 0) + 1;
-            st.players[holderId].score += points;
-            st.score += points;
-          }
-        }
-
-        if (ctx.matchLog) {
-          ctx.matchLog.log('squash', {
-            bugId,
-            type: 'memory-leak',
-            by: allHolders,
-            growthStage: bug.holdStartStage,
-            holderCount,
-            activeBugs: Object.keys(st.bugs).length,
-            score: st.score,
-          });
-        }
-
-        network.broadcastToLobby(ctx.lobbyId, {
-          type: 'memory-leak-cleared',
-          bugId,
-          holders: allHolders,
-          holderCount,
-          score: st.score,
-          players: Object.fromEntries(
-            allHolders.filter(h => st.players[h]).map(h => [h, st.players[h].score])
-          ),
-          points,
-        });
-
-        if (st.phase === 'boss') {
-          game.checkBossGameState(ctx);
-        } else {
-          game.checkGameState(ctx);
-        }
+        completeMemoryLeak(ctx, bugId, bug);
         break;
       }
 
@@ -881,7 +919,73 @@ async function handleLeaveLobby(ws, pid, lobbyId) {
   }
 
   if (mem) {
-    const remaining = Object.keys(mem.state.players).length;
+    const st = mem.state;
+
+    // Clean up memory leak holders for the departing player
+    for (const bugId of Object.keys(st.bugs)) {
+      const bug = st.bugs[bugId];
+      if (!bug.isMemoryLeak || !bug.holders || !bug.holders.has(pid)) continue;
+
+      bug.holders.delete(pid);
+      const ctx = { lobbyId, state: st, counters: mem.counters, timers: mem.timers, playerInfo };
+      Object.defineProperty(ctx, 'matchLog', {
+        get() { return mem.timers._matchLog || null; },
+        set(v) { mem.timers._matchLog = v; },
+        enumerable: true,
+      });
+
+      if (bug.holders.size === 0) {
+        // No holders left — clear auto-complete and resume growth
+        if (bug.autoCompleteTimer) { clearTimeout(bug.autoCompleteTimer); bug.autoCompleteTimer = null; }
+        delete bug.holders;
+        delete bug.holdStartStage;
+        delete bug.firstHolderStartTime;
+        if (!bug.growthInterval && bug.growthStage < MEMORY_LEAK_CONFIG.maxGrowthStage) {
+          const phaseCheck = st.phase;
+          bug.growthInterval = setInterval(() => {
+            if (st.phase !== phaseCheck || !st.bugs[bugId]) return;
+            if (bug.growthStage < MEMORY_LEAK_CONFIG.maxGrowthStage) {
+              bug.growthStage++;
+              network.broadcastToLobby(lobbyId, { type: 'memory-leak-grow', bugId, growthStage: bug.growthStage });
+            }
+          }, MEMORY_LEAK_CONFIG.growthInterval);
+        }
+        // Broadcast reset to clients
+        const requiredTime = MEMORY_LEAK_CONFIG.holdTimeByStage[bug.growthStage];
+        network.broadcastToLobby(lobbyId, {
+          type: 'memory-leak-hold-update',
+          bugId,
+          playerId: pid,
+          holderCount: 0,
+          requiredHoldTime: requiredTime,
+          elapsedTime: 0,
+          dropOut: true,
+        });
+      } else {
+        // Recalculate auto-complete timer with fewer holders
+        const requiredTime = MEMORY_LEAK_CONFIG.holdTimeByStage[bug.holdStartStage];
+        const effectiveRequiredTime = requiredTime / bug.holders.size;
+        const elapsedSinceFirst = Date.now() - bug.firstHolderStartTime;
+        const remaining = Math.max(0, effectiveRequiredTime - elapsedSinceFirst);
+        if (bug.autoCompleteTimer) clearTimeout(bug.autoCompleteTimer);
+        bug.autoCompleteTimer = setTimeout(() => {
+          if (!st.bugs[bugId] || !bug.holders) return;
+          completeMemoryLeak(ctx, bugId, bug);
+        }, remaining);
+        // Broadcast holder update
+        network.broadcastToLobby(lobbyId, {
+          type: 'memory-leak-hold-update',
+          bugId,
+          playerId: pid,
+          holderCount: bug.holders.size,
+          requiredHoldTime: requiredTime,
+          elapsedTime: elapsedSinceFirst,
+          dropOut: true,
+        });
+      }
+    }
+
+    const remaining = Object.keys(st.players).length;
     // Notify remaining players
     network.broadcastToLobby(lobbyId, {
       type: 'player-left',
@@ -891,7 +995,7 @@ async function handleLeaveLobby(ws, pid, lobbyId) {
 
     // Reset game if lobby is now empty (destroyLobby already called by leaveLobby)
     if (remaining === 0) {
-      game.resetToLobby({ lobbyId, state: mem.state, counters: mem.counters, timers: mem.timers });
+      game.resetToLobby({ lobbyId, state: st, counters: mem.counters, timers: mem.timers });
     }
   }
 }

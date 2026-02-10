@@ -121,7 +121,7 @@ const MEMORY_LEAK_CONFIG = {
   growthInterval: 500,
   maxGrowthStage: 3,
   damageByStage: [5, 10, 15, 20],
-  pointsByStage: [10, 15, 20, 25],
+  pointsByStage: [25, 20, 15, 10],
   escapeTimeMultiplier: 1.3,
   holdTimeByStage: [800, 1200, 1600, 2000],
 };

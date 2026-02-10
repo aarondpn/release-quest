@@ -373,6 +373,19 @@ function handleMessage(msg) {
         }
       }
       
+      // Show "Too early!" feedback for the local player
+      if (msg.dropOut && msg.playerId === clientState.myId) {
+        const rect = bugEl.getBoundingClientRect();
+        const arenaRect = dom.arena.getBoundingClientRect();
+        const fx = document.createElement('div');
+        fx.className = 'memory-leak-early-release';
+        fx.textContent = 'Too early!';
+        fx.style.left = (rect.left - arenaRect.left + rect.width / 2) + 'px';
+        fx.style.top = (rect.top - arenaRect.top) + 'px';
+        dom.arena.appendChild(fx);
+        setTimeout(() => fx.remove(), 1000);
+      }
+
       // Handle dropout
       if (msg.dropOut && msg.holderCount === 0) {
         progressBar.remove();
@@ -387,19 +400,17 @@ function handleMessage(msg) {
       const requiredTime = parseInt(bugEl.dataset.requiredTime);
       const effectiveRequiredTime = requiredTime / msg.holderCount;
       const elapsed = Date.now() - holdStartTime;
-      
-      // Update progress bar with smooth transition
+
+      // Update progress bar — force-restart CSS transition
       const fill = progressBar.querySelector('.memory-leak-progress-fill');
       const currentProgress = Math.min(100, (elapsed / effectiveRequiredTime) * 100);
       const remainingTime = Math.max(0, effectiveRequiredTime - elapsed);
-      
-      fill.style.transition = `width ${remainingTime}ms linear`;
+
+      fill.style.transition = 'none';
       fill.style.width = currentProgress + '%';
-      
-      // Animate to 100% from current position
-      requestAnimationFrame(() => {
-        fill.style.width = '100%';
-      });
+      fill.getBoundingClientRect(); // force layout
+      fill.style.transition = `width ${remainingTime}ms linear`;
+      fill.style.width = '100%';
       
       break;
     }

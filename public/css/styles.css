@@ -1127,6 +1127,24 @@ header p {
   filter: brightness(1.2);
 }
 
+.memory-leak-early-release {
+  position: absolute;
+  pointer-events: none;
+  z-index: 25;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--red);
+  text-shadow: 0 0 8px rgba(255,107,107,0.6);
+  white-space: nowrap;
+  transform: translateX(-50%);
+  animation: memory-leak-early-release-rise 1s ease-out forwards;
+}
+
+@keyframes memory-leak-early-release-rise {
+  0% { transform: translateX(-50%) translateY(0) scale(1.2); opacity: 1; }
+  100% { transform: translateX(-50%) translateY(-40px) scale(0.8); opacity: 0; }
+}
+
 /* ── Feature 4: Rubber Duck Debugger ── */
 .rubber-duck {
   position: absolute;
