@@ -1,4 +1,4 @@
-const { BOSS_CONFIG } = require('./config');
+const { BOSS_CONFIG, RUBBER_DUCK_CONFIG } = require('./config');
 const { state, randomPosition, getPlayerScores } = require('./state');
 const network = require('./network');
 
@@ -122,7 +122,15 @@ function handleBossClick(pid) {
   if (state.boss.lastClickBy[pid] && now - state.boss.lastClickBy[pid] < BOSS_CONFIG.clickCooldownMs) return;
   state.boss.lastClickBy[pid] = now;
 
-  state.boss.hp -= BOSS_CONFIG.clickDamage;
+  // Duck buff doubles click damage
+  let damage = BOSS_CONFIG.clickDamage;
+  let powerups;
+  try { powerups = require('./powerups'); } catch (e) { powerups = null; }
+  if (powerups && powerups.isDuckBuffActive()) {
+    damage *= RUBBER_DUCK_CONFIG.pointsMultiplier;
+  }
+
+  state.boss.hp -= damage;
   if (state.boss.hp < 0) state.boss.hp = 0;
 
   state.score += BOSS_CONFIG.clickPoints;

@@ -2,10 +2,10 @@ import { LOGICAL_W, LOGICAL_H } from './config.js';
 import { dom, clientState } from './state.js';
 import { logicalToPixel } from './coordinates.js';
 import { updateHUD, updatePlayerCount, hideAllScreens, showStartScreen, showGameOverScreen, showWinScreen, showLevelScreen } from './hud.js';
-import { createBugElement, removeBugElement, clearAllBugs, showSquashEffect } from './bugs.js';
+import { createBugElement, removeBugElement, clearAllBugs, showSquashEffect, updateMergeTether, removeMergeTether } from './bugs.js';
 import { createBossElement, updateBossHp, removeBossElement, showBossHitEffect, formatTime } from './boss.js';
 import { addRemoteCursor, removeRemoteCursor, updateRemoteCursor } from './players.js';
-import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, showEnrageFlash, showLevelFlash, showEscalationWarning, showBossRegenNumber } from './vfx.js';
+import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, showEnrageFlash, showLevelFlash, showEscalationWarning, showBossRegenNumber, showHeisenbugFleeEffect, showFeaturePenaltyEffect, showDuckBuffOverlay, removeDuckBuffOverlay, showMergeResolvedEffect } from './vfx.js';
 
 export function sendMessage(msg) {
   if (clientState.ws && clientState.ws.readyState === 1) {
@@ -62,7 +62,13 @@ function handleMessage(msg) {
 
       clearAllBugs();
       if (msg.bugs) {
-        msg.bugs.forEach(b => createBugElement(b.id, b.x, b.y));
+        msg.bugs.forEach(b => createBugElement(b.id, b.x, b.y, b));
+      }
+
+      // Restore duck element if present
+      removeDuckElement();
+      if (msg.rubberDuck) {
+        createDuckElement(msg.rubberDuck);
       }
 
       removeBossElement();
@@ -113,6 +119,8 @@ function handleMessage(msg) {
       hideAllScreens();
       clearAllBugs();
       removeBossElement();
+      removeDuckElement();
+      removeDuckBuffOverlay();
       updateHUD(msg.score, msg.level, msg.hp);
       if (msg.players) {
         msg.players.forEach(p => { if (clientState.players[p.id]) clientState.players[p.id].score = p.score; });
@@ -138,7 +146,7 @@ function handleMessage(msg) {
     }
 
     case 'bug-spawned': {
-      createBugElement(msg.bug.id, msg.bug.x, msg.bug.y);
+      createBugElement(msg.bug.id, msg.bug.x, msg.bug.y, msg.bug);
       break;
     }
 
@@ -157,6 +165,16 @@ function handleMessage(msg) {
         el.style.transition = 'left ' + dur + 'ms linear, top ' + dur + 'ms linear';
         el.style.left = pos.x + 'px';
         el.style.top = pos.y + 'px';
+      }
+
+      // Update merge tethers
+      if (clientState.mergeTethers) {
+        for (const cid of Object.keys(clientState.mergeTethers)) {
+          const t = clientState.mergeTethers[cid];
+          if (t.bug1 === msg.bugId || t.bug2 === msg.bugId) {
+            setTimeout(() => updateMergeTether(cid), 50);
+          }
+        }
       }
       break;
     }
@@ -191,9 +209,160 @@ function handleMessage(msg) {
       break;
     }
 
+    // ── Heisenbug flee ──
+    case 'bug-flee': {
+      const bugEl = clientState.bugs[msg.bugId];
+      if (bugEl) {
+        showHeisenbugFleeEffect(bugEl);
+        // Instant teleport (no CSS transition)
+        bugEl.style.transition = 'none';
+        const pos = logicalToPixel(msg.x, msg.y);
+        bugEl.style.left = pos.x + 'px';
+        bugEl.style.top = pos.y + 'px';
+        // Re-enable transition after a frame
+        requestAnimationFrame(() => { bugEl.style.transition = ''; });
+        // Stabilized
+        if (msg.fleesRemaining <= 0) {
+          bugEl.classList.remove('heisenbug');
+          bugEl.classList.add('heisenbug-stabilized');
+        }
+      }
+      break;
+    }
+
+    // ── Feature-not-a-bug squashed ──
+    case 'feature-squashed': {
+      const bugEl = clientState.bugs[msg.bugId];
+      if (bugEl) {
+        const rect = bugEl.getBoundingClientRect();
+        const arenaRect = dom.arena.getBoundingClientRect();
+        const lx = ((rect.left - arenaRect.left + rect.width / 2) / arenaRect.width) * LOGICAL_W;
+        const ly = ((rect.top - arenaRect.top) / arenaRect.height) * LOGICAL_H;
+        showFeaturePenaltyEffect(lx, ly);
+      }
+      removeBugElement(msg.bugId, true);
+      updateHUD(undefined, undefined, msg.hp);
+      showDamageVignette();
+      shakeArena('light');
+      break;
+    }
+
+    // ── Feature escaped peacefully ──
+    case 'feature-escaped': {
+      const bugEl = clientState.bugs[msg.bugId];
+      if (bugEl) {
+        bugEl.classList.add('feature-leaving');
+        setTimeout(() => {
+          removeBugElement(msg.bugId);
+        }, 500);
+      } else {
+        removeBugElement(msg.bugId);
+      }
+      break;
+    }
+
+    // ── Rubber duck ──
+    case 'duck-spawn': {
+      createDuckElement(msg.duck);
+      break;
+    }
+
+    case 'duck-wander': {
+      if (clientState.duckElement) {
+        const pos = logicalToPixel(msg.x, msg.y);
+        clientState.duckElement.style.transition = 'left 1s ease, top 1s ease';
+        clientState.duckElement.style.left = pos.x + 'px';
+        clientState.duckElement.style.top = pos.y + 'px';
+      }
+      break;
+    }
+
+    case 'duck-despawn': {
+      removeDuckElement();
+      break;
+    }
+
+    case 'duck-collected': {
+      removeDuckElement();
+      updateHUD(msg.score);
+      if (clientState.players[msg.playerId]) {
+        clientState.players[msg.playerId].score = msg.playerScore;
+      }
+      showDuckBuffOverlay(msg.buffDuration);
+      break;
+    }
+
+    case 'duck-buff-expired': {
+      removeDuckBuffOverlay();
+      break;
+    }
+
+    // ── Merge conflict ──
+    case 'merge-conflict-resolved': {
+      const bugEl1 = clientState.bugs[msg.bugId];
+      const bugEl2 = clientState.bugs[msg.partnerId];
+      // Show merge effect at midpoint
+      if (bugEl1 || bugEl2) {
+        const ref = bugEl1 || bugEl2;
+        const rect = ref.getBoundingClientRect();
+        const arenaRect = dom.arena.getBoundingClientRect();
+        const lx = ((rect.left - arenaRect.left + rect.width / 2) / arenaRect.width) * LOGICAL_W;
+        const ly = ((rect.top - arenaRect.top) / arenaRect.height) * LOGICAL_H;
+        showMergeResolvedEffect(lx, ly);
+        showParticleBurst(lx, ly, '#ffe66d');
+      }
+      removeBugElement(msg.bugId, true);
+      removeBugElement(msg.partnerId, true);
+      // Clean up tether
+      if (clientState.mergeTethers) {
+        for (const cid of Object.keys(clientState.mergeTethers)) {
+          const t = clientState.mergeTethers[cid];
+          if (t.bug1 === msg.bugId || t.bug2 === msg.bugId || t.bug1 === msg.partnerId || t.bug2 === msg.partnerId) {
+            removeMergeTether(cid);
+          }
+        }
+      }
+      updateHUD(msg.score);
+      if (msg.players) {
+        for (const [pid, score] of Object.entries(msg.players)) {
+          if (clientState.players[pid]) clientState.players[pid].score = score;
+        }
+      }
+      break;
+    }
+
+    case 'merge-conflict-halfclick': {
+      const bugEl = clientState.bugs[msg.bugId];
+      if (bugEl) {
+        bugEl.classList.add('merge-halfclick');
+        setTimeout(() => bugEl.classList.remove('merge-halfclick'), 500);
+      }
+      break;
+    }
+
+    case 'merge-conflict-escaped': {
+      removeBugElement(msg.bugId);
+      removeBugElement(msg.partnerId);
+      // Clean up tether
+      if (clientState.mergeTethers) {
+        for (const cid of Object.keys(clientState.mergeTethers)) {
+          const t = clientState.mergeTethers[cid];
+          if (t.bug1 === msg.bugId || t.bug2 === msg.bugId || t.bug1 === msg.partnerId || t.bug2 === msg.partnerId) {
+            removeMergeTether(cid);
+          }
+        }
+      }
+      updateHUD(undefined, undefined, msg.hp);
+      showDamageVignette();
+      shakeArena('medium');
+      break;
+    }
+
     case 'game-over': {
       clearAllBugs();
       removeBossElement();
+      removeDuckElement();
+      removeDuckBuffOverlay();
       shakeArena('heavy');
       showGameOverScreen(msg.score, msg.level, msg.players || []);
       break;
@@ -277,9 +446,39 @@ function handleMessage(msg) {
     case 'game-reset': {
       clearAllBugs();
       removeBossElement();
+      removeDuckElement();
+      removeDuckBuffOverlay();
       showStartScreen();
       updateHUD(0, 1, 100);
       break;
     }
   }
 }
+
+// ── Duck element helpers ──
+
+function createDuckElement(duck) {
+  removeDuckElement();
+  const el = document.createElement('div');
+  el.className = 'rubber-duck';
+  el.id = 'rubber-duck';
+  const pos = logicalToPixel(duck.x, duck.y);
+  el.style.left = pos.x + 'px';
+  el.style.top = pos.y + 'px';
+  el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    sendMessage({ type: 'click-duck' });
+  });
+  dom.arena.appendChild(el);
+  clientState.duckElement = el;
+}
+
+function removeDuckElement() {
+  if (clientState.duckElement) {
+    clientState.duckElement.remove();
+    clientState.duckElement = null;
+  }
+  const existing = document.getElementById('rubber-duck');
+  if (existing) existing.remove();
+}
+

@@ -3,6 +3,7 @@ const { state, currentLevelConfig, getPlayerScores } = require('./state');
 const network = require('./network');
 const bugs = require('./bugs');
 const boss = require('./boss');
+const powerups = require('./powerups');
 
 function startGame() {
   state.score = 0;
@@ -11,6 +12,7 @@ function startGame() {
   state.phase = 'playing';
   state.boss = null;
   boss.clearBossTimers();
+  powerups.clearDuck();
 
   for (const pid of Object.keys(state.players)) {
     state.players[pid].score = 0;
@@ -28,6 +30,9 @@ function startGame() {
   });
 
   startLevel();
+
+  // Start duck spawning globally (works across levels)
+  powerups.startDuckSpawning();
 }
 
 function startLevel() {
@@ -54,6 +59,7 @@ function checkGameState() {
     state.phase = 'gameover';
     bugs.clearSpawnTimer();
     bugs.clearAllBugs();
+    powerups.clearDuck();
     network.broadcast({
       type: 'game-over',
       score: state.score,
@@ -99,6 +105,7 @@ function checkBossGameState() {
     state.phase = 'gameover';
     boss.clearBossTimers();
     bugs.clearAllBugs();
+    powerups.clearDuck();
     state.boss = null;
     network.broadcast({
       type: 'game-over',
@@ -120,6 +127,7 @@ function resetToLobby() {
   bugs.clearSpawnTimer();
   bugs.clearAllBugs();
   boss.clearBossTimers();
+  powerups.clearDuck();
 }
 
 module.exports = { startGame, startLevel, checkGameState, checkBossGameState, resetToLobby };
