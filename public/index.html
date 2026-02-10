@@ -143,18 +143,34 @@
 
       <!-- Start / Lobby screen -->
       <div class="screen-overlay" id="start-screen">
-        <div class="screen-title">BUG HUNTER</div>
-        <div class="screen-sub">
-          Das Release lief nicht perfekt.<br>
-          Aber hey – wir sind Menschen!<br><br>
-          Klicke die Bugs weg, bevor sie<br>
-          deine HP auffressen.<br><br>
-          3 Level. Schneller werdende Bugs.<br>
-          Jetzt mit Multiplayer!<br><br>
-          <a href="/overview.html" target="_blank" class="wiki-link">📚 View Game Wiki</a>
+        <!-- Crawling background bugs layer -->
+        <div class="lobby-bg-bugs" id="lobby-bg-bugs"></div>
+
+        <!-- Glitch title -->
+        <div class="lobby-title-wrap">
+          <div class="lobby-title" data-text="BUG HUNTER">BUG HUNTER</div>
+          <div class="lobby-subtitle">SQUASH THE INFESTATION</div>
         </div>
-        <button class="btn" id="start-btn">START</button>
-        <button class="btn btn-leave" id="leave-btn-start">LEAVE LOBBY</button>
+
+        <!-- Player roster -->
+        <div class="lobby-roster" id="lobby-roster">
+          <div class="lobby-roster-label">HUNTERS IN LOBBY</div>
+          <div class="lobby-roster-list" id="lobby-roster-list"></div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="lobby-actions">
+          <button class="btn lobby-start-btn" id="start-btn">
+            <span class="lobby-start-icon">&#9654;</span> START HUNT
+          </button>
+          <button class="btn btn-leave" id="leave-btn-start">LEAVE LOBBY</button>
+        </div>
+
+        <!-- Tips ticker -->
+        <div class="lobby-tips" id="lobby-tips">
+          <span class="lobby-tips-label">TIP:</span>
+          <span class="lobby-tips-text" id="lobby-tips-text"></span>
+        </div>
       </div>
 
       <!-- Game Over screen -->
