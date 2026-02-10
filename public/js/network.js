@@ -4,8 +4,9 @@ import { logicalToPixel } from './coordinates.js';
 import { updateHUD, updatePlayerCount, hideAllScreens, showStartScreen, showGameOverScreen, showWinScreen, showLevelScreen } from './hud.js';
 import { createBugElement, removeBugElement, clearAllBugs, showSquashEffect, removeMergeTether } from './bugs.js';
 import { createBossElement, updateBossHp, removeBossElement, showBossHitEffect, formatTime } from './boss.js';
-import { addRemoteCursor, removeRemoteCursor, updateRemoteCursor } from './players.js';
+import { addRemoteCursor, removeRemoteCursor, updateRemoteCursor, clearRemoteCursors } from './players.js';
 import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, showEnrageFlash, showLevelFlash, showEscalationWarning, showBossRegenNumber, showHeisenbugFleeEffect, showFeaturePenaltyEffect, showDuckBuffOverlay, removeDuckBuffOverlay, showMergeResolvedEffect } from './vfx.js';
+import { showLobbyBrowser, hideLobbyBrowser, renderLobbyList, showLobbyError } from './lobby-ui.js';
 
 export function sendMessage(msg) {
   if (clientState.ws && clientState.ws.readyState === 1) {
@@ -25,6 +26,7 @@ export function connect() {
   clientState.ws.onclose = () => {
     dom.connStatus.textContent = 'DISCONNECTED';
     dom.connStatus.className = 'conn-status disconnected';
+    clientState.currentLobbyId = null;
     setTimeout(connect, 2000);
   };
 
@@ -43,6 +45,7 @@ function handleMessage(msg) {
       clientState.myColor = msg.color;
       clientState.myIcon = msg.icon;
       clientState.myName = msg.name;
+      clientState.currentLobbyId = null;
 
       if (msg.icon) {
         clientState.selectedIcon = msg.icon;
@@ -51,6 +54,41 @@ function handleMessage(msg) {
         });
       }
 
+      clientState.players = {};
+      updatePlayerCount();
+
+      if (!clientState.hasJoined) {
+        dom.nameEntry.classList.remove('hidden');
+        hideLobbyBrowser();
+        dom.nameInput.focus();
+      } else {
+        dom.nameEntry.classList.add('hidden');
+        // Re-send name and show lobby browser
+        sendMessage({ type: 'set-name', name: clientState.myName, icon: clientState.myIcon });
+        showLobbyBrowser();
+      }
+      break;
+    }
+
+    // ── Lobby messages ──
+
+    case 'lobby-list': {
+      renderLobbyList(msg.lobbies);
+      break;
+    }
+
+    case 'lobby-created': {
+      // Auto-join the lobby we just created
+      sendMessage({ type: 'join-lobby', lobbyId: msg.lobby.id });
+      break;
+    }
+
+    case 'lobby-joined': {
+      clientState.currentLobbyId = msg.lobbyId;
+      hideLobbyBrowser();
+      document.getElementById('hud-leave-btn').classList.remove('hidden');
+
+      // Load game state from lobby
       clientState.players = {};
       if (msg.players) {
         msg.players.forEach(p => {
@@ -65,7 +103,6 @@ function handleMessage(msg) {
         msg.bugs.forEach(b => createBugElement(b.id, b.x, b.y, b));
       }
 
-      // Restore duck element if present
       removeDuckElement();
       if (msg.rubberDuck) {
         createDuckElement(msg.rubberDuck);
@@ -81,19 +118,35 @@ function handleMessage(msg) {
       if (msg.phase === 'boss') dom.levelEl.textContent = 'BOSS';
       clientState.currentPhase = msg.phase;
 
-      if (!clientState.hasJoined) {
-        dom.nameEntry.classList.remove('hidden');
-        dom.nameInput.focus();
-      } else {
-        dom.nameEntry.classList.add('hidden');
-        if (msg.phase === 'lobby') showStartScreen();
-        else if (msg.phase === 'gameover') showGameOverScreen(msg.score, msg.level, msg.players || []);
-        else if (msg.phase === 'win') showWinScreen(msg.score, msg.players || []);
-        else if (msg.phase === 'boss') hideAllScreens();
-        else hideAllScreens();
-      }
+      if (msg.phase === 'lobby') showStartScreen();
+      else if (msg.phase === 'gameover') showGameOverScreen(msg.score, msg.level, msg.players || []);
+      else if (msg.phase === 'win') showWinScreen(msg.score, msg.players || []);
+      else hideAllScreens();
       break;
     }
+
+    case 'lobby-left': {
+      clientState.currentLobbyId = null;
+      clientState.players = {};
+      clearAllBugs();
+      removeBossElement();
+      removeDuckElement();
+      removeDuckBuffOverlay();
+      clearRemoteCursors();
+      hideAllScreens();
+      updateHUD(0, 1, 100);
+      updatePlayerCount();
+      document.getElementById('hud-leave-btn').classList.add('hidden');
+      showLobbyBrowser();
+      break;
+    }
+
+    case 'lobby-error': {
+      showLobbyError(msg.message);
+      break;
+    }
+
+    // ── Player messages ──
 
     case 'player-joined': {
       const p = msg.player;
@@ -114,6 +167,8 @@ function handleMessage(msg) {
       updateRemoteCursor(msg.playerId, msg.x, msg.y);
       break;
     }
+
+    // ── Game messages ──
 
     case 'game-start': {
       hideAllScreens();
@@ -472,4 +527,3 @@ function removeDuckElement() {
   const existing = document.getElementById('rubber-duck');
   if (existing) existing.remove();
 }
-

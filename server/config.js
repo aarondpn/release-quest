@@ -1,3 +1,33 @@
+const path = require('path');
+
+// Load config.json with env var overrides
+let fileConfig = {};
+try {
+  fileConfig = require(path.join(__dirname, '..', 'config.json'));
+} catch (e) {
+  // config.json is optional; defaults below
+}
+
+const SERVER_CONFIG = {
+  port: parseInt(process.env.PORT, 10) || (fileConfig.server && fileConfig.server.port) || 3000,
+};
+
+const DATABASE_CONFIG = process.env.DATABASE_URL
+  ? { connectionString: process.env.DATABASE_URL }
+  : {
+      host: process.env.DB_HOST || (fileConfig.database && fileConfig.database.host) || 'localhost',
+      port: parseInt(process.env.DB_PORT, 10) || (fileConfig.database && fileConfig.database.port) || 5432,
+      database: process.env.DB_NAME || (fileConfig.database && fileConfig.database.database) || 'release_quest',
+      user: process.env.DB_USER || (fileConfig.database && fileConfig.database.user) || 'release_quest',
+      password: process.env.DB_PASSWORD || (fileConfig.database && fileConfig.database.password) || 'release_quest',
+    };
+
+const LOBBY_CONFIG = {
+  maxLobbies: parseInt(process.env.MAX_LOBBIES, 10) || (fileConfig.lobby && fileConfig.lobby.maxLobbies) || 10,
+  defaultMaxPlayers: parseInt(process.env.DEFAULT_MAX_PLAYERS, 10) || (fileConfig.lobby && fileConfig.lobby.defaultMaxPlayers) || 4,
+  maxPlayersLimit: parseInt(process.env.MAX_PLAYERS_LIMIT, 10) || (fileConfig.lobby && fileConfig.lobby.maxPlayersLimit) || 8,
+};
+
 const LOGICAL_W = 800;
 const LOGICAL_H = 500;
 const COLORS = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#a855f7', '#ff9ff3', '#54a0ff', '#5f27cd', '#01a3a4'];
@@ -69,6 +99,7 @@ const MERGE_CONFLICT_CONFIG = {
 };
 
 module.exports = {
+  SERVER_CONFIG, DATABASE_CONFIG, LOBBY_CONFIG,
   LOGICAL_W, LOGICAL_H, COLORS, ICONS, LEVEL_CONFIG, BOSS_CONFIG, MAX_LEVEL, HP_DAMAGE, BUG_POINTS,
   HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, RUBBER_DUCK_CONFIG, MERGE_CONFLICT_CONFIG,
 };

@@ -1,8 +1,9 @@
 import { PLAYER_ICONS, CURSOR_THROTTLE_MS } from './config.js';
 import { clientState, dom, initDom } from './state.js';
 import { pixelToLogical } from './coordinates.js';
-import { updateHUD, showStartScreen, showGameOverScreen, showWinScreen, hideAllScreens } from './hud.js';
+import { updateHUD } from './hud.js';
 import { connect, sendMessage } from './network.js';
+import { showLobbyBrowser, initLobbySend } from './lobby-ui.js';
 
 initDom();
 
@@ -29,17 +30,25 @@ function submitJoin() {
   clientState.hasJoined = true;
   dom.nameEntry.classList.add('hidden');
 
-  const phase = clientState.currentPhase;
-  if (phase === 'lobby' || !phase) showStartScreen();
-  else if (phase === 'gameover') showGameOverScreen(0, 1, Object.values(clientState.players));
-  else if (phase === 'win') showWinScreen(0, Object.values(clientState.players));
-  else if (phase === 'boss') hideAllScreens();
-  else hideAllScreens();
+  // Show lobby browser instead of going directly to game
+  showLobbyBrowser();
 }
 
 dom.joinBtn.addEventListener('click', submitJoin);
 dom.nameInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') submitJoin();
+});
+
+// ── Lobby create handler ──
+dom.createLobbyBtn.addEventListener('click', () => {
+  const name = dom.lobbyNameInput.value.trim().slice(0, 32) || 'Game Lobby';
+  const maxPlayers = parseInt(dom.lobbyMaxPlayers.value, 10) || 4;
+  sendMessage({ type: 'create-lobby', name, maxPlayers });
+  dom.lobbyNameInput.value = '';
+});
+
+dom.lobbyNameInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') dom.createLobbyBtn.click();
 });
 
 // Cursor broadcasting
@@ -72,6 +81,19 @@ document.getElementById('retry-btn').addEventListener('click', () => {
 document.getElementById('continue-btn').addEventListener('click', () => {
   sendMessage({ type: 'start-game' });
 });
+
+// ── Leave lobby handlers ──
+function leaveLobby() {
+  sendMessage({ type: 'leave-lobby' });
+}
+
+document.getElementById('leave-btn-start').addEventListener('click', leaveLobby);
+document.getElementById('leave-btn-gameover').addEventListener('click', leaveLobby);
+document.getElementById('leave-btn-win').addEventListener('click', leaveLobby);
+document.getElementById('hud-leave-btn').addEventListener('click', leaveLobby);
+
+// Initialize lobby send function (avoids circular dependency)
+initLobbySend(sendMessage);
 
 // Start
 connect();

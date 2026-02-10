@@ -1,26 +1,30 @@
 const { LOGICAL_W, LOGICAL_H, LEVEL_CONFIG, MAX_LEVEL } = require('./config');
 
-const state = {
-  phase: 'lobby',
-  score: 0,
-  hp: 100,
-  level: 1,
-  bugsRemaining: 0,
-  bugsSpawned: 0,
-  bugs: {},
-  players: {},
-  boss: null,
-  rubberDuck: null,
-  duckBuff: null,
-};
+function createGameState() {
+  return {
+    phase: 'lobby',
+    score: 0,
+    hp: 100,
+    level: 1,
+    bugsRemaining: 0,
+    bugsSpawned: 0,
+    bugs: {},
+    players: {},
+    boss: null,
+    rubberDuck: null,
+    duckBuff: null,
+  };
+}
 
-const counters = {
-  nextBugId: 1,
-  nextPlayerId: 1,
-  colorIndex: 0,
-  nextDuckId: 1,
-  nextConflictId: 1,
-};
+function createCounters() {
+  return {
+    nextBugId: 1,
+    nextPlayerId: 1,
+    colorIndex: 0,
+    nextDuckId: 1,
+    nextConflictId: 1,
+  };
+}
 
 function randomPosition() {
   const pad = 40;
@@ -30,7 +34,7 @@ function randomPosition() {
   };
 }
 
-function currentLevelConfig() {
+function currentLevelConfig(state) {
   const base = LEVEL_CONFIG[state.level] || LEVEL_CONFIG[MAX_LEVEL];
   const extra = Math.max(0, Object.keys(state.players).length - 1);
   if (extra === 0) return base;
@@ -42,7 +46,7 @@ function currentLevelConfig() {
   };
 }
 
-function getPlayerScores() {
+function getPlayerScores(state) {
   return Object.values(state.players).map(p => ({
     id: p.id,
     name: p.name,
@@ -52,13 +56,13 @@ function getPlayerScores() {
   }));
 }
 
-function getStateSnapshot() {
+function getStateSnapshot(state) {
   return {
     phase: state.phase,
     score: state.score,
     hp: state.hp,
     level: state.level,
-    bugsRemaining: currentLevelConfig().bugsTotal - state.bugsSpawned + Object.keys(state.bugs).length,
+    bugsRemaining: currentLevelConfig(state).bugsTotal - state.bugsSpawned + Object.keys(state.bugs).length,
     bugs: Object.values(state.bugs).map(b => ({
       id: b.id, x: b.x, y: b.y,
       ...(b.isHeisenbug ? { isHeisenbug: true, fleesRemaining: b.fleesRemaining } : {}),
@@ -67,7 +71,7 @@ function getStateSnapshot() {
     })),
     rubberDuck: state.rubberDuck ? { id: state.rubberDuck.id, x: state.rubberDuck.x, y: state.rubberDuck.y } : null,
     duckBuff: state.duckBuff ? { expiresAt: state.duckBuff.expiresAt } : null,
-    players: getPlayerScores(),
+    players: getPlayerScores(state),
     boss: state.boss ? {
       hp: state.boss.hp,
       maxHp: state.boss.maxHp,
@@ -79,4 +83,4 @@ function getStateSnapshot() {
   };
 }
 
-module.exports = { state, counters, randomPosition, currentLevelConfig, getPlayerScores, getStateSnapshot };
+module.exports = { createGameState, createCounters, randomPosition, currentLevelConfig, getPlayerScores, getStateSnapshot };
