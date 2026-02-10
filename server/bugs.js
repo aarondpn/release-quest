@@ -5,8 +5,8 @@ const network = require('./network');
 let spawnTimer = null;
 
 function spawnEntity({ phaseCheck, maxOnScreen, escapeTime, isMinion, onEscapeCheck, variant }) {
-  if (state.phase !== phaseCheck) return;
-  if (Object.keys(state.bugs).length >= maxOnScreen) return;
+  if (state.phase !== phaseCheck) return false;
+  if (Object.keys(state.bugs).length >= maxOnScreen) return false;
 
   const id = 'bug_' + (counters.nextBugId++);
   const pos = randomPosition();
@@ -78,19 +78,21 @@ function spawnEntity({ phaseCheck, maxOnScreen, escapeTime, isMinion, onEscapeCh
     network.broadcast({ type: 'bug-escaped', bugId: id, hp: state.hp });
     onEscapeCheck();
   }, escapeTime);
+  return true;
 }
 
 function spawnBug() {
   if (state.phase !== 'playing') return;
   const cfg = currentLevelConfig();
   if (state.bugsSpawned >= cfg.bugsTotal) return;
-  state.bugsSpawned++;
 
   const game = require('./game');
   const playerCount = Object.keys(state.players).length;
 
-  // Roll for merge conflict (2+ players, not on level 1 for variety)
-  if (playerCount >= MERGE_CONFLICT_CONFIG.minPlayers && Math.random() < MERGE_CONFLICT_CONFIG.chance) {
+  // Roll for merge conflict (2+ players, needs room for 2 bugs)
+  if (playerCount >= MERGE_CONFLICT_CONFIG.minPlayers
+    && Object.keys(state.bugs).length + 2 <= cfg.maxOnScreen
+    && Math.random() < MERGE_CONFLICT_CONFIG.chance) {
     spawnMergeConflict(cfg, game);
     return;
   }
@@ -111,7 +113,7 @@ function spawnBug() {
     ? cfg.escapeTime * HEISENBUG_CONFIG.escapeTimeMultiplier
     : cfg.escapeTime;
 
-  spawnEntity({
+  const spawned = spawnEntity({
     phaseCheck: 'playing',
     maxOnScreen: cfg.maxOnScreen,
     escapeTime,
@@ -119,6 +121,7 @@ function spawnBug() {
     onEscapeCheck: () => game.checkGameState(),
     variant,
   });
+  if (spawned) state.bugsSpawned++;
 }
 
 function spawnMergeConflict(cfg, game) {
@@ -127,8 +130,8 @@ function spawnMergeConflict(cfg, game) {
   const id1 = 'bug_' + (counters.nextBugId++);
   const id2 = 'bug_' + (counters.nextBugId++);
 
-  // We need an extra bugsSpawned since merge creates 2 bugs from 1 spawn call
-  if (state.bugsSpawned < cfg.bugsTotal) state.bugsSpawned++;
+  // Count both bugs as spawned
+  state.bugsSpawned += 2;
 
   const pos1 = randomPosition();
   const pos2 = randomPosition();
