@@ -348,6 +348,7 @@ header p {
 .remote-cursor {
   position: absolute;
   pointer-events: none;
+  user-select: none;
   z-index: 50;
   transition: left 60ms linear, top 60ms linear;
   display: flex;
