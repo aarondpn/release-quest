@@ -1111,7 +1111,7 @@ header p {
 
 .memory-leak-holder-count {
   position: absolute;
-  top: -16px;
+  top: -20px;
   left: 50%;
   transform: translateX(-50%);
   font-family: 'Press Start 2P', monospace;
@@ -1120,6 +1120,8 @@ header p {
   text-shadow: 0 0 6px rgba(168,85,247,0.8);
   white-space: nowrap;
   display: none;
+  pointer-events: none;
+  z-index: 10;
 }
 
 .bug.memory-leak.being-held {

@@ -348,14 +348,20 @@ function handleMessage(msg) {
       if (!bugEl) break;
       
       let progressBar = bugEl.querySelector('.memory-leak-progress');
+      let countEl = bugEl.querySelector('.memory-leak-holder-count');
       
       // Create progress bar if it doesn't exist
       if (!progressBar) {
         progressBar = document.createElement('div');
         progressBar.className = 'memory-leak-progress';
-        progressBar.innerHTML = '<div class="memory-leak-progress-fill"></div><div class="memory-leak-holder-count"></div>';
+        progressBar.innerHTML = '<div class="memory-leak-progress-fill"></div>';
         bugEl.appendChild(progressBar);
         bugEl.classList.add('being-held');
+        
+        // Create holder count as a sibling (not inside progress bar to avoid overflow clipping)
+        countEl = document.createElement('div');
+        countEl.className = 'memory-leak-holder-count';
+        bugEl.appendChild(countEl);
         
         // Store start time for this progress session
         bugEl.dataset.holdStartTime = Date.now() - msg.elapsedTime;
@@ -363,7 +369,6 @@ function handleMessage(msg) {
       }
       
       // Update holder count display
-      const countEl = progressBar.querySelector('.memory-leak-holder-count');
       if (countEl) {
         if (msg.holderCount > 1) {
           countEl.textContent = 'x' + msg.holderCount;
@@ -375,7 +380,8 @@ function handleMessage(msg) {
       
       // Handle dropout
       if (msg.dropOut && msg.holderCount === 0) {
-        progressBar.remove();
+        if (progressBar) progressBar.remove();
+        if (countEl) countEl.remove();
         bugEl.classList.remove('being-held');
         delete bugEl.dataset.holdStartTime;
         delete bugEl.dataset.requiredTime;

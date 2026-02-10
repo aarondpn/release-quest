@@ -93,6 +93,7 @@ function spawnEntity(ctx, { phaseCheck, maxOnScreen, escapeTime, isMinion, onEsc
 
     // Memory leak: damage scales with growth stage
     if (bug.isMemoryLeak) {
+      if (bug.completionTimer) clearTimeout(bug.completionTimer);
       const damage = MEMORY_LEAK_CONFIG.damageByStage[bug.growthStage] || HP_DAMAGE;
       delete state.bugs[id];
       state.hp -= damage;
