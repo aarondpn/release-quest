@@ -534,6 +534,13 @@ wss.on('connection', (ws) => {
         break;
       }
 
+      case 'click-hammer': {
+        const ctx = getCtxForPlayer(pid);
+        if (!ctx) break;
+        powerups.collectHammer(ctx, pid);
+        break;
+      }
+
       case 'get-leaderboard': {
         db.getLeaderboard(10).then(entries => {
           network.send(ws, { type: 'leaderboard', entries });

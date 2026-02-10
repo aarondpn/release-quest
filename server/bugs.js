@@ -56,7 +56,7 @@ function spawnEntity(ctx, { phaseCheck, maxOnScreen, escapeTime, isMinion, onEsc
   network.broadcastToLobby(lobbyId, { type: 'bug-spawned', bug: broadcastPayload });
 
   bug.wanderInterval = setInterval(() => {
-    if (state.phase !== phaseCheck || !state.bugs[id]) return;
+    if (state.phase !== phaseCheck || !state.bugs[id] || state.hammerStunActive) return;
     const newPos = randomPosition();
     bug.x = newPos.x;
     bug.y = newPos.y;

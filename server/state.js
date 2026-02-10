@@ -13,6 +13,8 @@ function createGameState() {
     boss: null,
     rubberDuck: null,
     duckBuff: null,
+    hotfixHammer: null,
+    hammerStunActive: false,
   };
 }
 
@@ -23,6 +25,7 @@ function createCounters() {
     colorIndex: 0,
     nextDuckId: 1,
     nextConflictId: 1,
+    nextHammerId: 1,
   };
 }
 
@@ -71,6 +74,7 @@ function getStateSnapshot(state) {
     })),
     rubberDuck: state.rubberDuck ? { id: state.rubberDuck.id, x: state.rubberDuck.x, y: state.rubberDuck.y } : null,
     duckBuff: state.duckBuff ? { expiresAt: state.duckBuff.expiresAt } : null,
+    hotfixHammer: state.hotfixHammer ? { id: state.hotfixHammer.id, x: state.hotfixHammer.x, y: state.hotfixHammer.y } : null,
     players: getPlayerScores(state),
     boss: state.boss ? {
       hp: state.boss.hp,
