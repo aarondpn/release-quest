@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { WebSocketServer } = require('ws');
 
-const { SERVER_CONFIG, LOGICAL_W, LOGICAL_H, COLORS, ICONS, BUG_POINTS, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG } = require('./server/config');
+const { SERVER_CONFIG, LOGICAL_W, LOGICAL_H, COLORS, ICONS, BUG_POINTS, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG, PIPELINE_BUG_CONFIG } = require('./server/config');
 const { randomPosition, getStateSnapshot } = require('./server/state');
 const network = require('./server/network');
 const db = require('./server/db');
@@ -402,6 +402,89 @@ wss.on('connection', (ws) => {
 
           if (st.phase === 'boss') game.checkBossGameState(ctx);
           else game.checkGameState(ctx);
+          break;
+        }
+
+        // Pipeline chain logic
+        if (bug.isPipeline) {
+          const chain = st.pipelineChains[bug.chainId];
+          if (!chain) break;
+
+          if (bug.chainIndex === chain.nextIndex) {
+            // Correct order — squash this bug (wander is managed by chain, not individual bug)
+            delete st.bugs[bugId];
+            chain.nextIndex++;
+
+            player.bugsSquashed = (player.bugsSquashed || 0) + 1;
+            let points = PIPELINE_BUG_CONFIG.pointsPerBug;
+            if (powerups.isDuckBuffActive(ctx)) points *= 2;
+            st.score += points;
+            player.score += points;
+
+            if (ctx.matchLog) {
+              ctx.matchLog.log('squash', { bugId, type: 'pipeline', chainId: bug.chainId, chainIndex: bug.chainIndex, by: pid, score: st.score });
+            }
+
+            network.broadcastToLobby(ctx.lobbyId, {
+              type: 'pipeline-bug-squashed',
+              bugId, chainId: bug.chainId, chainIndex: bug.chainIndex,
+              playerId: pid, playerColor: player.color,
+              score: st.score, playerScore: player.score, points,
+            });
+
+            if (chain.nextIndex >= chain.length) {
+              // Chain complete — bonus!
+              let bonus = PIPELINE_BUG_CONFIG.chainBonus;
+              if (powerups.isDuckBuffActive(ctx)) bonus *= 2;
+              st.score += bonus;
+              player.score += bonus;
+
+              clearInterval(chain.wanderInterval);
+              clearTimeout(bug.escapeTimer);
+              delete st.pipelineChains[bug.chainId];
+
+              if (ctx.matchLog) {
+                ctx.matchLog.log('squash', { type: 'pipeline-chain-complete', chainId: bug.chainId, by: pid, score: st.score });
+              }
+
+              network.broadcastToLobby(ctx.lobbyId, {
+                type: 'pipeline-chain-resolved',
+                chainId: bug.chainId,
+                playerId: pid, playerColor: player.color,
+                score: st.score, playerScore: player.score, bonus,
+              });
+            }
+
+            if (st.phase === 'boss') game.checkBossGameState(ctx);
+            else game.checkGameState(ctx);
+          } else {
+            // Wrong order — respawn all remaining bugs in snake formation
+            chain.nextIndex = 0;
+            const remaining = chain.bugIds.filter(bid => st.bugs[bid]);
+            const startPos = randomPosition();
+            const angle = Math.random() * Math.PI * 2;
+            chain.snakeAngle = angle + Math.PI; // reset heading
+            const spacing = 40;
+            const pad = 40;
+            const newPositions = {};
+            remaining.forEach((bid, i) => {
+              const b = st.bugs[bid];
+              b.x = Math.max(pad, Math.min(LOGICAL_W - pad, startPos.x + Math.cos(angle) * spacing * i));
+              b.y = Math.max(pad, Math.min(LOGICAL_H - pad, startPos.y + Math.sin(angle) * spacing * i));
+              newPositions[bid] = { x: b.x, y: b.y };
+            });
+
+            if (ctx.matchLog) {
+              ctx.matchLog.log('pipeline-reset', { chainId: bug.chainId, by: pid, remaining: remaining.length });
+            }
+
+            network.broadcastToLobby(ctx.lobbyId, {
+              type: 'pipeline-chain-reset',
+              chainId: bug.chainId,
+              positions: newPositions,
+              playerId: pid,
+            });
+          }
           break;
         }
 
