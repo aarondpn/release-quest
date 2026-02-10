@@ -15,6 +15,7 @@ function createGameState() {
     duckBuff: null,
     hotfixHammer: null,
     hammerStunActive: false,
+    dependencyChains: {},
   };
 }
 
@@ -25,6 +26,7 @@ function createCounters() {
     colorIndex: 0,
     nextDuckId: 1,
     nextConflictId: 1,
+    nextChainId: 1,
     nextHammerId: 1,
   };
 }
@@ -71,6 +73,7 @@ function getStateSnapshot(state) {
       ...(b.isHeisenbug ? { isHeisenbug: true, fleesRemaining: b.fleesRemaining } : {}),
       ...(b.isFeature ? { isFeature: true } : {}),
       ...(b.mergeConflict ? { mergeConflict: b.mergeConflict, mergePartner: b.mergePartner, mergeSide: b.mergeSide } : {}),
+      ...(b.isDependency ? { isDependency: true, chainId: b.chainId, chainIndex: b.chainIndex, chainLength: b.chainLength } : {}),
     })),
     rubberDuck: state.rubberDuck ? { id: state.rubberDuck.id, x: state.rubberDuck.x, y: state.rubberDuck.y } : null,
     duckBuff: state.duckBuff ? { expiresAt: state.duckBuff.expiresAt } : null,
