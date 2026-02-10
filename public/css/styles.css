@@ -1281,6 +1281,20 @@ header p {
 }
 .hud-leave-btn.hidden { display: none; }
 
+/* ── Play button ── */
+.btn-play {
+  font-size: 14px;
+  padding: 16px 48px;
+  border-color: var(--teal);
+  background: var(--dark-teal);
+  color: var(--teal);
+}
+.btn-play:hover {
+  background: var(--teal);
+  color: var(--bg);
+  box-shadow: 0 0 24px rgba(78,205,196,0.5);
+}
+
 /* ── Auth UI ── */
 .auth-status {
   font-size: 7px;
@@ -1289,6 +1303,12 @@ header p {
   align-items: center;
   gap: 8px;
   justify-content: center;
+  margin-top: 8px;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+.auth-status:hover {
+  opacity: 1;
 }
 
 .auth-or {
