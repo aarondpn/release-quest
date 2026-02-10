@@ -46,6 +46,8 @@ Tables are created automatically on startup.
 3. Click bugs to squash them before they escape
 4. Survive 3 levels, then defeat the boss
 
+Visit the **Game Wiki** (📚 button in the lobby browser or link on the start screen) to see detailed information about all bugs, bosses, powerups, and game mechanics.
+
 ### Bug Types
 
 | Bug | Appearance | Behavior |
@@ -84,7 +86,10 @@ server/
   network.js           WebSocket broadcast helpers
 public/
   index.html           Game page
-  css/styles.css       All styles
+  overview.html        Game wiki (bugs, bosses, powerups)
+  css/
+    styles.css         All styles
+    overview.css       Wiki page styles
   js/
     main.js            Client entry point
     network.js         WebSocket client and message handling
