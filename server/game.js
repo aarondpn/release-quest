@@ -47,6 +47,7 @@ function startGame(ctx) {
 
   // Start duck spawning globally (works across levels)
   powerups.startDuckSpawning(ctx);
+  powerups.startHammerSpawning(ctx);
 }
 
 function startLevel(ctx) {
@@ -86,6 +87,7 @@ function checkGameState(ctx) {
     bugs.clearSpawnTimer(ctx);
     bugs.clearAllBugs(ctx);
     powerups.clearDuck(ctx);
+    powerups.clearHammer(ctx);
     if (ctx.matchLog) {
       ctx.matchLog.log('game-end', {
         outcome: 'loss',
@@ -150,6 +152,7 @@ function checkBossGameState(ctx) {
     boss.clearBossTimers(ctx);
     bugs.clearAllBugs(ctx);
     powerups.clearDuck(ctx);
+    powerups.clearHammer(ctx);
     state.boss = null;
     if (ctx.matchLog) {
       ctx.matchLog.log('game-end', {
@@ -188,6 +191,7 @@ function resetToLobby(ctx) {
   bugs.clearAllBugs(ctx);
   boss.clearBossTimers(ctx);
   powerups.clearDuck(ctx);
+  powerups.clearHammer(ctx);
 }
 
 module.exports = { startGame, startLevel, checkGameState, checkBossGameState, resetToLobby };

@@ -64,14 +64,17 @@ function startBoss(ctx) {
   });
 
   ctx.timers.bossWander = setInterval(() => {
-    if (state.phase !== 'boss' || !state.boss) return;
+    if (state.phase !== 'boss' || !state.boss || state.hammerStunActive) return;
     const newPos = randomPosition();
     state.boss.x = newPos.x;
     state.boss.y = newPos.y;
     network.broadcastToLobby(lobbyId, { type: 'boss-wander', x: newPos.x, y: newPos.y });
   }, BOSS_CONFIG.wanderInterval);
 
-  ctx.timers.bossMinionSpawn = setInterval(() => bugs.spawnMinion(ctx), BOSS_CONFIG.minionSpawnRate);
+  ctx.timers.bossMinionSpawn = setInterval(() => {
+    if (state.hammerStunActive) return;
+    bugs.spawnMinion(ctx);
+  }, BOSS_CONFIG.minionSpawnRate);
   ctx.timers.bossTick = setInterval(() => bossTick(ctx), 1000);
 }
 
@@ -104,7 +107,10 @@ function bossTick(ctx) {
         });
       }
       if (ctx.timers.bossMinionSpawn) clearInterval(ctx.timers.bossMinionSpawn);
-      ctx.timers.bossMinionSpawn = setInterval(() => bugs.spawnMinion(ctx), getEffectiveSpawnRate(ctx));
+      ctx.timers.bossMinionSpawn = setInterval(() => {
+        if (state.hammerStunActive) return;
+        bugs.spawnMinion(ctx);
+      }, getEffectiveSpawnRate(ctx));
     }
   }
 
@@ -174,7 +180,7 @@ function handleBossClick(ctx, pid) {
 
     if (ctx.timers.bossWander) clearInterval(ctx.timers.bossWander);
     ctx.timers.bossWander = setInterval(() => {
-      if (state.phase !== 'boss' || !state.boss) return;
+      if (state.phase !== 'boss' || !state.boss || state.hammerStunActive) return;
       const newPos = randomPosition();
       state.boss.x = newPos.x;
       state.boss.y = newPos.y;
@@ -182,7 +188,10 @@ function handleBossClick(ctx, pid) {
     }, BOSS_CONFIG.enrageWanderInterval);
 
     if (ctx.timers.bossMinionSpawn) clearInterval(ctx.timers.bossMinionSpawn);
-    ctx.timers.bossMinionSpawn = setInterval(() => bugs.spawnMinion(ctx), getEffectiveSpawnRate(ctx));
+    ctx.timers.bossMinionSpawn = setInterval(() => {
+      if (state.hammerStunActive) return;
+      bugs.spawnMinion(ctx);
+    }, getEffectiveSpawnRate(ctx));
   }
 
   if (ctx.matchLog) {

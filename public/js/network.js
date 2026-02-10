@@ -165,6 +165,11 @@ function handleMessage(msg) {
         createDuckElement(msg.rubberDuck);
       }
 
+      removeHammerElement();
+      if (msg.hotfixHammer) {
+        createHammerElement(msg.hotfixHammer);
+      }
+
       removeBossElement();
       if (msg.boss) {
         createBossElement(msg.boss.x, msg.boss.y, msg.boss.hp, msg.boss.maxHp, msg.boss.enraged, msg.boss.timeRemaining);
@@ -188,6 +193,7 @@ function handleMessage(msg) {
       clearAllBugs();
       removeBossElement();
       removeDuckElement();
+      removeHammerElement();
       removeDuckBuffOverlay();
       clearRemoteCursors();
       hideAllScreens();
@@ -234,6 +240,7 @@ function handleMessage(msg) {
       clearAllBugs();
       removeBossElement();
       removeDuckElement();
+      removeHammerElement();
       removeDuckBuffOverlay();
       updateHUD(msg.score, msg.level, msg.hp);
       if (msg.players) {
@@ -399,6 +406,42 @@ function handleMessage(msg) {
 
     case 'duck-buff-expired': {
       removeDuckBuffOverlay();
+      break;
+    }
+
+    // ── Hotfix Hammer ──
+    case 'hammer-spawn': {
+      createHammerElement(msg.hammer);
+      break;
+    }
+
+    case 'hammer-despawn': {
+      removeHammerElement();
+      break;
+    }
+
+    case 'hammer-collected': {
+      removeHammerElement();
+      updateHUD(msg.score);
+      if (clientState.players[msg.playerId]) {
+        clientState.players[msg.playerId].score = msg.playerScore;
+      }
+      showHammerShockwave(msg.playerColor);
+      break;
+    }
+
+    case 'hammer-stun-expired': {
+      // Resume bug animations
+      for (const bugId in clientState.bugs) {
+        const bugEl = clientState.bugs[bugId];
+        if (bugEl) {
+          bugEl.classList.remove('stunned');
+        }
+      }
+      // Resume boss animation
+      if (clientState.bossElement) {
+        clientState.bossElement.classList.remove('stunned');
+      }
       break;
     }
 
@@ -590,4 +633,56 @@ function removeDuckElement() {
   }
   const existing = document.getElementById('rubber-duck');
   if (existing) existing.remove();
+}
+
+// ── Hammer element helpers ──
+
+function createHammerElement(hammer) {
+  removeHammerElement();
+  const el = document.createElement('div');
+  el.className = 'hotfix-hammer';
+  el.id = 'hotfix-hammer';
+  const pos = logicalToPixel(hammer.x, hammer.y);
+  el.style.left = pos.x + 'px';
+  el.style.top = pos.y + 'px';
+  el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    sendMessage({ type: 'click-hammer' });
+  });
+  dom.arena.appendChild(el);
+  clientState.hammerElement = el;
+}
+
+function removeHammerElement() {
+  if (clientState.hammerElement) {
+    clientState.hammerElement.remove();
+    clientState.hammerElement = null;
+  }
+  const existing = document.getElementById('hotfix-hammer');
+  if (existing) existing.remove();
+}
+
+function showHammerShockwave(playerColor) {
+  // Create expanding ring shockwave
+  const shockwave = document.createElement('div');
+  shockwave.className = 'hammer-shockwave';
+  shockwave.style.borderColor = playerColor;
+  dom.arena.appendChild(shockwave);
+  setTimeout(() => shockwave.remove(), 800);
+  
+  // Stun all bugs visually
+  for (const bugId in clientState.bugs) {
+    const bugEl = clientState.bugs[bugId];
+    if (bugEl) {
+      bugEl.classList.add('stunned');
+    }
+  }
+  
+  // Stun boss visually
+  if (clientState.bossElement) {
+    clientState.bossElement.classList.add('stunned');
+  }
+  
+  // Screen shake
+  shakeArena('medium');
 }

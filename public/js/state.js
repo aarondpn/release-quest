@@ -19,6 +19,8 @@ export const clientState = {
   authToken: null,
   authUser: null,
   isLoggedIn: false,
+  duckElement: null,
+  hammerElement: null,
 };
 
 export const dom = {
