@@ -51,7 +51,7 @@ const BOSS_CONFIG = {
   minionMaxOnScreen: 3,
   enrageMinionMaxOnScreen: 5,
   clickCooldownMs: 100,
-  regenPerSecond: 3,
+  regenPerSecond: 2,
   timeLimit: 120,
   escalation: [
     { timeRemaining: 90, spawnRate: 3200, maxOnScreen: 4 },
@@ -65,11 +65,11 @@ const BUG_POINTS = 10;
 
 const HEISENBUG_CONFIG = {
   chance: 0.15,
-  escapeTimeMultiplier: 0.65,
+  escapeTimeMultiplier: 0.85,
   pointsMultiplier: 3,
   fleeRadius: 100,
   fleeCooldown: 800,
-  maxFlees: 4,
+  maxFlees: 2,
 };
 
 const CODE_REVIEW_CONFIG = {

@@ -46,6 +46,15 @@ function startBoss(ctx) {
     extraPlayers: extra,
   };
 
+  if (ctx.matchLog) {
+    ctx.matchLog.log('boss-start', {
+      bossHp: state.boss.hp,
+      minionSpawnRate: BOSS_CONFIG.minionSpawnRate,
+      timeLimit: BOSS_CONFIG.timeLimit,
+      players: Object.keys(state.players).length,
+    });
+  }
+
   network.broadcastToLobby(lobbyId, {
     type: 'boss-spawn',
     boss: { hp: state.boss.hp, maxHp: state.boss.maxHp, x: pos.x, y: pos.y, enraged: false },
@@ -86,6 +95,14 @@ function bossTick(ctx) {
       state.boss.currentSpawnRate = threshold.spawnRate;
       state.boss.currentMaxOnScreen = threshold.maxOnScreen + state.boss.extraPlayers;
       escalated = true;
+      if (ctx.matchLog) {
+        ctx.matchLog.log('boss-escalation', {
+          escalationLevel: state.boss.escalationLevel,
+          newSpawnRate: threshold.spawnRate,
+          newMaxOnScreen: state.boss.currentMaxOnScreen,
+          timeRemaining: state.boss.timeRemaining,
+        });
+      }
       if (ctx.timers.bossMinionSpawn) clearInterval(ctx.timers.bossMinionSpawn);
       ctx.timers.bossMinionSpawn = setInterval(() => bugs.spawnMinion(ctx), getEffectiveSpawnRate(ctx));
     }
@@ -106,6 +123,16 @@ function bossTick(ctx) {
     clearBossTimers(ctx);
     bugs.clearAllBugs(ctx);
     state.boss = null;
+    if (ctx.matchLog) {
+      ctx.matchLog.log('game-end', {
+        outcome: 'loss-timeout',
+        score: state.score,
+        level: state.level,
+        duration: Date.now() - (state.gameStartedAt || 0),
+      });
+      ctx.matchLog.close();
+      ctx.matchLog = null;
+    }
     network.broadcastToLobby(lobbyId, {
       type: 'game-over',
       score: state.score,
@@ -158,6 +185,15 @@ function handleBossClick(ctx, pid) {
     ctx.timers.bossMinionSpawn = setInterval(() => bugs.spawnMinion(ctx), getEffectiveSpawnRate(ctx));
   }
 
+  if (ctx.matchLog) {
+    ctx.matchLog.log('boss-hit', {
+      player: pid,
+      damage,
+      bossHp: state.boss.hp,
+      enraged: state.boss.enraged,
+    });
+  }
+
   network.broadcastToLobby(lobbyId, {
     type: 'boss-hit',
     bossHp: state.boss.hp,
@@ -190,6 +226,17 @@ function defeatBoss(ctx) {
   clearBossTimers(ctx);
   bugs.clearAllBugs(ctx);
   state.phase = 'win';
+
+  if (ctx.matchLog) {
+    ctx.matchLog.log('game-end', {
+      outcome: 'win',
+      score: state.score,
+      level: state.level,
+      duration: Date.now() - (state.gameStartedAt || 0),
+    });
+    ctx.matchLog.close();
+    ctx.matchLog = null;
+  }
 
   network.broadcastToLobby(lobbyId, {
     type: 'boss-defeated',

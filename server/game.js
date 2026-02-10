@@ -5,6 +5,7 @@ const bugs = require('./bugs');
 const boss = require('./boss');
 const powerups = require('./powerups');
 const stats = require('./stats');
+const { createMatchLog } = require('./match-logger');
 
 function startGame(ctx) {
   const { lobbyId, state } = ctx;
@@ -13,8 +14,13 @@ function startGame(ctx) {
   state.level = 1;
   state.phase = 'playing';
   state.boss = null;
+  state.gameStartedAt = Date.now();
   boss.clearBossTimers(ctx);
   powerups.clearDuck(ctx);
+
+  // Close any previous match log
+  if (ctx.matchLog) ctx.matchLog.close();
+  ctx.matchLog = createMatchLog(lobbyId);
 
   for (const pid of Object.keys(state.players)) {
     state.players[pid].score = 0;
@@ -23,6 +29,11 @@ function startGame(ctx) {
 
   bugs.clearSpawnTimer(ctx);
   bugs.clearAllBugs(ctx);
+
+  ctx.matchLog.log('game-start', {
+    lobby: lobbyId,
+    players: Object.keys(state.players).length,
+  });
 
   network.broadcastToLobby(lobbyId, {
     type: 'game-start',
@@ -45,6 +56,16 @@ function startLevel(ctx) {
   state.bugsSpawned = 0;
   state.phase = 'playing';
 
+  if (ctx.matchLog) {
+    ctx.matchLog.log('level-start', {
+      level: state.level,
+      bugsTotal: cfg.bugsTotal,
+      spawnRate: cfg.spawnRate,
+      maxOnScreen: cfg.maxOnScreen,
+      escapeTime: cfg.escapeTime,
+    });
+  }
+
   network.broadcastToLobby(lobbyId, {
     type: 'level-start',
     level: state.level,
@@ -65,6 +86,16 @@ function checkGameState(ctx) {
     bugs.clearSpawnTimer(ctx);
     bugs.clearAllBugs(ctx);
     powerups.clearDuck(ctx);
+    if (ctx.matchLog) {
+      ctx.matchLog.log('game-end', {
+        outcome: 'loss',
+        score: state.score,
+        level: state.level,
+        duration: Date.now() - (state.gameStartedAt || 0),
+      });
+      ctx.matchLog.close();
+      ctx.matchLog = null;
+    }
     network.broadcastToLobby(lobbyId, {
       type: 'game-over',
       score: state.score,
@@ -82,6 +113,9 @@ function checkGameState(ctx) {
   if (allSpawned && noneAlive) {
     bugs.clearSpawnTimer(ctx);
     if (state.level >= MAX_LEVEL) {
+      if (ctx.matchLog) {
+        ctx.matchLog.log('level-complete', { level: state.level, next: 'boss' });
+      }
       network.broadcastToLobby(lobbyId, {
         type: 'level-complete',
         level: state.level,
@@ -89,6 +123,9 @@ function checkGameState(ctx) {
       });
       setTimeout(() => boss.startBoss(ctx), 2000);
     } else {
+      if (ctx.matchLog) {
+        ctx.matchLog.log('level-complete', { level: state.level, nextLevel: state.level + 1 });
+      }
       network.broadcastToLobby(lobbyId, {
         type: 'level-complete',
         level: state.level,
@@ -114,6 +151,16 @@ function checkBossGameState(ctx) {
     bugs.clearAllBugs(ctx);
     powerups.clearDuck(ctx);
     state.boss = null;
+    if (ctx.matchLog) {
+      ctx.matchLog.log('game-end', {
+        outcome: 'loss',
+        score: state.score,
+        level: state.level,
+        duration: Date.now() - (state.gameStartedAt || 0),
+      });
+      ctx.matchLog.close();
+      ctx.matchLog = null;
+    }
     network.broadcastToLobby(lobbyId, {
       type: 'game-over',
       score: state.score,
@@ -126,6 +173,10 @@ function checkBossGameState(ctx) {
 
 function resetToLobby(ctx) {
   const { state } = ctx;
+  if (ctx.matchLog) {
+    ctx.matchLog.close();
+    ctx.matchLog = null;
+  }
   state.phase = 'lobby';
   state.score = 0;
   state.hp = 100;
