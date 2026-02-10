@@ -57,7 +57,7 @@ function getCtxForPlayer(pid) {
   if (!lobbyId) return null;
   const mem = lobby.getLobbyState(lobbyId);
   if (!mem) return null;
-  return { lobbyId, state: mem.state, counters: mem.counters, timers: mem.timers };
+  return { lobbyId, state: mem.state, counters: mem.counters, timers: mem.timers, playerInfo };
 }
 
 // ── WebSocket server ──
@@ -298,6 +298,7 @@ wss.on('connection', (ws) => {
           x: LOGICAL_W / 2,
           y: LOGICAL_H / 2,
           score: 0,
+          bugsSquashed: 0,
         };
 
         lobby.joinLobby(lobbyId, pid, playerData).then(result => {
@@ -416,6 +417,7 @@ wss.on('connection', (ws) => {
               if (st.players[clickerId]) {
                 st.players[clickerId].score += MERGE_CONFLICT_CONFIG.bonusPoints;
                 st.score += MERGE_CONFLICT_CONFIG.bonusPoints;
+                st.players[clickerId].bugsSquashed = (st.players[clickerId].bugsSquashed || 0) + 1;
               }
             }
 
@@ -450,6 +452,8 @@ wss.on('connection', (ws) => {
         clearTimeout(bug.escapeTimer);
         clearInterval(bug.wanderInterval);
         delete st.bugs[bugId];
+
+        player.bugsSquashed = (player.bugsSquashed || 0) + 1;
 
         // Calculate points
         let points = BUG_POINTS;
@@ -495,6 +499,15 @@ wss.on('connection', (ws) => {
         const ctx = getCtxForPlayer(pid);
         if (!ctx) break;
         powerups.collectDuck(ctx, pid);
+        break;
+      }
+
+      case 'get-leaderboard': {
+        db.getLeaderboard(10).then(entries => {
+          network.send(ws, { type: 'leaderboard', entries });
+        }).catch(() => {
+          network.send(ws, { type: 'leaderboard', entries: [] });
+        });
         break;
       }
 

@@ -5,6 +5,7 @@ import { updateHUD } from './hud.js';
 import { connect, sendMessage } from './network.js';
 import { showLobbyBrowser, initLobbySend } from './lobby-ui.js';
 import { initAuthSend, showAuthOverlay, hideAuthOverlay, switchTab, submitLogin, submitRegister, submitLogout } from './auth-ui.js';
+import { initLeaderboardSend, showLeaderboardTab, showLobbiesTab } from './leaderboard-ui.js';
 
 initDom();
 
@@ -106,6 +107,9 @@ initLobbySend(sendMessage);
 // Initialize auth send function
 initAuthSend(sendMessage);
 
+// Initialize leaderboard send function
+initLeaderboardSend(sendMessage);
+
 // ── Auth handlers ──
 dom.authShowLoginBtn.addEventListener('click', showAuthOverlay);
 
@@ -126,6 +130,10 @@ dom.authRegSubmit.addEventListener('click', submitRegister);
 dom.authRegConfirm.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') submitRegister();
 });
+
+// ── Leaderboard tab handlers ──
+dom.lobbiesTab.addEventListener('click', showLobbiesTab);
+dom.leaderboardTab.addEventListener('click', showLeaderboardTab);
 
 // Start
 connect();

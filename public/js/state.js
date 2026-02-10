@@ -61,6 +61,11 @@ export const dom = {
   authRegConfirm: null,
   authRegSubmit: null,
   authBackBtn: null,
+  lobbyListPanel: null,
+  leaderboardPanel: null,
+  leaderboardList: null,
+  leaderboardTab: null,
+  lobbiesTab: null,
 };
 
 export function initDom() {
@@ -103,4 +108,9 @@ export function initDom() {
   dom.authRegConfirm = document.getElementById('auth-reg-confirm');
   dom.authRegSubmit = document.getElementById('auth-reg-submit');
   dom.authBackBtn = document.getElementById('auth-back-btn');
+  dom.lobbyListPanel = document.getElementById('lobby-list-panel');
+  dom.leaderboardPanel = document.getElementById('leaderboard-panel');
+  dom.leaderboardList = document.getElementById('leaderboard-list');
+  dom.leaderboardTab = document.getElementById('leaderboard-tab');
+  dom.lobbiesTab = document.getElementById('lobbies-tab');
 }

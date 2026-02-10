@@ -8,6 +8,7 @@ import { addRemoteCursor, removeRemoteCursor, updateRemoteCursor, clearRemoteCur
 import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, showEnrageFlash, showLevelFlash, showEscalationWarning, showBossRegenNumber, showHeisenbugFleeEffect, showFeaturePenaltyEffect, showDuckBuffOverlay, removeDuckBuffOverlay, showMergeResolvedEffect } from './vfx.js';
 import { showLobbyBrowser, hideLobbyBrowser, renderLobbyList, showLobbyError } from './lobby-ui.js';
 import { updateAuthUI, hideAuthOverlay, showAuthError } from './auth-ui.js';
+import { renderLeaderboard } from './leaderboard-ui.js';
 
 export function sendMessage(msg) {
   if (clientState.ws && clientState.ws.readyState === 1) {
@@ -552,6 +553,11 @@ function handleMessage(msg) {
       removeDuckBuffOverlay();
       showStartScreen();
       updateHUD(0, 1, 100);
+      break;
+    }
+
+    case 'leaderboard': {
+      renderLeaderboard(msg.entries);
       break;
     }
   }
