@@ -438,7 +438,6 @@ function clearAllBugs(ctx) {
     clearTimeout(bug.escapeTimer);
     clearInterval(bug.wanderInterval);
     if (bug.growthInterval) clearInterval(bug.growthInterval);
-    if (bug.autoCompleteTimer) clearTimeout(bug.autoCompleteTimer);
     if (bug.mergeResetTimer) clearTimeout(bug.mergeResetTimer);
   }
   state.bugs = {};
