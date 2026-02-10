@@ -68,6 +68,7 @@ export const dom = {
   leaderboardList: null,
   leaderboardTab: null,
   lobbiesTab: null,
+  liveDashboard: null,
 };
 
 export function initDom() {
@@ -115,4 +116,5 @@ export function initDom() {
   dom.leaderboardList = document.getElementById('leaderboard-list');
   dom.leaderboardTab = document.getElementById('leaderboard-tab');
   dom.lobbiesTab = document.getElementById('lobbies-tab');
+  dom.liveDashboard = document.getElementById('live-dashboard');
 }
