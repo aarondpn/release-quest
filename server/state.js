@@ -15,7 +15,7 @@ function createGameState() {
     duckBuff: null,
     hotfixHammer: null,
     hammerStunActive: false,
-    dependencyChains: {},
+    pipelineChains: {},
   };
 }
 
@@ -73,7 +73,7 @@ function getStateSnapshot(state) {
       ...(b.isHeisenbug ? { isHeisenbug: true, fleesRemaining: b.fleesRemaining } : {}),
       ...(b.isFeature ? { isFeature: true } : {}),
       ...(b.mergeConflict ? { mergeConflict: b.mergeConflict, mergePartner: b.mergePartner, mergeSide: b.mergeSide } : {}),
-      ...(b.isDependency ? { isDependency: true, chainId: b.chainId, chainIndex: b.chainIndex, chainLength: b.chainLength } : {}),
+      ...(b.isPipeline ? { isPipeline: true, chainId: b.chainId, chainIndex: b.chainIndex, chainLength: b.chainLength } : {}),
     })),
     rubberDuck: state.rubberDuck ? { id: state.rubberDuck.id, x: state.rubberDuck.x, y: state.rubberDuck.y } : null,
     duckBuff: state.duckBuff ? { expiresAt: state.duckBuff.expiresAt } : null,

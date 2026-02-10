@@ -1,4 +1,4 @@
-const { HP_DAMAGE, BOSS_CONFIG, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG, DEPENDENCY_BUG_CONFIG, LOGICAL_W, LOGICAL_H } = require('./config');
+const { HP_DAMAGE, BOSS_CONFIG, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG, PIPELINE_BUG_CONFIG, LOGICAL_W, LOGICAL_H } = require('./config');
 const { randomPosition, currentLevelConfig } = require('./state');
 const network = require('./network');
 
@@ -126,18 +126,18 @@ function spawnBug(ctx) {
   const game = require('./game');
   const playerCount = Object.keys(state.players).length;
 
-  // Roll for dependency chain (level 2+, needs room for 3+ bugs)
-  const minChain = DEPENDENCY_BUG_CONFIG.minChainLength;
-  if (state.level >= DEPENDENCY_BUG_CONFIG.startLevel
+  // Roll for pipeline chain (level 2+, needs room for 3+ bugs)
+  const minChain = PIPELINE_BUG_CONFIG.minChainLength;
+  if (state.level >= PIPELINE_BUG_CONFIG.startLevel
     && Object.keys(state.bugs).length + minChain <= cfg.maxOnScreen + minChain
     && state.bugsSpawned + minChain <= cfg.bugsTotal
-    && Math.random() < DEPENDENCY_BUG_CONFIG.chance) {
+    && Math.random() < PIPELINE_BUG_CONFIG.chance) {
     const maxLen = Math.min(
-      DEPENDENCY_BUG_CONFIG.maxChainLength,
+      PIPELINE_BUG_CONFIG.maxChainLength,
       cfg.bugsTotal - state.bugsSpawned
     );
     if (maxLen >= minChain) {
-      spawnDependencyChain(ctx, cfg, game, minChain + Math.floor(Math.random() * (maxLen - minChain + 1)));
+      spawnPipelineChain(ctx, cfg, game, minChain + Math.floor(Math.random() * (maxLen - minChain + 1)));
       return;
     }
   }
@@ -247,10 +247,10 @@ function spawnMergeConflict(ctx, cfg, game) {
   bug2.escapeTimer = bug1.escapeTimer;
 }
 
-function spawnDependencyChain(ctx, cfg, game, chainLength) {
+function spawnPipelineChain(ctx, cfg, game, chainLength) {
   const { lobbyId, state, counters } = ctx;
   const chainId = 'chain_' + (counters.nextChainId++);
-  const escapeTime = cfg.escapeTime * DEPENDENCY_BUG_CONFIG.escapeTimeMultiplier;
+  const escapeTime = cfg.escapeTime * PIPELINE_BUG_CONFIG.escapeTimeMultiplier;
   const pad = 40;
 
   state.bugsSpawned += chainLength;
@@ -268,7 +268,7 @@ function spawnDependencyChain(ctx, cfg, game, chainLength) {
     const y = Math.max(pad, Math.min(LOGICAL_H - pad, startPos.y + Math.sin(angle) * spacing * i));
     const bug = {
       id, x, y, escapeTimer: null, wanderInterval: null,
-      isDependency: true, chainId, chainIndex: i, chainLength,
+      isPipeline: true, chainId, chainIndex: i, chainLength,
       escapeTime, escapeStartedAt: Date.now(),
     };
     state.bugs[id] = bug;
@@ -284,7 +284,7 @@ function spawnDependencyChain(ctx, cfg, game, chainLength) {
 
   const chainWanderInterval = setInterval(() => {
     if (state.phase !== 'playing' || state.hammerStunActive) return;
-    const chain = state.dependencyChains[chainId];
+    const chain = state.pipelineChains[chainId];
     if (!chain) { clearInterval(chainWanderInterval); return; }
     const alive = chain.bugIds.filter(bid => state.bugs[bid]);
     if (alive.length === 0) { clearInterval(chainWanderInterval); return; }
@@ -327,7 +327,7 @@ function spawnDependencyChain(ctx, cfg, game, chainLength) {
     }
   }, snakeTickMs);
 
-  state.dependencyChains[chainId] = {
+  state.pipelineChains[chainId] = {
     bugIds, nextIndex: 0, length: chainLength,
     wanderInterval: chainWanderInterval,
     snakeAngle,
@@ -337,13 +337,13 @@ function spawnDependencyChain(ctx, cfg, game, chainLength) {
   for (const bug of chainBugs) {
     network.broadcastToLobby(lobbyId, { type: 'bug-spawned', bug: {
       id: bug.id, x: bug.x, y: bug.y,
-      isDependency: true, chainId, chainIndex: bug.chainIndex, chainLength,
+      isPipeline: true, chainId, chainIndex: bug.chainIndex, chainLength,
     }});
   }
 
   // Shared escape timer
   const escapeHandler = () => {
-    const chain = state.dependencyChains[chainId];
+    const chain = state.pipelineChains[chainId];
     if (!chain) return;
     clearInterval(chain.wanderInterval);
     const remaining = bugIds.filter(bid => state.bugs[bid]);
@@ -352,16 +352,17 @@ function spawnDependencyChain(ctx, cfg, game, chainLength) {
     for (const bid of remaining) {
       if (state.bugs[bid]) delete state.bugs[bid];
     }
-    delete state.dependencyChains[chainId];
+    delete state.pipelineChains[chainId];
     state.hp -= damage;
     if (state.hp < 0) state.hp = 0;
     if (ctx.matchLog) {
-      ctx.matchLog.log('escape', { chainId, type: 'dependency-chain', bugsLost: remaining.length, hp: state.hp });
+      ctx.matchLog.log('escape', { chainId, type: 'pipeline-chain', bugsLost: remaining.length, hp: state.hp });
     }
     network.broadcastToLobby(lobbyId, {
-      type: 'dependency-chain-escaped', chainId, bugIds: remaining, hp: state.hp,
+      type: 'pipeline-chain-escaped', chainId, bugIds: remaining, hp: state.hp,
     });
-    game.checkGameState(ctx);
+    if (state.phase === 'boss') game.checkBossGameState(ctx);
+    else game.checkGameState(ctx);
   };
 
   const timer = setTimeout(escapeHandler, escapeTime);
@@ -395,8 +396,8 @@ function spawnMinion(ctx) {
 
 function clearAllBugs(ctx) {
   const { state } = ctx;
-  for (const chainId of Object.keys(state.dependencyChains)) {
-    const chain = state.dependencyChains[chainId];
+  for (const chainId of Object.keys(state.pipelineChains)) {
+    const chain = state.pipelineChains[chainId];
     if (chain.wanderInterval) clearInterval(chain.wanderInterval);
   }
   for (const id of Object.keys(state.bugs)) {
@@ -406,7 +407,7 @@ function clearAllBugs(ctx) {
     if (bug.mergeResetTimer) clearTimeout(bug.mergeResetTimer);
   }
   state.bugs = {};
-  state.dependencyChains = {};
+  state.pipelineChains = {};
 }
 
 function clearSpawnTimer(ctx) {
@@ -421,4 +422,4 @@ function startSpawning(ctx, rate) {
   spawnBug(ctx);
 }
 
-module.exports = { spawnBug, spawnMinion, spawnMergeConflict, spawnDependencyChain, clearAllBugs, clearSpawnTimer, startSpawning, spawnEntity };
+module.exports = { spawnBug, spawnMinion, spawnMergeConflict, clearAllBugs, clearSpawnTimer, startSpawning, spawnEntity };

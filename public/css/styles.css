@@ -1201,6 +1201,7 @@ header p {
   background: linear-gradient(135deg, #a855f7, #6366f1);
   box-shadow: 0 0 14px rgba(168,85,247,0.5);
   border: 2px solid rgba(168,85,247,0.6);
+  animation: pipeline-pulse 1.5s ease-in-out infinite;
 }
 .bug.pipeline-bug .bug-body::before,
 .bug.pipeline-bug .bug-body::after {
@@ -1227,10 +1228,6 @@ header p {
 .bug.pipeline-bug[data-chain-index="2"] .bug-eyes::after { content: '3'; }
 .bug.pipeline-bug[data-chain-index="3"] .bug-eyes::after { content: '4'; }
 .bug.pipeline-bug[data-chain-index="4"] .bug-eyes::after { content: '5'; }
-
-.bug.pipeline-bug .bug-body {
-  animation: pipeline-pulse 1.5s ease-in-out infinite;
-}
 
 @keyframes pipeline-pulse {
   0%, 100% { box-shadow: 0 0 14px rgba(168,85,247,0.5); }
