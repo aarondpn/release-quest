@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { WebSocketServer } = require('ws');
 
-const { SERVER_CONFIG, LOGICAL_W, LOGICAL_H, COLORS, ICONS, BUG_POINTS, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG, PIPELINE_BUG_CONFIG } = require('./server/config');
+const { SERVER_CONFIG, LOGICAL_W, LOGICAL_H, COLORS, ICONS, BUG_POINTS, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG, PIPELINE_BUG_CONFIG, MEMORY_LEAK_CONFIG } = require('./server/config');
 const { randomPosition, getStateSnapshot } = require('./server/state');
 const network = require('./server/network');
 const db = require('./server/db');
@@ -379,6 +379,11 @@ wss.on('connection', (ws) => {
         const player = st.players[pid];
         if (!player) break;
 
+        // Memory leak: requires hold mechanic, ignore regular clicks
+        if (bug.isMemoryLeak) {
+          break;
+        }
+
         // Feature-not-a-bug: penalize player
         if (bug.isFeature) {
           clearTimeout(bug.escapeTimer);
@@ -553,9 +558,10 @@ wss.on('connection', (ws) => {
           break;
         }
 
-        // Normal bug / Heisenbug / Clone squash
+        // Normal bug / Heisenbug / Memory Leak / Clone squash
         clearTimeout(bug.escapeTimer);
         clearInterval(bug.wanderInterval);
+        if (bug.growthInterval) clearInterval(bug.growthInterval);
         delete st.bugs[bugId];
 
         player.bugsSquashed = (player.bugsSquashed || 0) + 1;
@@ -564,6 +570,10 @@ wss.on('connection', (ws) => {
         let points = BUG_POINTS;
         if (bug.isHeisenbug) {
           points = BUG_POINTS * HEISENBUG_CONFIG.pointsMultiplier;
+        }
+        if (bug.isMemoryLeak) {
+          // Reward proactive clicking: earlier = more points
+          points = MEMORY_LEAK_CONFIG.pointsByStage[bug.growthStage] || BUG_POINTS;
         }
 
         // Duck buff: double points
@@ -577,10 +587,11 @@ wss.on('connection', (ws) => {
         if (ctx.matchLog) {
           ctx.matchLog.log('squash', {
             bugId,
-            type: bug.isHeisenbug ? 'heisenbug' : (bug.isMinion ? 'minion' : 'normal'),
+            type: bug.isHeisenbug ? 'heisenbug' : (bug.isMemoryLeak ? 'memory-leak' : (bug.isMinion ? 'minion' : 'normal')),
             by: pid,
             activeBugs: Object.keys(st.bugs).length,
             score: st.score,
+            ...(bug.isMemoryLeak ? { growthStage: bug.growthStage } : {}),
           });
         }
 
@@ -592,6 +603,155 @@ wss.on('connection', (ws) => {
           score: st.score,
           playerScore: player.score,
           isHeisenbug: bug.isHeisenbug || false,
+          isMemoryLeak: bug.isMemoryLeak || false,
+          points,
+        });
+
+        if (st.phase === 'boss') {
+          game.checkBossGameState(ctx);
+        } else {
+          game.checkGameState(ctx);
+        }
+        break;
+      }
+
+      case 'click-memory-leak-start': {
+        const ctx = getCtxForPlayer(pid);
+        if (!ctx) break;
+        const { state: st } = ctx;
+        if (st.phase !== 'playing' && st.phase !== 'boss') break;
+        const bugId = msg.bugId;
+        const bug = st.bugs[bugId];
+        if (!bug || !bug.isMemoryLeak) break;
+
+        // Initialize holders tracking if needed
+        if (!bug.holders) {
+          bug.holders = new Map();
+          bug.holdStartStage = bug.growthStage;
+          bug.firstHolderStartTime = Date.now(); // Track when first holder started
+        }
+
+        // Add this player to holders
+        if (!bug.holders.has(pid)) {
+          bug.holders.set(pid, Date.now());
+          
+          const elapsedSinceFirst = Date.now() - bug.firstHolderStartTime;
+          const requiredTime = MEMORY_LEAK_CONFIG.holdTimeByStage[bug.holdStartStage];
+          
+          // Broadcast hold update with sync info
+          network.broadcastToLobby(ctx.lobbyId, {
+            type: 'memory-leak-hold-update',
+            bugId,
+            playerId: pid,
+            holderCount: bug.holders.size,
+            requiredHoldTime: requiredTime,
+            elapsedTime: elapsedSinceFirst,
+          });
+        }
+        break;
+      }
+
+      case 'click-memory-leak-complete': {
+        const ctx = getCtxForPlayer(pid);
+        if (!ctx) break;
+        const { state: st } = ctx;
+        if (st.phase !== 'playing' && st.phase !== 'boss') break;
+        const bugId = msg.bugId;
+        const bug = st.bugs[bugId];
+        if (!bug || !bug.isMemoryLeak) break;
+
+        const player = st.players[pid];
+        if (!player) break;
+
+        // Check if this player was holding
+        if (!bug.holders || !bug.holders.has(pid)) break;
+        
+        const playerStartTime = bug.holders.get(pid);
+        const playerHoldDuration = Date.now() - playerStartTime;
+        const requiredTime = MEMORY_LEAK_CONFIG.holdTimeByStage[bug.holdStartStage];
+        const holderCount = bug.holders.size;
+        
+        // With multiple holders, effective required time for collective completion
+        // Each holder still needs to hold their full time, but collectively they clear it faster
+        const elapsedSinceFirst = Date.now() - bug.firstHolderStartTime;
+        const effectiveRequiredTime = requiredTime / holderCount;
+        
+        // Check if this player held long enough personally
+        if (playerHoldDuration < effectiveRequiredTime) {
+          // Released too early - remove this holder
+          bug.holders.delete(pid);
+          
+          network.broadcastToLobby(ctx.lobbyId, {
+            type: 'memory-leak-hold-update',
+            bugId,
+            playerId: pid,
+            holderCount: bug.holders.size,
+            requiredHoldTime: requiredTime,
+            elapsedTime: elapsedSinceFirst,
+            dropOut: true,
+          });
+          
+          // If no holders left, reset completely
+          if (bug.holders.size === 0) {
+            delete bug.holders;
+            delete bug.holdStartStage;
+            delete bug.firstHolderStartTime;
+          }
+          break;
+        }
+
+        // Check if collective progress is complete
+        if (elapsedSinceFirst < effectiveRequiredTime) {
+          // Not done yet, just ignore
+          break;
+        }
+
+        // Success! Clear the leak
+        clearTimeout(bug.escapeTimer);
+        clearInterval(bug.wanderInterval);
+        if (bug.growthInterval) clearInterval(bug.growthInterval);
+        
+        // Collect all holders for rewards
+        const allHolders = Array.from(bug.holders.keys());
+        delete st.bugs[bugId];
+
+        // Award points to all holders
+        let points = MEMORY_LEAK_CONFIG.pointsByStage[bug.holdStartStage] || BUG_POINTS;
+        
+        // Duck buff: double points
+        if (powerups.isDuckBuffActive(ctx)) {
+          points *= 2;
+        }
+
+        for (const holderId of allHolders) {
+          if (st.players[holderId]) {
+            st.players[holderId].bugsSquashed = (st.players[holderId].bugsSquashed || 0) + 1;
+            st.players[holderId].score += points;
+            st.score += points;
+          }
+        }
+
+        if (ctx.matchLog) {
+          ctx.matchLog.log('squash', {
+            bugId,
+            type: 'memory-leak',
+            by: allHolders,
+            growthStage: bug.holdStartStage,
+            holderCount,
+            activeBugs: Object.keys(st.bugs).length,
+            score: st.score,
+          });
+        }
+
+        network.broadcastToLobby(ctx.lobbyId, {
+          type: 'memory-leak-cleared',
+          bugId,
+          holders: allHolders,
+          holderCount,
+          score: st.score,
+          players: Object.fromEntries(
+            allHolders.filter(h => st.players[h]).map(h => [h, st.players[h].score])
+          ),
           points,
         });
 

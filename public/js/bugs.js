@@ -20,6 +20,10 @@ export function createBugElement(bugId, lx, ly, variant) {
     if (variant.isHeisenbug) {
       el.classList.add('heisenbug');
     }
+    if (variant.isMemoryLeak) {
+      el.classList.add('memory-leak');
+      el.dataset.growthStage = variant.growthStage || 0;
+    }
     if (variant.isFeature) {
       // Delayed checkmark reveal (600ms ambiguity)
       setTimeout(() => {
@@ -45,12 +49,46 @@ export function createBugElement(bugId, lx, ly, variant) {
   el.style.left = pos.x + 'px';
   el.style.top = pos.y + 'px';
 
-  el.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (clientState.ws && clientState.ws.readyState === 1) {
-      clientState.ws.send(JSON.stringify({ type: 'click-bug', bugId }));
-    }
-  });
+  // Memory leak requires hold mechanic
+  if (variant && variant.isMemoryLeak) {
+    let holdTimer = null;
+    let holdStartTime = null;
+
+    el.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      if (clientState.ws && clientState.ws.readyState === 1) {
+        holdStartTime = Date.now();
+        clientState.ws.send(JSON.stringify({ type: 'click-memory-leak-start', bugId }));
+      }
+    });
+
+    el.addEventListener('mouseup', (e) => {
+      e.stopPropagation();
+      if (clientState.ws && clientState.ws.readyState === 1 && holdStartTime) {
+        clientState.ws.send(JSON.stringify({ type: 'click-memory-leak-complete', bugId }));
+        holdStartTime = null;
+      }
+    });
+
+    el.addEventListener('mouseleave', (e) => {
+      // Cancel hold if mouse leaves
+      if (holdStartTime) {
+        if (clientState.ws && clientState.ws.readyState === 1) {
+          clientState.ws.send(JSON.stringify({ type: 'click-memory-leak-complete', bugId }));
+        }
+        holdStartTime = null;
+      }
+    });
+  } else {
+    // Normal click for other bugs
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (clientState.ws && clientState.ws.readyState === 1) {
+        clientState.ws.send(JSON.stringify({ type: 'click-bug', bugId }));
+      }
+    });
+  }
 
   dom.arena.appendChild(el);
   clientState.bugs[bugId] = el;
