@@ -16,6 +16,9 @@ export const clientState = {
   bossEnraged: false,
   currentLobbyId: null,
   lobbies: [],
+  authToken: null,
+  authUser: null,
+  isLoggedIn: false,
 };
 
 export const dom = {
@@ -40,6 +43,24 @@ export const dom = {
   lobbyMaxPlayers: null,
   createLobbyBtn: null,
   lobbyError: null,
+  authStatus: null,
+  authShowLoginBtn: null,
+  authLogoutBtn: null,
+  authUsername: null,
+  authOverlay: null,
+  authTabs: null,
+  authLoginForm: null,
+  authRegisterForm: null,
+  authError: null,
+  authLoginUsername: null,
+  authLoginPassword: null,
+  authLoginSubmit: null,
+  authRegUsername: null,
+  authRegDisplayName: null,
+  authRegPassword: null,
+  authRegConfirm: null,
+  authRegSubmit: null,
+  authBackBtn: null,
 };
 
 export function initDom() {
@@ -64,4 +85,22 @@ export function initDom() {
   dom.lobbyMaxPlayers = document.getElementById('lobby-max-players');
   dom.createLobbyBtn = document.getElementById('create-lobby-btn');
   dom.lobbyError = document.getElementById('lobby-error');
+  dom.authStatus = document.getElementById('auth-status');
+  dom.authShowLoginBtn = document.getElementById('auth-show-login-btn');
+  dom.authLogoutBtn = document.getElementById('auth-logout-btn');
+  dom.authUsername = document.getElementById('auth-username');
+  dom.authOverlay = document.getElementById('auth-overlay');
+  dom.authTabs = document.getElementById('auth-tabs');
+  dom.authLoginForm = document.getElementById('auth-login-form');
+  dom.authRegisterForm = document.getElementById('auth-register-form');
+  dom.authError = document.getElementById('auth-error');
+  dom.authLoginUsername = document.getElementById('auth-login-username');
+  dom.authLoginPassword = document.getElementById('auth-login-password');
+  dom.authLoginSubmit = document.getElementById('auth-login-submit');
+  dom.authRegUsername = document.getElementById('auth-reg-username');
+  dom.authRegDisplayName = document.getElementById('auth-reg-display-name');
+  dom.authRegPassword = document.getElementById('auth-reg-password');
+  dom.authRegConfirm = document.getElementById('auth-reg-confirm');
+  dom.authRegSubmit = document.getElementById('auth-reg-submit');
+  dom.authBackBtn = document.getElementById('auth-back-btn');
 }

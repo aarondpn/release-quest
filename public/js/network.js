@@ -7,6 +7,7 @@ import { createBossElement, updateBossHp, removeBossElement, showBossHitEffect, 
 import { addRemoteCursor, removeRemoteCursor, updateRemoteCursor, clearRemoteCursors } from './players.js';
 import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, showEnrageFlash, showLevelFlash, showEscalationWarning, showBossRegenNumber, showHeisenbugFleeEffect, showFeaturePenaltyEffect, showDuckBuffOverlay, removeDuckBuffOverlay, showMergeResolvedEffect } from './vfx.js';
 import { showLobbyBrowser, hideLobbyBrowser, renderLobbyList, showLobbyError } from './lobby-ui.js';
+import { updateAuthUI, hideAuthOverlay, showAuthError } from './auth-ui.js';
 
 export function sendMessage(msg) {
   if (clientState.ws && clientState.ws.readyState === 1) {
@@ -40,6 +41,53 @@ export function connect() {
 function handleMessage(msg) {
   switch (msg.type) {
 
+    case 'auth-result': {
+      if (msg.success) {
+        if (msg.action === 'logout') {
+          clientState.authToken = null;
+          clientState.authUser = null;
+          clientState.isLoggedIn = false;
+          localStorage.removeItem('rq_session_token');
+          updateAuthUI();
+        } else {
+          // login, register, or resume
+          if (msg.token) {
+            clientState.authToken = msg.token;
+            localStorage.setItem('rq_session_token', msg.token);
+          }
+          clientState.authUser = msg.user;
+          clientState.isLoggedIn = true;
+          updateAuthUI();
+          hideAuthOverlay();
+
+          // Update client name/icon from account
+          if (msg.user.displayName) {
+            clientState.myName = msg.user.displayName;
+            dom.nameInput.value = msg.user.displayName;
+          }
+          if (msg.user.icon) {
+            clientState.myIcon = msg.user.icon;
+            clientState.selectedIcon = msg.user.icon;
+            dom.iconPicker.querySelectorAll('.icon-option').forEach(o => {
+              o.classList.toggle('selected', o.textContent === msg.user.icon);
+            });
+          }
+        }
+      } else {
+        if (msg.action === 'resume') {
+          // Stale token — clear it silently
+          localStorage.removeItem('rq_session_token');
+          clientState.authToken = null;
+          clientState.authUser = null;
+          clientState.isLoggedIn = false;
+          updateAuthUI();
+        } else {
+          showAuthError(msg.error || 'Authentication failed');
+        }
+      }
+      break;
+    }
+
     case 'welcome': {
       clientState.myId = msg.playerId;
       clientState.myColor = msg.color;
@@ -66,6 +114,14 @@ function handleMessage(msg) {
         // Re-send name and show lobby browser
         sendMessage({ type: 'set-name', name: clientState.myName, icon: clientState.myIcon });
         showLobbyBrowser();
+      }
+
+      // Attempt session resume from localStorage
+      const savedToken = localStorage.getItem('rq_session_token');
+      if (savedToken) {
+        sendMessage({ type: 'resume-session', token: savedToken });
+      } else {
+        updateAuthUI();
       }
       break;
     }

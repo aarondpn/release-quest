@@ -21,11 +21,47 @@
 <div class="name-entry" id="name-entry">
   <div class="name-entry-title">BUG HUNTER</div>
   <div class="name-entry-sub">Choose your name &amp; icon</div>
+  <div class="auth-status" id="auth-status">
+    <span class="auth-guest-view">
+      <button class="btn btn-link" id="auth-show-login-btn">LOG IN</button>
+      <span class="auth-or">or play as guest</span>
+    </span>
+    <span class="auth-logged-in-view hidden">
+      Logged in as <span class="auth-username" id="auth-username"></span>
+      <button class="btn btn-link" id="auth-logout-btn">LOG OUT</button>
+    </span>
+  </div>
   <input class="name-input" id="name-input" type="text" placeholder="Your name..." maxlength="16" autocomplete="off" spellcheck="false">
   <div class="icon-picker" id="icon-picker">
     <div class="icon-picker-label">Pick your hunter</div>
   </div>
   <button class="btn" id="join-btn">JOIN</button>
+</div>
+
+<!-- Auth overlay -->
+<div class="auth-overlay hidden" id="auth-overlay">
+  <div class="auth-overlay-title">ACCOUNT</div>
+  <div class="auth-tabs" id="auth-tabs">
+    <button class="auth-tab active" data-tab="login">LOG IN</button>
+    <button class="auth-tab" data-tab="register">REGISTER</button>
+  </div>
+
+  <div class="auth-form" id="auth-login-form">
+    <input class="auth-input" id="auth-login-username" type="text" placeholder="Username" maxlength="16" autocomplete="off" spellcheck="false">
+    <input class="auth-input" id="auth-login-password" type="password" placeholder="Password" maxlength="64" autocomplete="off">
+    <button class="btn" id="auth-login-submit">LOG IN</button>
+  </div>
+
+  <div class="auth-form hidden" id="auth-register-form">
+    <input class="auth-input" id="auth-reg-username" type="text" placeholder="Username" maxlength="16" autocomplete="off" spellcheck="false">
+    <input class="auth-input" id="auth-reg-display-name" type="text" placeholder="Display name (optional)" maxlength="16" autocomplete="off" spellcheck="false">
+    <input class="auth-input" id="auth-reg-password" type="password" placeholder="Password (6+ chars)" maxlength="64" autocomplete="off">
+    <input class="auth-input" id="auth-reg-confirm" type="password" placeholder="Confirm password" maxlength="64" autocomplete="off">
+    <button class="btn" id="auth-reg-submit">REGISTER</button>
+  </div>
+
+  <div class="auth-error hidden" id="auth-error"></div>
+  <button class="btn btn-link auth-back-btn" id="auth-back-btn">BACK</button>
 </div>
 
 <!-- Lobby browser overlay -->

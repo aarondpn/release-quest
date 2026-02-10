@@ -11,6 +11,7 @@ const lobby = require('./server/lobby');
 const boss = require('./server/boss');
 const game = require('./server/game');
 const powerups = require('./server/powerups');
+const auth = require('./server/auth');
 
 // Global counters for unique player IDs/colors across all lobbies
 let nextPlayerId = 1;
@@ -95,6 +96,122 @@ wss.on('connection', (ws) => {
     if (!pid) return;
 
     switch (msg.type) {
+      case 'register': {
+        const username = String(msg.username || '').trim();
+        const password = String(msg.password || '');
+        const displayName = String(msg.displayName || '').trim().slice(0, 16);
+        const icon = msg.icon || undefined;
+
+        auth.register(username, password, displayName, icon).then(result => {
+          if (result.error) {
+            network.send(ws, { type: 'auth-result', action: 'register', success: false, error: result.error });
+            return;
+          }
+          const info = playerInfo.get(pid);
+          if (info) {
+            info.name = result.user.displayName;
+            info.icon = result.user.icon;
+            info.userId = result.user.id;
+          }
+          network.send(ws, {
+            type: 'auth-result', action: 'register', success: true,
+            user: result.user, token: result.token,
+          });
+          // Update lobby if in one
+          const ctx = getCtxForPlayer(pid);
+          if (ctx) {
+            const player = ctx.state.players[pid];
+            if (player) {
+              player.name = result.user.displayName;
+              player.icon = result.user.icon;
+              network.broadcastToLobby(ctx.lobbyId, {
+                type: 'player-joined',
+                player: { id: pid, name: player.name, color: player.color, icon: player.icon, score: player.score },
+                playerCount: Object.keys(ctx.state.players).length,
+              });
+            }
+          }
+        }).catch(() => {
+          network.send(ws, { type: 'auth-result', action: 'register', success: false, error: 'Registration failed' });
+        });
+        break;
+      }
+
+      case 'login': {
+        const username = String(msg.username || '').trim();
+        const password = String(msg.password || '');
+
+        auth.login(username, password).then(result => {
+          if (result.error) {
+            network.send(ws, { type: 'auth-result', action: 'login', success: false, error: result.error });
+            return;
+          }
+          const info = playerInfo.get(pid);
+          if (info) {
+            info.name = result.user.displayName;
+            info.icon = result.user.icon;
+            info.userId = result.user.id;
+          }
+          network.send(ws, {
+            type: 'auth-result', action: 'login', success: true,
+            user: result.user, token: result.token,
+          });
+          const ctx = getCtxForPlayer(pid);
+          if (ctx) {
+            const player = ctx.state.players[pid];
+            if (player) {
+              player.name = result.user.displayName;
+              player.icon = result.user.icon;
+              network.broadcastToLobby(ctx.lobbyId, {
+                type: 'player-joined',
+                player: { id: pid, name: player.name, color: player.color, icon: player.icon, score: player.score },
+                playerCount: Object.keys(ctx.state.players).length,
+              });
+            }
+          }
+        }).catch(() => {
+          network.send(ws, { type: 'auth-result', action: 'login', success: false, error: 'Login failed' });
+        });
+        break;
+      }
+
+      case 'logout': {
+        const token = String(msg.token || '');
+        auth.logout(token).then(() => {
+          const info = playerInfo.get(pid);
+          if (info) {
+            delete info.userId;
+          }
+          network.send(ws, { type: 'auth-result', action: 'logout', success: true });
+        }).catch(() => {
+          network.send(ws, { type: 'auth-result', action: 'logout', success: true });
+        });
+        break;
+      }
+
+      case 'resume-session': {
+        const token = String(msg.token || '');
+        auth.validateSession(token).then(user => {
+          if (!user) {
+            network.send(ws, { type: 'auth-result', action: 'resume', success: false, error: 'Session expired' });
+            return;
+          }
+          const info = playerInfo.get(pid);
+          if (info) {
+            info.name = user.displayName;
+            info.icon = user.icon;
+            info.userId = user.id;
+          }
+          network.send(ws, {
+            type: 'auth-result', action: 'resume', success: true,
+            user: { id: user.id, username: user.username, displayName: user.displayName, icon: user.icon },
+          });
+        }).catch(() => {
+          network.send(ws, { type: 'auth-result', action: 'resume', success: false, error: 'Session validation failed' });
+        });
+        break;
+      }
+
       case 'set-name': {
         const info = playerInfo.get(pid);
         if (!info) break;
