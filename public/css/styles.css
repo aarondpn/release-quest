@@ -1346,7 +1346,7 @@ header p {
   align-items: center;
   justify-content: center;
   background: var(--bg);
-  z-index: 475;
+  z-index: 510;
   gap: 16px;
   text-align: center;
   padding: 20px;
