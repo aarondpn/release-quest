@@ -262,8 +262,8 @@ function spawnMergeConflict(ctx, cfg, game) {
     network.broadcastToLobby(lobbyId, { type: 'bug-wander', bugId: id2, x: np.x, y: np.y });
   }, escapeTime * 0.45);
 
-  // Shared escape timer on bug1 — bug1's escape handler handles both
-  bug1.escapeTimer = setTimeout(() => {
+  // Shared escape handler — assigned to _onEscape so hammer stun/resume can restart it
+  const escapeHandler = () => {
     if (!state.bugs[id1] && !state.bugs[id2]) return;
     const damage = MERGE_CONFLICT_CONFIG.doubleDamage ? HP_DAMAGE * 2 : HP_DAMAGE;
     if (state.bugs[id1]) { clearInterval(bug1.wanderInterval); delete state.bugs[id1]; }
@@ -275,9 +275,13 @@ function spawnMergeConflict(ctx, cfg, game) {
     }
     network.broadcastToLobby(lobbyId, { type: 'merge-conflict-escaped', bugId: id1, partnerId: id2, hp: state.hp });
     game.checkGameState(ctx);
-  }, escapeTime);
+  };
 
-  // bug2 shares the same escape time
+  bug1._onEscape = escapeHandler;
+  bug2._onEscape = escapeHandler;
+
+  bug1.escapeTimer = setTimeout(escapeHandler, escapeTime);
+  // bug2 shares the same escape timer
   bug2.escapeTimer = bug1.escapeTimer;
 }
 
@@ -398,6 +402,11 @@ function spawnPipelineChain(ctx, cfg, game, chainLength) {
     if (state.phase === 'boss') game.checkBossGameState(ctx);
     else game.checkGameState(ctx);
   };
+
+  // Assign _onEscape so hammer stun/resume can restart the escape timer
+  for (const bug of chainBugs) {
+    bug._onEscape = escapeHandler;
+  }
 
   const timer = setTimeout(escapeHandler, escapeTime);
   for (const bug of chainBugs) {
