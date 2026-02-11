@@ -92,30 +92,23 @@ server/
   network.ts           WebSocket broadcast helpers
   timer-bag.ts         Named timer management
   match-logger.ts      Per-match event logging
+frontend/
+  App.vue              Main Vue application component
+  main.ts              Vue application entry point
+  i18n.ts              Internationalization configuration (EN/DE)
+  components/          Vue components (game UI, lobby, etc.)
+  composables/         Vue composables (game state, WebSocket, etc.)
 public/
-  index.html           Game page
   overview.html        Game wiki (bugs, bosses, powerups)
+  dist/                Built Vue.js frontend (generated)
   css/
-    styles.css         All styles
+    styles.css         Shared styles
     overview.css       Wiki page styles
-  js/
-    main.js            Client entry point
-    network.js         WebSocket client and message handling
-    state.js           Client state and DOM refs
-    auth-ui.js         Login/register UI
-    lobby-ui.js        Lobby browser UI
-    hud.js             Score, HP, player count
-    bugs.js            Bug rendering
-    boss.js            Boss rendering
-    players.js         Remote cursor display
-    vfx.js             Visual effects
-    coordinates.js     Logical/pixel coordinate mapping
-    config.js          Client-side constants
 ```
 
 ## Tech Stack
 
 - **Server:** Node.js 24 (native TypeScript, ESM), WebSocket (ws), PostgreSQL (pg), bcrypt
-- **Client:** Vanilla JS (ES modules), CSS3
+- **Client:** Vue 3 (Composition API), TypeScript, Vite, vue-i18n
 - **Deploy:** Docker / Docker Compose
 - **Type checking:** `npm run typecheck` (tsc --noEmit, no build step)

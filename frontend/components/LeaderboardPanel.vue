@@ -19,9 +19,9 @@ function escapeHtml(s: string): string {
 
 <template>
   <div class="leaderboard-panel">
-    <div class="leaderboard-header">TOP PLAYERS</div>
+    <div class="leaderboard-header">{{ $t('leaderboard.title') }}</div>
     <div class="leaderboard-list">
-      <div v-if="!entries.length" class="leaderboard-empty">No stats yet. Play a game!</div>
+      <div v-if="!entries.length" class="leaderboard-empty">{{ $t('leaderboard.noData') }}</div>
       <div
         v-for="(e, i) in entries"
         :key="i"

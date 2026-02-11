@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { gameState } from '../composables/useGameState';
 import { sendMessage } from '../composables/useWebSocket';
 import LeaderboardPanel from './LeaderboardPanel.vue';
 
+const { t } = useI18n();
 const visible = computed(() => gameState.showLobbyBrowser);
 const lobbyNameInput = ref('');
 const maxPlayers = ref(4);
@@ -12,16 +14,16 @@ const lobbyError = ref('');
 let errorTimer: ReturnType<typeof setTimeout> | null = null;
 const activeTab = ref<'lobbies' | 'leaderboard'>('lobbies');
 
-const playerOptions = [
-  { value: 2, label: '2 players' },
-  { value: 4, label: '4 players' },
-  { value: 6, label: '6 players' },
-  { value: 8, label: '8 players' },
-];
+const playerOptions = computed(() => [
+  { value: 2, label: t('lobby.playersCount', { count: 2 }) },
+  { value: 4, label: t('lobby.playersCount', { count: 4 }) },
+  { value: 6, label: t('lobby.playersCount', { count: 6 }) },
+  { value: 8, label: t('lobby.playersCount', { count: 8 }) },
+]);
 
 const selectedLabel = computed(() => {
-  const opt = playerOptions.find(o => o.value === maxPlayers.value);
-  return (opt?.label || '4 players') + ' \u25BE';
+  const opt = playerOptions.value.find(o => o.value === maxPlayers.value);
+  return (opt?.label || t('lobby.playersCount', { count: 4 })) + ' \u25BE';
 });
 
 function selectOption(value: number) {
@@ -85,13 +87,13 @@ function escapeHtml(s: string): string {
 
 <template>
   <div class="lobby-browser" :class="{ hidden: !visible }" @click="closeSelect">
-    <div class="lobby-browser-title">GAME LOBBIES</div>
-    <div class="lobby-browser-sub">Join or create a lobby</div>
+    <div class="lobby-browser-title">{{ $t('lobby.title') }}</div>
+    <div class="lobby-browser-sub">{{ $t('lobby.subtitle') }}</div>
 
     <div class="lobby-tabs">
-      <button class="lobby-tab" :class="{ active: activeTab === 'lobbies' }" @click="switchToLobbies">LOBBIES</button>
-      <button class="lobby-tab" :class="{ active: activeTab === 'leaderboard' }" @click="switchToLeaderboard">LEADERBOARD</button>
-      <a href="/overview.html" class="lobby-tab lobby-tab-link" target="_blank">&#x1F4DA; WIKI</a>
+      <button class="lobby-tab" :class="{ active: activeTab === 'lobbies' }" @click="switchToLobbies">{{ $t('lobby.lobbiesTab') }}</button>
+      <button class="lobby-tab" :class="{ active: activeTab === 'leaderboard' }" @click="switchToLeaderboard">{{ $t('lobby.leaderboardTab') }}</button>
+      <a href="/overview.html" class="lobby-tab lobby-tab-link" target="_blank">&#x1F4DA; {{ $t('common.wiki') }}</a>
     </div>
 
     <div v-if="activeTab === 'lobbies'" id="lobby-list-panel">
@@ -100,7 +102,7 @@ function escapeHtml(s: string): string {
           class="lobby-name-input"
           v-model="lobbyNameInput"
           type="text"
-          placeholder="Lobby name..."
+          :placeholder="$t('lobby.lobbyNamePlaceholder')"
           maxlength="32"
           autocomplete="off"
           spellcheck="false"
@@ -118,11 +120,11 @@ function escapeHtml(s: string): string {
             >{{ opt.label }}</div>
           </div>
         </div>
-        <button class="btn btn-small" @click="createLobby">CREATE</button>
+        <button class="btn btn-small" @click="createLobby">{{ $t('common.create') }}</button>
       </div>
 
       <div class="lobby-list">
-        <div v-if="!gameState.lobbies.length" class="lobby-list-empty">No lobbies yet. Create one!</div>
+        <div v-if="!gameState.lobbies.length" class="lobby-list-empty">{{ $t('lobby.noLobbies') }}</div>
         <div v-for="lobby in gameState.lobbies" :key="lobby.id" class="lobby-list-item">
           <div class="lobby-list-info">
             <span class="lobby-list-name" v-html="escapeHtml(lobby.name)"></span>
@@ -133,7 +135,7 @@ function escapeHtml(s: string): string {
             class="btn btn-small lobby-join-btn"
             :disabled="lobby.player_count >= lobby.max_players"
             @click="joinLobby(lobby.id)"
-          >{{ lobby.player_count >= lobby.max_players ? 'FULL' : 'JOIN' }}</button>
+          >{{ lobby.player_count >= lobby.max_players ? $t('lobby.lobbyFull') : $t('common.join') }}</button>
         </div>
       </div>
     </div>

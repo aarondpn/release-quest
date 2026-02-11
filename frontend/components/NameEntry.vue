@@ -61,21 +61,21 @@ watch(() => gameState.myName, (val) => {
 
 <template>
   <div class="name-entry" :class="{ hidden: !visible }">
-    <div class="name-entry-title">BUG HUNTER</div>
-    <div class="name-entry-sub">Choose your name &amp; icon</div>
+    <div class="name-entry-title">{{ $t('nameEntry.title') }}</div>
+    <div class="name-entry-sub">{{ $t('nameEntry.subtitle') }}</div>
     <input
       ref="nameInputEl"
       class="name-input"
       v-model="nameInput"
       type="text"
-      placeholder="Your name..."
+      :placeholder="$t('nameEntry.namePlaceholder')"
       maxlength="16"
       autocomplete="off"
       spellcheck="false"
       @keydown.enter="submitJoin"
     >
     <div class="icon-picker">
-      <div class="icon-picker-label">Pick your hunter</div>
+      <div class="icon-picker-label">{{ $t('nameEntry.pickYourHunter') }}</div>
       <div
         v-for="icon in PLAYER_ICONS"
         :key="icon"
@@ -84,15 +84,15 @@ watch(() => gameState.myName, (val) => {
         @click="selectIcon(icon)"
       >{{ icon }}</div>
     </div>
-    <button class="btn btn-play" @click="submitJoin">PLAY</button>
+    <button class="btn btn-play" @click="submitJoin">{{ $t('common.play') }}</button>
     <div class="auth-status">
       <span class="auth-guest-view" v-if="!gameState.isLoggedIn">
-        <span class="auth-or">Have an account?</span>
-        <button class="btn btn-link" @click="showAuthOverlay">LOG IN</button>
+        <span class="auth-or">{{ $t('nameEntry.haveAccount') }}</span>
+        <button class="btn btn-link" @click="showAuthOverlay">{{ $t('common.login') }}</button>
       </span>
       <span class="auth-logged-in-view" v-else>
-        Logged in as <span class="auth-username">{{ gameState.authUser?.username }}</span>
-        <button class="btn btn-link" @click="submitLogout">LOG OUT</button>
+        {{ $t('nameEntry.loggedInAs') }} <span class="auth-username">{{ gameState.authUser?.username }}</span>
+        <button class="btn btn-link" @click="submitLogout">{{ $t('common.logout') }}</button>
       </span>
     </div>
   </div>

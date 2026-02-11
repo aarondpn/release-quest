@@ -83,27 +83,27 @@ watch(() => gameState.vfxEvents.length, () => {
 
 <template>
   <div class="auth-overlay" :class="{ hidden: !visible }" id="auth-overlay">
-    <div class="auth-overlay-title">ACCOUNT</div>
+    <div class="auth-overlay-title">{{ $t('auth.loginTitle') }}</div>
     <div class="auth-tabs" id="auth-tabs">
-      <button class="auth-tab" :class="{ active: activeTab === 'login' }" @click="switchTab('login')">LOG IN</button>
-      <button class="auth-tab" :class="{ active: activeTab === 'register' }" @click="switchTab('register')">REGISTER</button>
+      <button class="auth-tab" :class="{ active: activeTab === 'login' }" @click="switchTab('login')">{{ $t('auth.loginTitle') }}</button>
+      <button class="auth-tab" :class="{ active: activeTab === 'register' }" @click="switchTab('register')">{{ $t('auth.registerTitle') }}</button>
     </div>
 
     <div class="auth-form" v-if="activeTab === 'login'">
-      <input class="auth-input" v-model="loginUsername" type="text" placeholder="Username" maxlength="16" autocomplete="off" spellcheck="false">
-      <input class="auth-input" v-model="loginPassword" type="password" placeholder="Password" maxlength="64" autocomplete="off" @keydown.enter="submitLogin">
-      <button class="btn" @click="submitLogin">LOG IN</button>
+      <input class="auth-input" v-model="loginUsername" type="text" :placeholder="$t('auth.username')" maxlength="16" autocomplete="off" spellcheck="false">
+      <input class="auth-input" v-model="loginPassword" type="password" :placeholder="$t('auth.password')" maxlength="64" autocomplete="off" @keydown.enter="submitLogin">
+      <button class="btn" @click="submitLogin">{{ $t('auth.loginButton') }}</button>
     </div>
 
     <div class="auth-form" v-if="activeTab === 'register'">
-      <input class="auth-input" v-model="regUsername" type="text" placeholder="Username" maxlength="16" autocomplete="off" spellcheck="false">
-      <input class="auth-input" v-model="regDisplayName" type="text" placeholder="Display name (optional)" maxlength="16" autocomplete="off" spellcheck="false">
-      <input class="auth-input" v-model="regPassword" type="password" placeholder="Password (6+ chars)" maxlength="64" autocomplete="off">
-      <input class="auth-input" v-model="regConfirm" type="password" placeholder="Confirm password" maxlength="64" autocomplete="off" @keydown.enter="submitRegister">
-      <button class="btn" @click="submitRegister">REGISTER</button>
+      <input class="auth-input" v-model="regUsername" type="text" :placeholder="$t('auth.username')" maxlength="16" autocomplete="off" spellcheck="false">
+      <input class="auth-input" v-model="regDisplayName" type="text" :placeholder="$t('auth.displayName')" maxlength="16" autocomplete="off" spellcheck="false">
+      <input class="auth-input" v-model="regPassword" type="password" :placeholder="$t('auth.password')" maxlength="64" autocomplete="off">
+      <input class="auth-input" v-model="regConfirm" type="password" :placeholder="$t('auth.password')" maxlength="64" autocomplete="off" @keydown.enter="submitRegister">
+      <button class="btn" @click="submitRegister">{{ $t('auth.registerButton') }}</button>
     </div>
 
     <div class="auth-error" :class="{ hidden: !authError }">{{ authError }}</div>
-    <button class="btn btn-link auth-back-btn" @click="close">BACK</button>
+    <button class="btn btn-link auth-back-btn" @click="close">{{ $t('common.cancel') }}</button>
   </div>
 </template>

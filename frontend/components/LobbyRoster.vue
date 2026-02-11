@@ -130,7 +130,7 @@ onUnmounted(() => {
 
 <template>
   <div class="lobby-roster" id="lobby-roster">
-    <div class="lobby-roster-label">HUNTERS IN LOBBY</div>
+    <div class="lobby-roster-label">{{ $t('roster.huntersInLobby') }}</div>
     <div class="lobby-roster-list" id="lobby-roster-list">
       <div
         v-for="(p, i) in players"
@@ -142,7 +142,7 @@ onUnmounted(() => {
         <span class="lobby-player-icon">{{ p.icon || '' }}</span>
         <span class="lobby-player-name" v-html="escapeHtml(p.name)"></span>
         <span class="lobby-player-dot" :style="{ color: p.color || 'var(--teal)', background: p.color || 'var(--teal)' }"></span>
-        <span v-if="p.id === gameState.myId" class="lobby-player-you">YOU</span>
+        <span v-if="p.id === gameState.myId" class="lobby-player-you">{{ $t('roster.you') }}</span>
       </div>
     </div>
   </div>
