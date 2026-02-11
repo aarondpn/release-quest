@@ -37,16 +37,51 @@ const MIME: Record<string, string> = {
 };
 
 // ── HTTP server ──
+const distDir = path.join(import.meta.dirname, 'public', 'dist');
+const publicDir = path.join(import.meta.dirname, 'public');
+
 const httpServer = http.createServer((req, res) => {
   const urlPath = req.url!.split('?')[0];
-  let filePath = urlPath === '/' ? '/index.html' : urlPath;
-  filePath = path.join(import.meta.dirname, 'public', filePath);
 
+  // overview.html and its assets served from public/ directly
+  if (urlPath === '/overview.html' || urlPath.startsWith('/css/overview')) {
+    const filePath = path.join(publicDir, urlPath);
+    return serveFile(res, filePath);
+  }
+
+  // Favicon and other root-level public assets
+  if (urlPath === '/favicon.svg') {
+    return serveFile(res, path.join(publicDir, urlPath));
+  }
+
+  // CSS files — check public/css/ first (global styles), then dist/
+  if (urlPath.startsWith('/css/')) {
+    const publicCss = path.join(publicDir, urlPath);
+    return fs.access(publicCss, fs.constants.F_OK, (err) => {
+      if (!err) return serveFile(res, publicCss);
+      return serveFile(res, path.join(distDir, urlPath));
+    });
+  }
+
+  // For the main app, serve from dist/
+  let filePath = urlPath === '/' ? '/index.html' : urlPath;
+  serveFile(res, path.join(distDir, filePath), () => {
+    // Fallback: SPA routing — serve index.html for non-asset paths
+    if (!path.extname(filePath)) {
+      return serveFile(res, path.join(distDir, '/index.html'));
+    }
+    // Final fallback: try public/ directory
+    serveFile(res, path.join(publicDir, filePath));
+  });
+});
+
+function serveFile(res: http.ServerResponse, filePath: string, fallback?: () => void): void {
   const ext = path.extname(filePath);
   const contentType = MIME[ext] || 'application/octet-stream';
 
   fs.readFile(filePath, (err, data) => {
     if (err) {
+      if (fallback) return fallback();
       res.writeHead(404, { 'Content-Type': 'text/plain' });
       res.end('Not Found');
       return;
@@ -54,7 +89,7 @@ const httpServer = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': contentType });
     res.end(data);
   });
-});
+}
 
 // ── Helper to get lobby context for a player ──
 function getCtxForPlayer(pid: string): GameContext | null {
