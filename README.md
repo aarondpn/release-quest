@@ -14,7 +14,7 @@ Open http://localhost:3000.
 
 ### Local
 
-Requires Node.js 22+ and PostgreSQL 16+.
+Requires Node.js 24+ (native TypeScript support) and PostgreSQL 16+.
 
 ```bash
 # Create the database
@@ -75,18 +75,23 @@ Accounts are optional. Guest play is the default. Registered accounts persist yo
 ## Project Structure
 
 ```
-server.js              HTTP server, WebSocket message routing
+server.ts              HTTP server, WebSocket message routing
 server/
-  config.js            Game balance constants
-  db.js                PostgreSQL schema and queries
-  auth.js              Registration, login, sessions
-  lobby.js             Lobby creation and management
-  game.js              Level progression, win/loss
-  bugs.js              Bug spawning and variants
-  boss.js              Boss fight logic
-  powerups.js          Rubber duck mechanics
-  state.js             Game state factory
-  network.js           WebSocket broadcast helpers
+  types.ts             Shared TypeScript interfaces and type aliases
+  config.ts            Game balance constants
+  db.ts                PostgreSQL schema and queries
+  auth.ts              Registration, login, sessions
+  lobby.ts             Lobby creation and management
+  game.ts              Level progression, win/loss
+  bugs.ts              Bug spawning and variants
+  boss.ts              Boss fight logic
+  powerups.ts          Rubber duck and hotfix hammer mechanics
+  entity-types.ts      Entity type registry and descriptors
+  state.ts             Game state factory
+  stats.ts             Player statistics tracking
+  network.ts           WebSocket broadcast helpers
+  timer-bag.ts         Named timer management
+  match-logger.ts      Per-match event logging
 public/
   index.html           Game page
   overview.html        Game wiki (bugs, bosses, powerups)
@@ -110,6 +115,7 @@ public/
 
 ## Tech Stack
 
-- **Server:** Node.js, WebSocket (ws), PostgreSQL (pg), bcrypt
+- **Server:** Node.js 24 (native TypeScript, ESM), WebSocket (ws), PostgreSQL (pg), bcrypt
 - **Client:** Vanilla JS (ES modules), CSS3
 - **Deploy:** Docker / Docker Compose
+- **Type checking:** `npm run typecheck` (tsc --noEmit, no build step)

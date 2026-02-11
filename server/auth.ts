@@ -1,19 +1,20 @@
-const crypto = require('crypto');
-const bcrypt = require('bcrypt');
-const { AUTH_CONFIG } = require('./config');
-const db = require('./db');
+import crypto from 'node:crypto';
+import bcrypt from 'bcrypt';
+import { AUTH_CONFIG } from './config.ts';
+import * as db from './db.ts';
+import type { AuthResult, AuthUser } from './types.ts';
 
-function generateToken() {
+function generateToken(): string {
   return crypto.randomBytes(32).toString('hex');
 }
 
-function getExpiresAt() {
+function getExpiresAt(): Date {
   const d = new Date();
   d.setDate(d.getDate() + AUTH_CONFIG.sessionDurationDays);
   return d;
 }
 
-async function register(username, password, displayName, icon) {
+export async function register(username: string, password: string, displayName: string, icon?: string): Promise<AuthResult> {
   // Validate username
   if (!username || !AUTH_CONFIG.usernameRegex.test(username)) {
     return { error: 'Username must be 3-16 characters (letters, numbers, underscores)' };
@@ -54,7 +55,7 @@ async function register(username, password, displayName, icon) {
   };
 }
 
-async function login(username, password) {
+export async function login(username: string, password: string): Promise<AuthResult> {
   if (!username || !password) {
     return { error: 'Username and password required' };
   }
@@ -78,7 +79,7 @@ async function login(username, password) {
   };
 }
 
-async function validateSession(token) {
+export async function validateSession(token: string): Promise<AuthUser | null> {
   if (!token || typeof token !== 'string') return null;
 
   const row = await db.getSessionWithUser(token);
@@ -87,10 +88,8 @@ async function validateSession(token) {
   return { id: row.user_id, username: row.username, displayName: row.display_name, icon: row.icon };
 }
 
-async function logout(token) {
+export async function logout(token: string): Promise<void> {
   if (token) {
     await db.deleteSession(token);
   }
 }
-
-module.exports = { register, login, validateSession, logout };

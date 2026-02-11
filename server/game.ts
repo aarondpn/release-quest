@@ -1,13 +1,14 @@
-const { MAX_LEVEL } = require('./config');
-const { currentLevelConfig, getPlayerScores } = require('./state');
-const network = require('./network');
-const bugs = require('./bugs');
-const boss = require('./boss');
-const powerups = require('./powerups');
-const stats = require('./stats');
-const { createMatchLog } = require('./match-logger');
+import { MAX_LEVEL } from './config.ts';
+import { currentLevelConfig, getPlayerScores } from './state.ts';
+import * as network from './network.ts';
+import * as bugs from './bugs.ts';
+import * as boss from './boss.ts';
+import * as powerups from './powerups.ts';
+import * as stats from './stats.ts';
+import { createMatchLog } from './match-logger.ts';
+import type { GameContext } from './types.ts';
 
-function teardownGame(ctx) {
+function teardownGame(ctx: GameContext): void {
   bugs.clearSpawnTimer(ctx);
   bugs.clearAllBugs(ctx);
   boss.clearBossTimers(ctx);
@@ -16,7 +17,7 @@ function teardownGame(ctx) {
   if (ctx.matchLog) { ctx.matchLog.close(); ctx.matchLog = null; }
 }
 
-function endGame(ctx, outcome, win) {
+export function endGame(ctx: GameContext, outcome: string, win: boolean): void {
   const { lobbyId, state } = ctx;
   if (ctx.matchLog) {
     ctx.matchLog.log('game-end', {
@@ -38,7 +39,7 @@ function endGame(ctx, outcome, win) {
   if (ctx.playerInfo) stats.recordGameEnd(state, ctx.playerInfo, win);
 }
 
-function startGame(ctx) {
+export function startGame(ctx: GameContext): void {
   const { lobbyId, state } = ctx;
   teardownGame(ctx);
 
@@ -76,7 +77,7 @@ function startGame(ctx) {
   powerups.startHammerSpawning(ctx);
 }
 
-function startLevel(ctx) {
+function startLevel(ctx: GameContext): void {
   const { lobbyId, state } = ctx;
   const cfg = currentLevelConfig(state);
   state.bugsRemaining = cfg.bugsTotal;
@@ -104,7 +105,7 @@ function startLevel(ctx) {
   bugs.startSpawning(ctx, cfg.spawnRate);
 }
 
-function checkGameState(ctx) {
+export function checkGameState(ctx: GameContext): void {
   const { lobbyId, state } = ctx;
   if (state.phase !== 'playing') return;
 
@@ -149,7 +150,7 @@ function checkGameState(ctx) {
   }
 }
 
-function checkBossGameState(ctx) {
+export function checkBossGameState(ctx: GameContext): void {
   const { state } = ctx;
   if (state.phase !== 'boss') return;
   if (state.hp <= 0) {
@@ -157,7 +158,7 @@ function checkBossGameState(ctx) {
   }
 }
 
-function resetToLobby(ctx) {
+export function resetToLobby(ctx: GameContext): void {
   const { state } = ctx;
   teardownGame(ctx);
   state.phase = 'lobby';
@@ -168,5 +169,3 @@ function resetToLobby(ctx) {
   state.bugsSpawned = 0;
   state.boss = null;
 }
-
-module.exports = { startGame, startLevel, checkGameState, checkBossGameState, resetToLobby, teardownGame, endGame };

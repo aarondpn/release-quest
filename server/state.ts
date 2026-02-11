@@ -1,6 +1,7 @@
-const { LOGICAL_W, LOGICAL_H, LEVEL_CONFIG, MAX_LEVEL } = require('./config');
+import { LOGICAL_W, LOGICAL_H, LEVEL_CONFIG, MAX_LEVEL } from './config.ts';
+import type { GameState, GameCounters, LevelConfigEntry, PlayerScoreEntry } from './types.ts';
 
-function createGameState() {
+export function createGameState(): GameState {
   return {
     phase: 'lobby',
     score: 0,
@@ -19,7 +20,7 @@ function createGameState() {
   };
 }
 
-function createCounters() {
+export function createCounters(): GameCounters {
   return {
     nextBugId: 1,
     nextPlayerId: 1,
@@ -31,7 +32,7 @@ function createCounters() {
   };
 }
 
-function randomPosition() {
+export function randomPosition(): { x: number; y: number } {
   const pad = 40;
   return {
     x: pad + Math.random() * (LOGICAL_W - pad * 2),
@@ -39,7 +40,7 @@ function randomPosition() {
   };
 }
 
-function currentLevelConfig(state) {
+export function currentLevelConfig(state: GameState): LevelConfigEntry {
   const base = LEVEL_CONFIG[state.level] || LEVEL_CONFIG[MAX_LEVEL];
   const extra = Math.max(0, Object.keys(state.players).length - 1);
   if (extra === 0) return base;
@@ -51,7 +52,7 @@ function currentLevelConfig(state) {
   };
 }
 
-function getPlayerScores(state) {
+export function getPlayerScores(state: GameState): PlayerScoreEntry[] {
   return Object.values(state.players).map(p => ({
     id: p.id,
     name: p.name,
@@ -61,7 +62,7 @@ function getPlayerScores(state) {
   }));
 }
 
-function getStateSnapshot(state) {
+export function getStateSnapshot(state: GameState): Record<string, unknown> {
   return {
     phase: state.phase,
     score: state.score,
@@ -90,5 +91,3 @@ function getStateSnapshot(state) {
     } : null,
   };
 }
-
-module.exports = { createGameState, createCounters, randomPosition, currentLevelConfig, getPlayerScores, getStateSnapshot };

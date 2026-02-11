@@ -1,17 +1,20 @@
-const { HP_DAMAGE, BUG_POINTS, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG, PIPELINE_BUG_CONFIG, MEMORY_LEAK_CONFIG, LOGICAL_W, LOGICAL_H } = require('./config');
-const { randomPosition } = require('./state');
-const network = require('./network');
+import { HP_DAMAGE, BUG_POINTS, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG, PIPELINE_BUG_CONFIG, MEMORY_LEAK_CONFIG, LOGICAL_W, LOGICAL_H } from './config.ts';
+import { randomPosition } from './state.ts';
+import * as network from './network.ts';
+import * as game from './game.ts';
+import * as powerups from './powerups.ts';
+import type { BugEntity, GameContext, EntityDescriptor } from './types.ts';
 
 // ── Base descriptor — shared defaults for all entity types ──
 
-const baseDescriptor = {
-  init(bug, ctx, opts) {},
+const baseDescriptor: EntityDescriptor = {
+  init(_bug: BugEntity, _ctx: GameContext, _opts: { phaseCheck: string }) {},
 
-  broadcastFields(bug) { return {}; },
+  broadcastFields(_bug: BugEntity) { return {}; },
 
-  setupTimers(bug, ctx) {},
+  setupTimers(_bug: BugEntity, _ctx: GameContext) {},
 
-  createWander(bug, ctx) {
+  createWander(bug: BugEntity, ctx: GameContext) {
     const { lobbyId, state } = ctx;
     const bugId = bug.id;
     bug._timers.setInterval('wander', () => {
@@ -23,15 +26,15 @@ const baseDescriptor = {
     }, bug.escapeTime * 0.45);
   },
 
-  onStun(bug, ctx) {
+  onStun(bug: BugEntity, _ctx: GameContext) {
     bug.isStunned = true;
     bug.remainingEscapeTime = Math.max(0, bug.escapeTime - (Date.now() - bug.escapeStartedAt));
     bug._timers.clearAll();
   },
 
-  onResume(bug, ctx) {
+  onResume(this: EntityDescriptor, bug: BugEntity, ctx: GameContext) {
     bug.isStunned = false;
-    const remainingTime = bug.remainingEscapeTime;
+    const remainingTime = bug.remainingEscapeTime!;
     bug.escapeStartedAt = Date.now();
     bug.escapeTime = remainingTime;
 
@@ -46,7 +49,7 @@ const baseDescriptor = {
     }
   },
 
-  onEscape(bug, ctx, onEscapeCheck) {
+  onEscape(bug: BugEntity, ctx: GameContext, onEscapeCheck: () => void) {
     bug._timers.clearAll();
     delete ctx.state.bugs[bug.id];
     ctx.state.hp -= HP_DAMAGE;
@@ -58,7 +61,7 @@ const baseDescriptor = {
     onEscapeCheck();
   },
 
-  onClick(bug, ctx, pid, msg) {
+  onClick(bug: BugEntity, ctx: GameContext, pid: string, _msg: any) {
     const { state } = ctx;
     const player = state.players[pid];
     if (!player) return;
@@ -68,7 +71,6 @@ const baseDescriptor = {
 
     player.bugsSquashed = (player.bugsSquashed || 0) + 1;
     let points = BUG_POINTS;
-    const powerups = require('./powerups');
     if (powerups.isDuckBuffActive(ctx)) points *= 2;
     state.score += points;
     player.score += points;
@@ -95,7 +97,6 @@ const baseDescriptor = {
       points,
     });
 
-    const game = require('./game');
     if (state.phase === 'boss') game.checkBossGameState(ctx);
     else game.checkGameState(ctx);
   },
@@ -103,18 +104,19 @@ const baseDescriptor = {
 
 // ── Type-specific descriptors ──
 
-const types = {};
+const types: Record<string, EntityDescriptor> = {};
 
-types.normal = Object.assign({}, baseDescriptor);
+types.normal = { ...baseDescriptor };
 
-types.minion = Object.assign({}, baseDescriptor);
+types.minion = { ...baseDescriptor };
 
-types.heisenbug = Object.assign({}, baseDescriptor, {
-  broadcastFields(bug) {
+types.heisenbug = {
+  ...baseDescriptor,
+  broadcastFields(bug: BugEntity) {
     return { isHeisenbug: true, fleesRemaining: bug.fleesRemaining };
   },
 
-  onClick(bug, ctx, pid, msg) {
+  onClick(bug: BugEntity, ctx: GameContext, pid: string, _msg: any) {
     const { state } = ctx;
     const player = state.players[pid];
     if (!player) return;
@@ -124,7 +126,6 @@ types.heisenbug = Object.assign({}, baseDescriptor, {
 
     player.bugsSquashed = (player.bugsSquashed || 0) + 1;
     let points = BUG_POINTS * HEISENBUG_CONFIG.pointsMultiplier;
-    const powerups = require('./powerups');
     if (powerups.isDuckBuffActive(ctx)) points *= 2;
     state.score += points;
     player.score += points;
@@ -148,15 +149,14 @@ types.heisenbug = Object.assign({}, baseDescriptor, {
       points,
     });
 
-    const game = require('./game');
     if (state.phase === 'boss') game.checkBossGameState(ctx);
     else game.checkGameState(ctx);
   },
 
-  onCursorNear(bug, ctx, pid, x, y) {
-    if (!bug.isHeisenbug || bug.fleesRemaining <= 0) return;
+  onCursorNear(bug: BugEntity, ctx: GameContext, _pid: string, x: number, y: number) {
+    if (!bug.isHeisenbug || bug.fleesRemaining! <= 0) return;
     const now = Date.now();
-    if (now - bug.lastFleeTime < HEISENBUG_CONFIG.fleeCooldown) return;
+    if (now - bug.lastFleeTime! < HEISENBUG_CONFIG.fleeCooldown) return;
 
     const dx = bug.x - x;
     const dy = bug.y - y;
@@ -166,7 +166,7 @@ types.heisenbug = Object.assign({}, baseDescriptor, {
     const newPos = randomPosition();
     bug.x = newPos.x;
     bug.y = newPos.y;
-    bug.fleesRemaining--;
+    bug.fleesRemaining!--;
     bug.lastFleeTime = now;
 
     // Reset wander timer so bug stays put at new position briefly
@@ -186,14 +186,15 @@ types.heisenbug = Object.assign({}, baseDescriptor, {
       fleesRemaining: bug.fleesRemaining,
     });
   },
-});
+};
 
-types.feature = Object.assign({}, baseDescriptor, {
-  broadcastFields(bug) {
+types.feature = {
+  ...baseDescriptor,
+  broadcastFields(bug: BugEntity) {
     return { isFeature: true };
   },
 
-  onEscape(bug, ctx, onEscapeCheck) {
+  onEscape(bug: BugEntity, ctx: GameContext, onEscapeCheck: () => void) {
     bug._timers.clearAll();
     delete ctx.state.bugs[bug.id];
     if (ctx.matchLog) {
@@ -203,7 +204,7 @@ types.feature = Object.assign({}, baseDescriptor, {
     onEscapeCheck();
   },
 
-  onClick(bug, ctx, pid, msg) {
+  onClick(bug: BugEntity, ctx: GameContext, pid: string, _msg: any) {
     const { state } = ctx;
     const player = state.players[pid];
     if (!player) return;
@@ -226,33 +227,33 @@ types.feature = Object.assign({}, baseDescriptor, {
       hp: state.hp,
     });
 
-    const game = require('./game');
     if (state.phase === 'boss') game.checkBossGameState(ctx);
     else game.checkGameState(ctx);
   },
-});
+};
 
-types.memoryLeak = Object.assign({}, baseDescriptor, {
-  broadcastFields(bug) {
+types.memoryLeak = {
+  ...baseDescriptor,
+  broadcastFields(bug: BugEntity) {
     return { isMemoryLeak: true, growthStage: bug.growthStage };
   },
 
-  setupTimers(bug, ctx) {
-    if (bug.growthStage < MEMORY_LEAK_CONFIG.maxGrowthStage) {
+  setupTimers(bug: BugEntity, ctx: GameContext) {
+    if (bug.growthStage! < MEMORY_LEAK_CONFIG.maxGrowthStage) {
       const { lobbyId, state } = ctx;
       bug._timers.setInterval('growth', () => {
         if (!state.bugs[bug.id]) return;
-        if (bug.growthStage < MEMORY_LEAK_CONFIG.maxGrowthStage) {
-          bug.growthStage++;
+        if (bug.growthStage! < MEMORY_LEAK_CONFIG.maxGrowthStage) {
+          bug.growthStage!++;
           network.broadcastToLobby(lobbyId, { type: 'memory-leak-grow', bugId: bug.id, growthStage: bug.growthStage });
         }
       }, MEMORY_LEAK_CONFIG.growthInterval);
     }
   },
 
-  onEscape(bug, ctx, onEscapeCheck) {
+  onEscape(bug: BugEntity, ctx: GameContext, onEscapeCheck: () => void) {
     bug._timers.clearAll();
-    const damage = MEMORY_LEAK_CONFIG.damageByStage[bug.growthStage] || HP_DAMAGE;
+    const damage = MEMORY_LEAK_CONFIG.damageByStage[bug.growthStage!] || HP_DAMAGE;
     delete ctx.state.bugs[bug.id];
     ctx.state.hp -= damage;
     if (ctx.state.hp < 0) ctx.state.hp = 0;
@@ -263,13 +264,12 @@ types.memoryLeak = Object.assign({}, baseDescriptor, {
     onEscapeCheck();
   },
 
-  onClick(bug, ctx, pid, msg) {
+  onClick(_bug: BugEntity, _ctx: GameContext, _pid: string, _msg: any) {
     // Memory leak uses hold mechanic — regular clicks are ignored
-    // Hold start/complete are handled by onHoldStart/onHoldComplete
     return;
   },
 
-  onHoldStart(bug, ctx, pid) {
+  onHoldStart(this: EntityDescriptor, bug: BugEntity, ctx: GameContext, pid: string) {
     const { state } = ctx;
 
     // Initialize holders tracking if needed
@@ -283,8 +283,8 @@ types.memoryLeak = Object.assign({}, baseDescriptor, {
     if (!bug.holders.has(pid)) {
       bug.holders.set(pid, Date.now());
 
-      const elapsedSinceFirst = Date.now() - bug.firstHolderStartTime;
-      const requiredTime = MEMORY_LEAK_CONFIG.holdTimeByStage[bug.holdStartStage];
+      const elapsedSinceFirst = Date.now() - bug.firstHolderStartTime!;
+      const requiredTime = MEMORY_LEAK_CONFIG.holdTimeByStage[bug.holdStartStage!];
       const effectiveRequiredTime = requiredTime / bug.holders.size;
 
       network.broadcastToLobby(ctx.lobbyId, {
@@ -298,20 +298,20 @@ types.memoryLeak = Object.assign({}, baseDescriptor, {
 
       const remainingTime = Math.max(0, effectiveRequiredTime - elapsedSinceFirst);
       bug._timers.setTimeout('completion', () => {
-        this._completeHold(bug, ctx);
+        this._completeHold!(bug, ctx);
       }, remainingTime);
     }
   },
 
-  onHoldComplete(bug, ctx, pid) {
+  onHoldComplete(this: EntityDescriptor, bug: BugEntity, ctx: GameContext, pid: string) {
     const { state } = ctx;
     const player = state.players[pid];
     if (!player) return;
 
     if (!bug.holders || !bug.holders.has(pid)) return;
 
-    const requiredTime = MEMORY_LEAK_CONFIG.holdTimeByStage[bug.holdStartStage];
-    const elapsedSinceFirst = Date.now() - bug.firstHolderStartTime;
+    const requiredTime = MEMORY_LEAK_CONFIG.holdTimeByStage[bug.holdStartStage!];
+    const elapsedSinceFirst = Date.now() - bug.firstHolderStartTime!;
 
     bug.holders.delete(pid);
 
@@ -339,7 +339,7 @@ types.memoryLeak = Object.assign({}, baseDescriptor, {
     const remainingTime = Math.max(0, newEffectiveTime - elapsedSinceFirst);
 
     bug._timers.setTimeout('completion', () => {
-      this._completeHold(bug, ctx);
+      this._completeHold!(bug, ctx);
     }, remainingTime);
 
     network.broadcastToLobby(ctx.lobbyId, {
@@ -353,7 +353,7 @@ types.memoryLeak = Object.assign({}, baseDescriptor, {
     });
   },
 
-  _completeHold(bug, ctx) {
+  _completeHold(bug: BugEntity, ctx: GameContext) {
     const { state } = ctx;
     if (!state.bugs[bug.id] || !bug.holders || bug.holders.size === 0) return;
 
@@ -363,8 +363,7 @@ types.memoryLeak = Object.assign({}, baseDescriptor, {
     const holderCount = allHolders.length;
     delete state.bugs[bug.id];
 
-    let points = MEMORY_LEAK_CONFIG.pointsByStage[bug.holdStartStage] || BUG_POINTS;
-    const powerups = require('./powerups');
+    let points = MEMORY_LEAK_CONFIG.pointsByStage[bug.holdStartStage!] || BUG_POINTS;
     if (powerups.isDuckBuffActive(ctx)) points *= 2;
 
     for (const holderId of allHolders) {
@@ -399,14 +398,14 @@ types.memoryLeak = Object.assign({}, baseDescriptor, {
       points,
     });
 
-    const game = require('./game');
     if (state.phase === 'boss') game.checkBossGameState(ctx);
     else game.checkGameState(ctx);
   },
-});
+};
 
-types.mergeConflict = Object.assign({}, baseDescriptor, {
-  broadcastFields(bug) {
+types.mergeConflict = {
+  ...baseDescriptor,
+  broadcastFields(bug: BugEntity) {
     return {
       mergeConflict: bug.mergeConflict,
       mergePartner: bug.mergePartner,
@@ -414,9 +413,9 @@ types.mergeConflict = Object.assign({}, baseDescriptor, {
     };
   },
 
-  onEscape(bug, ctx, onEscapeCheck) {
+  onEscape(bug: BugEntity, ctx: GameContext, onEscapeCheck: () => void) {
     const { state } = ctx;
-    const partner = state.bugs[bug.mergePartner];
+    const partner = state.bugs[bug.mergePartner!];
     const damage = MERGE_CONFLICT_CONFIG.doubleDamage ? HP_DAMAGE * 2 : HP_DAMAGE;
     bug._timers.clearAll();
     delete state.bugs[bug.id];
@@ -433,11 +432,11 @@ types.mergeConflict = Object.assign({}, baseDescriptor, {
     onEscapeCheck();
   },
 
-  onClick(bug, ctx, pid, msg) {
+  onClick(bug: BugEntity, ctx: GameContext, pid: string, _msg: any) {
     const { state } = ctx;
     const player = state.players[pid];
     if (!player) return;
-    const partner = state.bugs[bug.mergePartner];
+    const partner = state.bugs[bug.mergePartner!];
 
     // Same player can't resolve both sides
     if (partner && partner.mergeClicked && partner.mergeClickedBy === pid) return;
@@ -446,14 +445,14 @@ types.mergeConflict = Object.assign({}, baseDescriptor, {
     bug.mergeClickedBy = pid;
     bug.mergeClickedAt = Date.now();
 
-    if (partner && partner.mergeClicked && (Date.now() - partner.mergeClickedAt) < MERGE_CONFLICT_CONFIG.resolveWindow) {
+    if (partner && partner.mergeClicked && (Date.now() - partner.mergeClickedAt!) < MERGE_CONFLICT_CONFIG.resolveWindow) {
       // Both clicked in time — resolve!
       bug._timers.clearAll();
       partner._timers.clearAll();
       delete state.bugs[bug.id];
       delete state.bugs[partner.id];
 
-      const clickers = new Set([pid, partner.mergeClickedBy]);
+      const clickers = new Set([pid, partner.mergeClickedBy!]);
       for (const clickerId of clickers) {
         if (state.players[clickerId]) {
           state.players[clickerId].score += MERGE_CONFLICT_CONFIG.bonusPoints;
@@ -477,7 +476,6 @@ types.mergeConflict = Object.assign({}, baseDescriptor, {
         ),
       });
 
-      const game = require('./game');
       if (state.phase === 'boss') game.checkBossGameState(ctx);
       else game.checkGameState(ctx);
     } else {
@@ -492,10 +490,11 @@ types.mergeConflict = Object.assign({}, baseDescriptor, {
       }, MERGE_CONFLICT_CONFIG.resolveWindow);
     }
   },
-});
+};
 
-types.pipeline = Object.assign({}, baseDescriptor, {
-  broadcastFields(bug) {
+types.pipeline = {
+  ...baseDescriptor,
+  broadcastFields(bug: BugEntity) {
     return {
       isPipeline: true,
       chainId: bug.chainId,
@@ -505,11 +504,11 @@ types.pipeline = Object.assign({}, baseDescriptor, {
   },
 
   // Pipeline bugs don't have individual wander — chain-level snake wander is managed separately
-  createWander(bug, ctx) {},
+  createWander(_bug: BugEntity, _ctx: GameContext) {},
 
-  onResume(bug, ctx) {
+  onResume(bug: BugEntity, ctx: GameContext) {
     bug.isStunned = false;
-    const remainingTime = bug.remainingEscapeTime;
+    const remainingTime = bug.remainingEscapeTime!;
     bug.escapeStartedAt = Date.now();
     bug.escapeTime = remainingTime;
 
@@ -518,7 +517,7 @@ types.pipeline = Object.assign({}, baseDescriptor, {
       bug._timers.setTimeout('escape', bug._onEscape, remainingTime);
 
       // Restart chain wander
-      const chain = ctx.state.pipelineChains[bug.chainId];
+      const chain = ctx.state.pipelineChains[bug.chainId!];
       if (chain) {
         const pad = 40;
         const margin = 100;
@@ -528,11 +527,11 @@ types.pipeline = Object.assign({}, baseDescriptor, {
         const phaseCheck = state.phase;
         bug._timers.setInterval('chainWander', () => {
           if (state.phase !== phaseCheck || state.hammerStunActive) return;
-          const ch = state.pipelineChains[bug.chainId];
+          const ch = state.pipelineChains[bug.chainId!];
           if (!ch) { bug._timers.clear('chainWander'); return; }
           const alive = ch.bugIds.filter(bid => state.bugs[bid]);
           if (alive.length === 0) { bug._timers.clear('chainWander'); return; }
-          const oldPos = {};
+          const oldPos: Record<string, { x: number; y: number }> = {};
           for (const bid of alive) {
             const b = state.bugs[bid];
             oldPos[bid] = { x: b.x, y: b.y };
@@ -563,11 +562,11 @@ types.pipeline = Object.assign({}, baseDescriptor, {
     }
   },
 
-  onClick(bug, ctx, pid, msg) {
+  onClick(bug: BugEntity, ctx: GameContext, pid: string, _msg: any) {
     const { state } = ctx;
     const player = state.players[pid];
     if (!player) return;
-    const chain = state.pipelineChains[bug.chainId];
+    const chain = state.pipelineChains[bug.chainId!];
     if (!chain) return;
 
     if (bug.chainIndex === chain.nextIndex) {
@@ -577,7 +576,6 @@ types.pipeline = Object.assign({}, baseDescriptor, {
 
       player.bugsSquashed = (player.bugsSquashed || 0) + 1;
       let points = PIPELINE_BUG_CONFIG.pointsPerBug;
-      const powerups = require('./powerups');
       if (powerups.isDuckBuffActive(ctx)) points *= 2;
       state.score += points;
       player.score += points;
@@ -603,7 +601,7 @@ types.pipeline = Object.assign({}, baseDescriptor, {
         const hBug = state.bugs[chain.headBugId];
         if (hBug) hBug._timers.clearAll();
         bug._timers.clearAll();
-        delete state.pipelineChains[bug.chainId];
+        delete state.pipelineChains[bug.chainId!];
 
         if (ctx.matchLog) {
           ctx.matchLog.log('squash', { type: 'pipeline-chain-complete', chainId: bug.chainId, by: pid, score: state.score });
@@ -617,19 +615,18 @@ types.pipeline = Object.assign({}, baseDescriptor, {
         });
       }
 
-      const game = require('./game');
       if (state.phase === 'boss') game.checkBossGameState(ctx);
       else game.checkGameState(ctx);
     } else {
       // Wrong order — reset chain
       const remaining = chain.bugIds.filter(bid => state.bugs[bid]);
-      chain.nextIndex = Math.min(...remaining.map(bid => state.bugs[bid].chainIndex));
+      chain.nextIndex = Math.min(...remaining.map(bid => state.bugs[bid].chainIndex!));
       const startPos = randomPosition();
       const angle = Math.random() * Math.PI * 2;
       chain.snakeAngle = angle + Math.PI;
       const spacing = 40;
       const pad = 40;
-      const newPositions = {};
+      const newPositions: Record<string, { x: number; y: number }> = {};
       remaining.forEach((bid, i) => {
         const b = state.bugs[bid];
         b.x = Math.max(pad, Math.min(LOGICAL_W - pad, startPos.x + Math.cos(angle) * spacing * i));
@@ -649,11 +646,11 @@ types.pipeline = Object.assign({}, baseDescriptor, {
       });
     }
   },
-});
+};
 
 // ── Type detection ──
 
-function getType(bug) {
+function getType(bug: BugEntity): string {
   if (bug.isPipeline) return 'pipeline';
   if (bug.mergeConflict) return 'mergeConflict';
   if (bug.isMemoryLeak) return 'memoryLeak';
@@ -663,8 +660,8 @@ function getType(bug) {
   return 'normal';
 }
 
-function getDescriptor(bug) {
+export function getDescriptor(bug: BugEntity): EntityDescriptor {
   return types[getType(bug)];
 }
 
-module.exports = { types, getType, getDescriptor };
+export { types, getType };

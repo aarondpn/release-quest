@@ -1,9 +1,11 @@
-const { Pool } = require('pg');
-const { DATABASE_CONFIG } = require('./config');
+import pg from 'pg';
+import { DATABASE_CONFIG } from './config.ts';
+import type { DbLobbyRow, DbUserRow, DbSessionRow, LeaderboardEntry } from './types.ts';
 
+const { Pool } = pg;
 const pool = new Pool(DATABASE_CONFIG);
 
-async function initialize() {
+export async function initialize(): Promise<void> {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS lobbies (
       id SERIAL PRIMARY KEY,
@@ -32,7 +34,7 @@ async function initialize() {
       username VARCHAR(16) NOT NULL UNIQUE,
       password_hash VARCHAR(72) NOT NULL,
       display_name VARCHAR(16) NOT NULL,
-      icon VARCHAR(8) NOT NULL DEFAULT '🐱',
+      icon VARCHAR(8) NOT NULL DEFAULT '\u{1F431}',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
@@ -67,7 +69,7 @@ async function initialize() {
   await pool.query(`DELETE FROM lobbies`);
 }
 
-function generateCode() {
+function generateCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
   for (let i = 0; i < 6; i++) {
@@ -76,16 +78,16 @@ function generateCode() {
   return code;
 }
 
-async function createLobby(name, maxPlayers, settings = {}) {
+export async function createLobby(name: string, maxPlayers: number, settings: Record<string, unknown> = {}): Promise<DbLobbyRow> {
   const code = generateCode();
   const result = await pool.query(
     `INSERT INTO lobbies (name, code, max_players, settings) VALUES ($1, $2, $3, $4) RETURNING *`,
     [name, code, maxPlayers, JSON.stringify(settings)]
   );
-  return result.rows[0];
+  return result.rows[0] as DbLobbyRow;
 }
 
-async function joinLobby(lobbyId, playerId, playerName) {
+export async function joinLobby(lobbyId: number, playerId: string, playerName: string): Promise<void> {
   await pool.query(
     `INSERT INTO lobby_players (lobby_id, player_id, player_name) VALUES ($1, $2, $3)
      ON CONFLICT (lobby_id, player_id) DO NOTHING`,
@@ -93,14 +95,14 @@ async function joinLobby(lobbyId, playerId, playerName) {
   );
 }
 
-async function leaveLobby(lobbyId, playerId) {
+export async function leaveLobby(lobbyId: number, playerId: string): Promise<void> {
   await pool.query(
     `DELETE FROM lobby_players WHERE lobby_id = $1 AND player_id = $2`,
     [lobbyId, playerId]
   );
 }
 
-async function listLobbies() {
+export async function listLobbies(): Promise<DbLobbyRow[]> {
   const result = await pool.query(`
     SELECT l.*, COUNT(lp.player_id)::int AS player_count
     FROM lobbies l
@@ -109,72 +111,72 @@ async function listLobbies() {
     GROUP BY l.id
     ORDER BY l.created_at DESC
   `);
-  return result.rows;
+  return result.rows as DbLobbyRow[];
 }
 
-async function getLobby(lobbyId) {
+export async function getLobby(lobbyId: number): Promise<DbLobbyRow | null> {
   const result = await pool.query(`SELECT * FROM lobbies WHERE id = $1`, [lobbyId]);
-  return result.rows[0] || null;
+  return (result.rows[0] as DbLobbyRow) || null;
 }
 
-async function deleteLobby(lobbyId) {
+export async function deleteLobby(lobbyId: number): Promise<void> {
   await pool.query(`DELETE FROM lobbies WHERE id = $1`, [lobbyId]);
 }
 
-async function getLobbyPlayerCount(lobbyId) {
+export async function getLobbyPlayerCount(lobbyId: number): Promise<number> {
   const result = await pool.query(
     `SELECT COUNT(*)::int AS count FROM lobby_players WHERE lobby_id = $1`,
     [lobbyId]
   );
-  return result.rows[0].count;
+  return (result.rows[0] as { count: number }).count;
 }
 
-async function getActiveLobbyCount() {
+export async function getActiveLobbyCount(): Promise<number> {
   const result = await pool.query(
     `SELECT COUNT(*)::int AS count FROM lobbies WHERE status = 'active'`
   );
-  return result.rows[0].count;
+  return (result.rows[0] as { count: number }).count;
 }
 
-// ── User & session queries ──
+// User & session queries
 
-async function createUser(username, passwordHash, displayName, icon) {
+export async function createUser(username: string, passwordHash: string, displayName: string, icon: string): Promise<DbUserRow> {
   const result = await pool.query(
     `INSERT INTO users (username, password_hash, display_name, icon) VALUES ($1, $2, $3, $4) RETURNING *`,
     [username, passwordHash, displayName, icon]
   );
-  return result.rows[0];
+  return result.rows[0] as DbUserRow;
 }
 
-async function getUserByUsername(username) {
+export async function getUserByUsername(username: string): Promise<DbUserRow | null> {
   const result = await pool.query(`SELECT * FROM users WHERE username = $1`, [username]);
-  return result.rows[0] || null;
+  return (result.rows[0] as DbUserRow) || null;
 }
 
-async function createSession(token, userId, expiresAt) {
+export async function createSession(token: string, userId: number, expiresAt: Date): Promise<void> {
   await pool.query(
     `INSERT INTO sessions (token, user_id, expires_at) VALUES ($1, $2, $3)`,
     [token, userId, expiresAt]
   );
 }
 
-async function getSessionWithUser(token) {
+export async function getSessionWithUser(token: string): Promise<DbSessionRow | null> {
   const result = await pool.query(
     `SELECT s.token, s.expires_at, u.id AS user_id, u.username, u.display_name, u.icon
      FROM sessions s JOIN users u ON s.user_id = u.id
      WHERE s.token = $1 AND s.expires_at > NOW()`,
     [token]
   );
-  return result.rows[0] || null;
+  return (result.rows[0] as DbSessionRow) || null;
 }
 
-async function deleteSession(token) {
+export async function deleteSession(token: string): Promise<void> {
   await pool.query(`DELETE FROM sessions WHERE token = $1`, [token]);
 }
 
-// ── Stats queries ──
+// Stats queries
 
-async function recordGameStats(userId, score, won, bugsSquashed) {
+export async function recordGameStats(userId: number, score: number, won: boolean, bugsSquashed: number): Promise<void> {
   await pool.query(`
     INSERT INTO user_stats (user_id, games_played, games_won, games_lost, total_score, highest_score, bugs_squashed, updated_at)
     VALUES ($1, 1, $2, $3, $4::bigint, $5, $6, NOW())
@@ -189,7 +191,7 @@ async function recordGameStats(userId, score, won, bugsSquashed) {
   `, [userId, won ? 1 : 0, won ? 0 : 1, score, score, bugsSquashed]);
 }
 
-async function getLeaderboard(limit = 10) {
+export async function getLeaderboard(limit: number = 10): Promise<LeaderboardEntry[]> {
   const result = await pool.query(`
     SELECT u.display_name, u.icon, s.games_played, s.games_won, s.games_lost,
            s.total_score, s.highest_score, s.bugs_squashed
@@ -198,25 +200,5 @@ async function getLeaderboard(limit = 10) {
     ORDER BY s.total_score DESC
     LIMIT $1
   `, [limit]);
-  return result.rows;
+  return result.rows as LeaderboardEntry[];
 }
-
-module.exports = {
-  pool,
-  initialize,
-  createLobby,
-  joinLobby,
-  leaveLobby,
-  listLobbies,
-  getLobby,
-  deleteLobby,
-  getLobbyPlayerCount,
-  getActiveLobbyCount,
-  createUser,
-  getUserByUsername,
-  createSession,
-  getSessionWithUser,
-  deleteSession,
-  recordGameStats,
-  getLeaderboard,
-};
