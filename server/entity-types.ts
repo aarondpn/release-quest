@@ -1,4 +1,4 @@
-import { HP_DAMAGE, BUG_POINTS, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG, PIPELINE_BUG_CONFIG, MEMORY_LEAK_CONFIG, LOGICAL_W, LOGICAL_H } from './config.ts';
+import { getDifficultyConfig, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG, PIPELINE_BUG_CONFIG, MEMORY_LEAK_CONFIG, LOGICAL_W, LOGICAL_H } from './config.ts';
 import { randomPosition } from './state.ts';
 import * as network from './network.ts';
 import * as game from './game.ts';
@@ -50,9 +50,10 @@ const baseDescriptor: EntityDescriptor = {
   },
 
   onEscape(bug: BugEntity, ctx: GameContext, onEscapeCheck: () => void) {
+    const diffConfig = getDifficultyConfig(ctx.state.difficulty);
     bug._timers.clearAll();
     delete ctx.state.bugs[bug.id];
-    ctx.state.hp -= HP_DAMAGE;
+    ctx.state.hp -= diffConfig.hpDamage;
     if (ctx.state.hp < 0) ctx.state.hp = 0;
     if (ctx.matchLog) {
       ctx.matchLog.log('escape', { bugId: bug.id, activeBugs: Object.keys(ctx.state.bugs).length, hp: ctx.state.hp });
@@ -63,6 +64,7 @@ const baseDescriptor: EntityDescriptor = {
 
   onClick(bug: BugEntity, ctx: GameContext, pid: string, _msg: any) {
     const { state } = ctx;
+    const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
     const player = state.players[pid];
     if (!player) return;
 
@@ -70,7 +72,7 @@ const baseDescriptor: EntityDescriptor = {
     delete state.bugs[bug.id];
 
     player.bugsSquashed = (player.bugsSquashed || 0) + 1;
-    let points = BUG_POINTS;
+    let points = diffConfig.bugPoints;
     if (powerups.isDuckBuffActive(ctx)) points *= 2;
     state.score += points;
     player.score += points;
@@ -118,6 +120,7 @@ types.heisenbug = {
 
   onClick(bug: BugEntity, ctx: GameContext, pid: string, _msg: any) {
     const { state } = ctx;
+    const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
     const player = state.players[pid];
     if (!player) return;
 
@@ -125,7 +128,7 @@ types.heisenbug = {
     delete state.bugs[bug.id];
 
     player.bugsSquashed = (player.bugsSquashed || 0) + 1;
-    let points = BUG_POINTS * HEISENBUG_CONFIG.pointsMultiplier;
+    let points = diffConfig.bugPoints * HEISENBUG_CONFIG.pointsMultiplier;
     if (powerups.isDuckBuffActive(ctx)) points *= 2;
     state.score += points;
     player.score += points;
@@ -266,8 +269,9 @@ types.memoryLeak = {
   },
 
   onEscape(bug: BugEntity, ctx: GameContext, onEscapeCheck: () => void) {
+    const diffConfig = getDifficultyConfig(ctx.state.difficulty);
     bug._timers.clearAll();
-    const damage = MEMORY_LEAK_CONFIG.damageByStage[bug.growthStage!] || HP_DAMAGE;
+    const damage = MEMORY_LEAK_CONFIG.damageByStage[bug.growthStage!] || diffConfig.hpDamage;
     delete ctx.state.bugs[bug.id];
     ctx.state.hp -= damage;
     if (ctx.state.hp < 0) ctx.state.hp = 0;
@@ -369,6 +373,7 @@ types.memoryLeak = {
 
   _completeHold(bug: BugEntity, ctx: GameContext) {
     const { state } = ctx;
+    const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
     if (!state.bugs[bug.id] || !bug.holders || bug.holders.size === 0) return;
 
     bug._timers.clearAll();
@@ -377,7 +382,7 @@ types.memoryLeak = {
     const holderCount = allHolders.length;
     delete state.bugs[bug.id];
 
-    let points = MEMORY_LEAK_CONFIG.pointsByStage[bug.holdStartStage!] || BUG_POINTS;
+    let points = MEMORY_LEAK_CONFIG.pointsByStage[bug.holdStartStage!] || diffConfig.bugPoints;
     if (powerups.isDuckBuffActive(ctx)) points *= 2;
 
     for (const holderId of allHolders) {
@@ -429,8 +434,9 @@ types.mergeConflict = {
 
   onEscape(bug: BugEntity, ctx: GameContext, onEscapeCheck: () => void) {
     const { state } = ctx;
+    const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
     const partner = state.bugs[bug.mergePartner!];
-    const damage = MERGE_CONFLICT_CONFIG.doubleDamage ? HP_DAMAGE * 2 : HP_DAMAGE;
+    const damage = MERGE_CONFLICT_CONFIG.doubleDamage ? diffConfig.hpDamage * 2 : diffConfig.hpDamage;
     bug._timers.clearAll();
     delete state.bugs[bug.id];
     if (partner) {

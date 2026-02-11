@@ -70,6 +70,16 @@ export const dom = {
   leaderboardTab: null,
   lobbiesTab: null,
   liveDashboard: null,
+  lobbyDifficulty: null,
+  advancedToggleBtn: null,
+  lobbyAdvancedConfig: null,
+  advancedResetBtn: null,
+  configStartingHp: null,
+  configHpDamage: null,
+  configBugPoints: null,
+  configBossHp: null,
+  configBossTime: null,
+  configHeisenbug: null,
 };
 
 export function initDom() {
@@ -92,8 +102,18 @@ export function initDom() {
   dom.lobbyList = document.getElementById('lobby-list');
   dom.lobbyNameInput = document.getElementById('lobby-name-input');
   dom.lobbyMaxPlayers = document.getElementById('lobby-max-players');
+  dom.lobbyDifficulty = document.getElementById('lobby-difficulty');
   dom.createLobbyBtn = document.getElementById('create-lobby-btn');
   dom.lobbyError = document.getElementById('lobby-error');
+  dom.advancedToggleBtn = document.getElementById('advanced-toggle-btn');
+  dom.lobbyAdvancedConfig = document.getElementById('lobby-advanced-config');
+  dom.advancedResetBtn = document.getElementById('advanced-reset-btn');
+  dom.configStartingHp = document.getElementById('config-starting-hp');
+  dom.configHpDamage = document.getElementById('config-hp-damage');
+  dom.configBugPoints = document.getElementById('config-bug-points');
+  dom.configBossHp = document.getElementById('config-boss-hp');
+  dom.configBossTime = document.getElementById('config-boss-time');
+  dom.configHeisenbug = document.getElementById('config-heisenbug');
   dom.authStatus = document.getElementById('auth-status');
   dom.authShowLoginBtn = document.getElementById('auth-show-login-btn');
   dom.authLogoutBtn = document.getElementById('auth-logout-btn');

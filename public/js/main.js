@@ -52,7 +52,42 @@ dom.nameInput.addEventListener('keydown', (e) => {
 dom.createLobbyBtn.addEventListener('click', () => {
   const name = dom.lobbyNameInput.value.trim().slice(0, 32) || 'Game Lobby';
   const maxPlayers = parseInt(dom.lobbyMaxPlayers.dataset.value, 10) || 4;
-  sendMessage({ type: 'create-lobby', name, maxPlayers });
+  const difficulty = dom.lobbyDifficulty.dataset.value || 'medium';
+  
+  // Build custom config from advanced settings
+  const customConfig = {};
+  
+  if (dom.configStartingHp.value) {
+    customConfig.startingHp = parseInt(dom.configStartingHp.value, 10);
+  }
+  if (dom.configHpDamage.value) {
+    if (!customConfig.bugs) customConfig.bugs = {};
+    customConfig.bugs.hpDamage = parseInt(dom.configHpDamage.value, 10);
+  }
+  if (dom.configBugPoints.value) {
+    if (!customConfig.bugs) customConfig.bugs = {};
+    customConfig.bugs.points = parseInt(dom.configBugPoints.value, 10);
+  }
+  if (dom.configBossHp.value) {
+    if (!customConfig.boss) customConfig.boss = {};
+    customConfig.boss.hp = parseInt(dom.configBossHp.value, 10);
+  }
+  if (dom.configBossTime.value) {
+    if (!customConfig.boss) customConfig.boss = {};
+    customConfig.boss.timeSeconds = parseInt(dom.configBossTime.value, 10);
+  }
+  if (dom.configHeisenbug.value) {
+    if (!customConfig.bugs) customConfig.bugs = {};
+    if (!customConfig.bugs.specialBugs) customConfig.bugs.specialBugs = {};
+    customConfig.bugs.specialBugs.heisenPercentage = parseInt(dom.configHeisenbug.value, 10);
+  }
+  
+  const message = { type: 'create-lobby', name, maxPlayers, difficulty };
+  if (Object.keys(customConfig).length > 0) {
+    message.customConfig = customConfig;
+  }
+  
+  sendMessage(message);
   dom.lobbyNameInput.value = '';
 });
 
@@ -75,6 +110,37 @@ dom.lobbyMaxPlayers.querySelector('.custom-select-options').addEventListener('cl
   dom.lobbyMaxPlayers.classList.remove('open');
 });
 document.addEventListener('click', () => dom.lobbyMaxPlayers.classList.remove('open'));
+
+// ── Difficulty select dropdown ──
+dom.lobbyDifficulty.querySelector('.custom-select-trigger').addEventListener('click', (e) => {
+  e.stopPropagation();
+  dom.lobbyDifficulty.classList.toggle('open');
+});
+dom.lobbyDifficulty.querySelector('.custom-select-options').addEventListener('click', (e) => {
+  const opt = e.target.closest('.custom-select-option');
+  if (!opt) return;
+  dom.lobbyDifficulty.dataset.value = opt.dataset.value;
+  dom.lobbyDifficulty.querySelector('.custom-select-trigger').textContent = opt.textContent + ' \u25BE';
+  dom.lobbyDifficulty.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('selected'));
+  opt.classList.add('selected');
+  dom.lobbyDifficulty.classList.remove('open');
+});
+document.addEventListener('click', () => dom.lobbyDifficulty.classList.remove('open'));
+
+// ── Advanced config toggle ──
+dom.advancedToggleBtn.addEventListener('click', () => {
+  dom.lobbyAdvancedConfig.classList.toggle('collapsed');
+});
+
+// ── Advanced config reset ──
+dom.advancedResetBtn.addEventListener('click', () => {
+  dom.configStartingHp.value = '';
+  dom.configHpDamage.value = '';
+  dom.configBugPoints.value = '';
+  dom.configBossHp.value = '';
+  dom.configBossTime.value = '';
+  dom.configHeisenbug.value = '';
+});
 
 // Cursor broadcasting
 dom.arena.addEventListener('mousemove', (e) => {

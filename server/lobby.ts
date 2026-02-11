@@ -1,7 +1,7 @@
 import { LOBBY_CONFIG } from './config.ts';
 import { createGameState, createCounters } from './state.ts';
 import * as db from './db.ts';
-import type { GameContext, LobbyMemory, PlayerData, DbLobbyRow } from './types.ts';
+import type { GameContext, LobbyMemory, PlayerData, DbLobbyRow, CustomDifficultyConfig } from './types.ts';
 
 // In-memory registry: lobbyId -> { state, counters, timers }
 export const lobbies = new Map<number, LobbyMemory>();
@@ -9,7 +9,7 @@ export const lobbies = new Map<number, LobbyMemory>();
 // Reverse lookup: playerId -> lobbyId
 export const playerToLobby = new Map<string, number>();
 
-export async function createLobby(name: string, maxPlayers: number | undefined): Promise<{ lobby?: DbLobbyRow; error?: string }> {
+export async function createLobby(name: string, maxPlayers: number | undefined, difficulty: string = 'medium', customConfig?: CustomDifficultyConfig): Promise<{ lobby?: DbLobbyRow; error?: string }> {
   const lobbyCount = await db.getActiveLobbyCount();
   if (lobbyCount >= LOBBY_CONFIG.maxLobbies) {
     return { error: 'Maximum number of lobbies reached' };
@@ -18,10 +18,11 @@ export async function createLobby(name: string, maxPlayers: number | undefined):
   let mp = Math.min(maxPlayers || LOBBY_CONFIG.defaultMaxPlayers, LOBBY_CONFIG.maxPlayersLimit);
   mp = Math.max(1, mp);
 
-  const row = await db.createLobby(name, mp);
+  const settings = { difficulty, customConfig };
+  const row = await db.createLobby(name, mp, settings);
 
   lobbies.set(row.id, {
-    state: createGameState(),
+    state: createGameState(difficulty, customConfig),
     counters: createCounters(),
     timers: {},
   });
@@ -44,8 +45,10 @@ export async function joinLobby(lobbyId: number, playerId: string, playerData: P
 
   // Ensure in-memory state exists
   if (!lobbies.has(lobbyId)) {
+    const difficulty = (lobby.settings as any)?.difficulty || 'medium';
+    const customConfig = (lobby.settings as any)?.customConfig;
     lobbies.set(lobbyId, {
-      state: createGameState(),
+      state: createGameState(difficulty, customConfig),
       counters: createCounters(),
       timers: {},
     });

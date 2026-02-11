@@ -1534,6 +1534,93 @@ header p {
   max-width: 500px;
 }
 
+.btn-advanced-toggle {
+  background: rgba(168, 85, 247, 0.1);
+  border-color: var(--purple);
+  color: var(--purple);
+  font-size: 6px;
+}
+.btn-advanced-toggle:hover {
+  background: var(--purple);
+  color: var(--bg);
+}
+
+.lobby-advanced-config {
+  background: rgba(26, 26, 46, 0.8);
+  border: 2px solid var(--purple);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 12px auto;
+  max-width: 600px;
+  transition: all 0.3s;
+}
+.lobby-advanced-config.collapsed {
+  display: none;
+}
+
+.advanced-config-header {
+  font-size: 8px;
+  color: var(--purple);
+  text-align: center;
+  margin-bottom: 12px;
+  letter-spacing: 1px;
+}
+
+.advanced-config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.advanced-config-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.advanced-config-label {
+  font-size: 6px;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+}
+
+.advanced-config-input {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  padding: 8px;
+  background: var(--surface);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 4px;
+  color: var(--yellow);
+  text-align: center;
+  outline: none;
+  width: 100%;
+}
+.advanced-config-input::placeholder {
+  color: #3d3d5c;
+  font-size: 6px;
+}
+.advanced-config-input:focus {
+  border-color: var(--purple);
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.2);
+}
+
+.advanced-reset-btn {
+  display: block;
+  margin: 8px auto 0;
+  font-size: 6px;
+  color: var(--red);
+  opacity: 0.7;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.advanced-reset-btn:hover {
+  opacity: 1;
+}
+
+
 .lobby-name-input {
   font-family: 'Press Start 2P', monospace;
   font-size: 9px;
@@ -1656,6 +1743,11 @@ header p {
   color: var(--teal);
   font-size: 6px;
   opacity: 0.7;
+}
+
+.lobby-list-difficulty {
+  font-size: 10px;
+  opacity: 0.8;
 }
 
 .lobby-list-players {

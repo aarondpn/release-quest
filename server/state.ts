@@ -1,11 +1,12 @@
-import { LOGICAL_W, LOGICAL_H, LEVEL_CONFIG, MAX_LEVEL } from './config.ts';
-import type { GameState, GameCounters, LevelConfigEntry, PlayerScoreEntry } from './types.ts';
+import { LOGICAL_W, LOGICAL_H, LEVEL_CONFIG, MAX_LEVEL, getDifficultyConfig } from './config.ts';
+import type { GameState, GameCounters, LevelConfigEntry, PlayerScoreEntry, DifficultyConfig, CustomDifficultyConfig } from './types.ts';
 
-export function createGameState(): GameState {
+export function createGameState(difficulty: string = 'medium', customConfig?: CustomDifficultyConfig): GameState {
+  const diffConfig = getDifficultyConfig(difficulty, customConfig);
   return {
     phase: 'lobby',
     score: 0,
-    hp: 100,
+    hp: diffConfig.startingHp,
     level: 1,
     bugsRemaining: 0,
     bugsSpawned: 0,
@@ -17,6 +18,8 @@ export function createGameState(): GameState {
     hotfixHammer: null,
     hammerStunActive: false,
     pipelineChains: {},
+    difficulty,
+    customConfig,
   };
 }
 
@@ -41,7 +44,8 @@ export function randomPosition(): { x: number; y: number } {
 }
 
 export function currentLevelConfig(state: GameState): LevelConfigEntry {
-  const base = LEVEL_CONFIG[state.level] || LEVEL_CONFIG[MAX_LEVEL];
+  const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
+  const base = diffConfig.levels[state.level] || diffConfig.levels[MAX_LEVEL];
   const extra = Math.max(0, Object.keys(state.players).length - 1);
   if (extra === 0) return base;
   return {

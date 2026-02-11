@@ -1,4 +1,4 @@
-import { RUBBER_DUCK_CONFIG, HOTFIX_HAMMER_CONFIG, BOSS_CONFIG } from './config.ts';
+import { getDifficultyConfig, RUBBER_DUCK_CONFIG, HOTFIX_HAMMER_CONFIG } from './config.ts';
 import { randomPosition } from './state.ts';
 import * as network from './network.ts';
 import * as boss from './boss.ts';
@@ -10,8 +10,9 @@ export function startDuckSpawning(ctx: GameContext): void {
 }
 
 function scheduleDuckSpawn(ctx: GameContext): void {
-  const delay = RUBBER_DUCK_CONFIG.spawnIntervalMin +
-    Math.random() * (RUBBER_DUCK_CONFIG.spawnIntervalMax - RUBBER_DUCK_CONFIG.spawnIntervalMin);
+  const diffConfig = getDifficultyConfig(ctx.state.difficulty);
+  const delay = diffConfig.powerups.rubberDuckIntervalMin +
+    Math.random() * (diffConfig.powerups.rubberDuckIntervalMax - diffConfig.powerups.rubberDuckIntervalMin);
   ctx.timers.duckSpawn = setTimeout(() => spawnDuck(ctx), delay);
 }
 
@@ -54,6 +55,7 @@ function spawnDuck(ctx: GameContext): void {
 
 export function collectDuck(ctx: GameContext, pid: string): void {
   const { lobbyId, state } = ctx;
+  const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
   if (!state.rubberDuck) return;
   const player = state.players[pid];
   if (!player) return;
@@ -69,7 +71,7 @@ export function collectDuck(ctx: GameContext, pid: string): void {
   state.rubberDuck = null;
 
   // Start buff
-  state.duckBuff = { expiresAt: Date.now() + RUBBER_DUCK_CONFIG.buffDuration };
+  state.duckBuff = { expiresAt: Date.now() + diffConfig.powerups.rubberDuckBuffDuration };
 
   network.broadcastToLobby(lobbyId, {
     type: 'duck-collected',
@@ -77,13 +79,13 @@ export function collectDuck(ctx: GameContext, pid: string): void {
     playerColor: player.color,
     score: state.score,
     playerScore: player.score,
-    buffDuration: RUBBER_DUCK_CONFIG.buffDuration,
+    buffDuration: diffConfig.powerups.rubberDuckBuffDuration,
   });
 
   ctx.timers.duckBuff = setTimeout(() => {
     state.duckBuff = null;
     network.broadcastToLobby(lobbyId, { type: 'duck-buff-expired' });
-  }, RUBBER_DUCK_CONFIG.buffDuration);
+  }, diffConfig.powerups.rubberDuckBuffDuration);
 
   // Schedule next duck
   scheduleDuckSpawn(ctx);
@@ -111,8 +113,9 @@ export function startHammerSpawning(ctx: GameContext): void {
 }
 
 function scheduleHammerSpawn(ctx: GameContext): void {
-  const delay = HOTFIX_HAMMER_CONFIG.spawnIntervalMin +
-    Math.random() * (HOTFIX_HAMMER_CONFIG.spawnIntervalMax - HOTFIX_HAMMER_CONFIG.spawnIntervalMin);
+  const diffConfig = getDifficultyConfig(ctx.state.difficulty);
+  const delay = diffConfig.powerups.hotfixHammerIntervalMin +
+    Math.random() * (diffConfig.powerups.hotfixHammerIntervalMax - diffConfig.powerups.hotfixHammerIntervalMin);
   ctx.timers.hammerSpawn = setTimeout(() => spawnHammer(ctx), delay);
 }
 
@@ -145,6 +148,7 @@ function spawnHammer(ctx: GameContext): void {
 
 export function collectHammer(ctx: GameContext, pid: string): void {
   const { lobbyId, state } = ctx;
+  const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
   if (!state.hotfixHammer) return;
   const player = state.players[pid];
   if (!player) return;
@@ -169,7 +173,7 @@ export function collectHammer(ctx: GameContext, pid: string): void {
     playerColor: player.color,
     score: state.score,
     playerScore: player.score,
-    stunDuration: HOTFIX_HAMMER_CONFIG.stunDuration,
+    stunDuration: diffConfig.powerups.hotfixHammerStunDuration,
   });
 
   // Resume bugs after stun
@@ -178,7 +182,7 @@ export function collectHammer(ctx: GameContext, pid: string): void {
     resumeAllBugs(ctx);
     resumeBoss(ctx);
     network.broadcastToLobby(lobbyId, { type: 'hammer-stun-expired' });
-  }, HOTFIX_HAMMER_CONFIG.stunDuration);
+  }, diffConfig.powerups.hotfixHammerStunDuration);
 
   // Schedule next hammer
   scheduleHammerSpawn(ctx);

@@ -269,14 +269,18 @@ wss.on('connection', (ws: WebSocket) => {
       case 'create-lobby': {
         const lobbyName = String(msg.name || '').trim().slice(0, 32) || 'Game Lobby';
         const maxPlayers = parseInt(msg.maxPlayers, 10) || undefined;
+        const difficulty = String(msg.difficulty || 'medium').trim();
+        const validDifficulties = ['easy', 'medium', 'hard'];
+        const finalDifficulty = validDifficulties.includes(difficulty) ? difficulty : 'medium';
+        const customConfig = msg.customConfig || undefined;
 
-        lobby.createLobby(lobbyName, maxPlayers).then(result => {
+        lobby.createLobby(lobbyName, maxPlayers, finalDifficulty, customConfig).then(result => {
           if (result.error) {
             console.log(`[lobby] ${pid} create failed: ${result.error}`);
             network.send(ws, { type: 'lobby-error', message: result.error });
             return;
           }
-          console.log(`[lobby] ${pid} created lobby "${lobbyName}" (${result.lobby!.code})`);
+          console.log(`[lobby] ${pid} created lobby "${lobbyName}" (${result.lobby!.code}) difficulty: ${finalDifficulty}${customConfig ? ' (custom)' : ''}`);
           network.send(ws, { type: 'lobby-created', lobby: result.lobby });
           // Broadcast updated lobby list to all unattached clients
           broadcastLobbyList();

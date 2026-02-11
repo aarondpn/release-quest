@@ -93,7 +93,47 @@
           <div class="custom-select-option" data-value="8">8 players</div>
         </div>
       </div>
+      <div class="custom-select" id="lobby-difficulty" data-value="medium">
+        <div class="custom-select-trigger">Medium ▾</div>
+        <div class="custom-select-options">
+          <div class="custom-select-option" data-value="easy">Easy</div>
+          <div class="custom-select-option selected" data-value="medium">Medium</div>
+          <div class="custom-select-option" data-value="hard">Hard</div>
+        </div>
+      </div>
+      <button class="btn btn-small btn-advanced-toggle" id="advanced-toggle-btn">⚙️ ADVANCED</button>
       <button class="btn btn-small" id="create-lobby-btn">CREATE</button>
+    </div>
+
+    <div class="lobby-advanced-config collapsed" id="lobby-advanced-config">
+      <div class="advanced-config-header">ADVANCED CONFIGURATION</div>
+      <div class="advanced-config-grid">
+        <div class="advanced-config-group">
+          <label class="advanced-config-label">Starting HP</label>
+          <input class="advanced-config-input" id="config-starting-hp" type="number" min="1" max="500" placeholder="Auto">
+        </div>
+        <div class="advanced-config-group">
+          <label class="advanced-config-label">HP Damage</label>
+          <input class="advanced-config-input" id="config-hp-damage" type="number" min="1" max="100" placeholder="Auto">
+        </div>
+        <div class="advanced-config-group">
+          <label class="advanced-config-label">Bug Points</label>
+          <input class="advanced-config-input" id="config-bug-points" type="number" min="1" max="100" placeholder="Auto">
+        </div>
+        <div class="advanced-config-group">
+          <label class="advanced-config-label">Boss HP</label>
+          <input class="advanced-config-input" id="config-boss-hp" type="number" min="1" max="2000" placeholder="Auto">
+        </div>
+        <div class="advanced-config-group">
+          <label class="advanced-config-label">Boss Time (s)</label>
+          <input class="advanced-config-input" id="config-boss-time" type="number" min="30" max="600" placeholder="Auto">
+        </div>
+        <div class="advanced-config-group">
+          <label class="advanced-config-label">Heisenbug %</label>
+          <input class="advanced-config-input" id="config-heisenbug" type="number" min="0" max="100" step="5" placeholder="Auto">
+        </div>
+      </div>
+      <button class="btn-link advanced-reset-btn" id="advanced-reset-btn">Reset to Defaults</button>
     </div>
 
     <div class="lobby-list" id="lobby-list">

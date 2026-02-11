@@ -136,6 +136,8 @@ export interface GameState {
   hammerStunActive: boolean;
   pipelineChains: Record<string, PipelineChain>;
   gameStartedAt?: number;
+  difficulty: string;
+  customConfig?: CustomDifficultyConfig;
 }
 
 export interface GameCounters {
@@ -201,6 +203,54 @@ export interface EscalationEntry {
   spawnRate: number;
   maxOnScreen: number;
 }
+
+export interface DifficultyConfig {
+  startingHp: number;
+  hpDamage: number;
+  bugPoints: number;
+  levels: Record<number, LevelConfigEntry>;
+  boss: {
+    hp: number;
+    clickDamage: number;
+    clickPoints: number;
+    killBonus: number;
+    wanderInterval: number;
+    enrageThreshold: number;
+    enrageWanderInterval: number;
+    minionSpawnRate: number;
+    enrageMinionSpawnRate: number;
+    minionEscapeTime: number;
+    minionMaxOnScreen: number;
+    enrageMinionMaxOnScreen: number;
+    clickCooldownMs: number;
+    regenPerSecond: number;
+    timeLimit: number;
+    escalation: EscalationEntry[];
+  };
+  specialBugs: {
+    heisenbugChance: number;
+    codeReviewChance: number;
+    codeReviewStartLevel: number;
+    mergeConflictChance: number;
+    pipelineBugChance: number;
+    pipelineBugStartLevel: number;
+    memoryLeakChance: number;
+  };
+  powerups: {
+    rubberDuckIntervalMin: number;
+    rubberDuckIntervalMax: number;
+    rubberDuckBuffDuration: number;
+    hotfixHammerIntervalMin: number;
+    hotfixHammerIntervalMax: number;
+    hotfixHammerStunDuration: number;
+  };
+}
+
+export type DeepPartial<T> = T extends object ? {
+  [P in keyof T]?: DeepPartial<T[P]>;
+} : T;
+
+export type CustomDifficultyConfig = DeepPartial<DifficultyConfig>;
 
 // DB row types
 

@@ -1,4 +1,4 @@
-import { MAX_LEVEL } from './config.ts';
+import { MAX_LEVEL, getDifficultyConfig } from './config.ts';
 import { currentLevelConfig, getPlayerScores } from './state.ts';
 import * as network from './network.ts';
 import * as bugs from './bugs.ts';
@@ -43,8 +43,9 @@ export function startGame(ctx: GameContext): void {
   const { lobbyId, state } = ctx;
   teardownGame(ctx);
 
+  const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
   state.score = 0;
-  state.hp = 100;
+  state.hp = diffConfig.startingHp;
   state.level = 1;
   state.phase = 'playing';
   state.boss = null;
@@ -65,7 +66,7 @@ export function startGame(ctx: GameContext): void {
   network.broadcastToLobby(lobbyId, {
     type: 'game-start',
     level: 1,
-    hp: 100,
+    hp: diffConfig.startingHp,
     score: 0,
     players: getPlayerScores(state),
   });
@@ -160,10 +161,11 @@ export function checkBossGameState(ctx: GameContext): void {
 
 export function resetToLobby(ctx: GameContext): void {
   const { state } = ctx;
+  const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
   teardownGame(ctx);
   state.phase = 'lobby';
   state.score = 0;
-  state.hp = 100;
+  state.hp = diffConfig.startingHp;
   state.level = 1;
   state.bugsRemaining = 0;
   state.bugsSpawned = 0;

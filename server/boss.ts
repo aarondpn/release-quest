@@ -1,4 +1,4 @@
-import { BOSS_CONFIG, RUBBER_DUCK_CONFIG } from './config.ts';
+import { getDifficultyConfig, RUBBER_DUCK_CONFIG } from './config.ts';
 import { randomPosition } from './state.ts';
 import * as network from './network.ts';
 import { createTimerBag } from './timer-bag.ts';
@@ -24,17 +24,19 @@ export function clearBossTimers(ctx: GameContext): void {
 
 export function getEffectiveSpawnRate(ctx: GameContext): number {
   const { state } = ctx;
-  if (!state.boss) return BOSS_CONFIG.minionSpawnRate;
+  const bossConfig = getDifficultyConfig(state.difficulty, state.customConfig).boss;
+  if (!state.boss) return bossConfig.minionSpawnRate;
   const base = state.boss.currentSpawnRate;
-  if (state.boss.enraged) return Math.min(base, BOSS_CONFIG.enrageMinionSpawnRate);
+  if (state.boss.enraged) return Math.min(base, bossConfig.enrageMinionSpawnRate);
   return base;
 }
 
 export function getEffectiveMaxOnScreen(ctx: GameContext): number {
   const { state } = ctx;
-  if (!state.boss) return BOSS_CONFIG.minionMaxOnScreen;
+  const bossConfig = getDifficultyConfig(state.difficulty, state.customConfig).boss;
+  if (!state.boss) return bossConfig.minionMaxOnScreen;
   const base = state.boss.currentMaxOnScreen;
-  if (state.boss.enraged) return Math.max(base, BOSS_CONFIG.enrageMinionMaxOnScreen + state.boss.extraPlayers);
+  if (state.boss.enraged) return Math.max(base, bossConfig.enrageMinionMaxOnScreen + state.boss.extraPlayers);
   return base;
 }
 
@@ -60,29 +62,30 @@ export function setupMinionSpawning(ctx: GameContext, rate: number): void {
 
 export function startBoss(ctx: GameContext): void {
   const { lobbyId, state } = ctx;
+  const bossConfig = getDifficultyConfig(state.difficulty, state.customConfig).boss;
   state.phase = 'boss';
   const pos = randomPosition();
   const extra = Math.max(0, Object.keys(state.players).length - 1);
   state.boss = {
-    hp: BOSS_CONFIG.hp + extra * 150,
-    maxHp: BOSS_CONFIG.hp + extra * 150,
+    hp: bossConfig.hp + extra * 150,
+    maxHp: bossConfig.hp + extra * 150,
     x: pos.x,
     y: pos.y,
     enraged: false,
     lastClickBy: {},
-    timeRemaining: BOSS_CONFIG.timeLimit,
+    timeRemaining: bossConfig.timeLimit,
     escalationLevel: 0,
-    currentSpawnRate: BOSS_CONFIG.minionSpawnRate,
-    currentMaxOnScreen: BOSS_CONFIG.minionMaxOnScreen + extra,
-    regenPerSecond: BOSS_CONFIG.regenPerSecond + extra,
+    currentSpawnRate: bossConfig.minionSpawnRate,
+    currentMaxOnScreen: bossConfig.minionMaxOnScreen + extra,
+    regenPerSecond: bossConfig.regenPerSecond + extra,
     extraPlayers: extra,
   };
 
   if (ctx.matchLog) {
     ctx.matchLog.log('boss-start', {
       bossHp: state.boss.hp,
-      minionSpawnRate: BOSS_CONFIG.minionSpawnRate,
-      timeLimit: BOSS_CONFIG.timeLimit,
+      minionSpawnRate: bossConfig.minionSpawnRate,
+      timeLimit: bossConfig.timeLimit,
       players: Object.keys(state.players).length,
     });
   }
@@ -92,18 +95,19 @@ export function startBoss(ctx: GameContext): void {
     boss: { hp: state.boss.hp, maxHp: state.boss.maxHp, x: pos.x, y: pos.y, enraged: false },
     hp: state.hp,
     score: state.score,
-    timeRemaining: BOSS_CONFIG.timeLimit,
+    timeRemaining: bossConfig.timeLimit,
   });
 
   const bt = ensureBossTimers(ctx);
-  setupBossWander(ctx, BOSS_CONFIG.wanderInterval);
-  setupMinionSpawning(ctx, BOSS_CONFIG.minionSpawnRate);
+  setupBossWander(ctx, bossConfig.wanderInterval);
+  setupMinionSpawning(ctx, bossConfig.minionSpawnRate);
   bt.setInterval('bossTick', () => bossTick(ctx), 1000);
 }
 
 function bossTick(ctx: GameContext): void {
   const { lobbyId, state } = ctx;
   if (state.phase !== 'boss' || !state.boss) return;
+  const bossConfig = getDifficultyConfig(state.difficulty, state.customConfig).boss;
 
   state.boss.timeRemaining--;
 
@@ -113,8 +117,8 @@ function bossTick(ctx: GameContext): void {
 
   let escalated = false;
   const nextLevel = state.boss.escalationLevel;
-  if (nextLevel < BOSS_CONFIG.escalation.length) {
-    const threshold = BOSS_CONFIG.escalation[nextLevel];
+  if (nextLevel < bossConfig.escalation.length) {
+    const threshold = bossConfig.escalation[nextLevel];
     if (state.boss.timeRemaining <= threshold.timeRemaining) {
       state.boss.escalationLevel++;
       state.boss.currentSpawnRate = threshold.spawnRate;
@@ -150,15 +154,16 @@ function bossTick(ctx: GameContext): void {
 export function handleBossClick(ctx: GameContext, pid: string): void {
   const { lobbyId, state } = ctx;
   if (state.phase !== 'boss' || !state.boss) return;
+  const bossConfig = getDifficultyConfig(state.difficulty, state.customConfig).boss;
   const player = state.players[pid];
   if (!player) return;
 
   const now = Date.now();
-  if (state.boss.lastClickBy[pid] && now - state.boss.lastClickBy[pid] < BOSS_CONFIG.clickCooldownMs) return;
+  if (state.boss.lastClickBy[pid] && now - state.boss.lastClickBy[pid] < bossConfig.clickCooldownMs) return;
   state.boss.lastClickBy[pid] = now;
 
   // Duck buff doubles click damage
-  let damage = BOSS_CONFIG.clickDamage;
+  let damage = bossConfig.clickDamage;
   if (powerups.isDuckBuffActive(ctx)) {
     damage *= RUBBER_DUCK_CONFIG.pointsMultiplier;
   }
@@ -166,14 +171,14 @@ export function handleBossClick(ctx: GameContext, pid: string): void {
   state.boss.hp -= damage;
   if (state.boss.hp < 0) state.boss.hp = 0;
 
-  state.score += BOSS_CONFIG.clickPoints;
-  player.score += BOSS_CONFIG.clickPoints;
+  state.score += bossConfig.clickPoints;
+  player.score += bossConfig.clickPoints;
 
   let justEnraged = false;
-  if (!state.boss.enraged && state.boss.hp <= state.boss.maxHp * BOSS_CONFIG.enrageThreshold) {
+  if (!state.boss.enraged && state.boss.hp <= state.boss.maxHp * bossConfig.enrageThreshold) {
     state.boss.enraged = true;
     justEnraged = true;
-    setupBossWander(ctx, BOSS_CONFIG.enrageWanderInterval);
+    setupBossWander(ctx, bossConfig.enrageWanderInterval);
     setupMinionSpawning(ctx, getEffectiveSpawnRate(ctx));
   }
 
@@ -205,13 +210,14 @@ export function handleBossClick(ctx: GameContext, pid: string): void {
 
 function defeatBoss(ctx: GameContext): void {
   const { state } = ctx;
+  const bossConfig = getDifficultyConfig(state.difficulty, state.customConfig).boss;
   const playerCount = Object.keys(state.players).length;
   if (playerCount > 0) {
-    const bonusEach = Math.floor(BOSS_CONFIG.killBonus / playerCount);
+    const bonusEach = Math.floor(bossConfig.killBonus / playerCount);
     for (const pid of Object.keys(state.players)) {
       state.players[pid].score += bonusEach;
     }
-    state.score += BOSS_CONFIG.killBonus;
+    state.score += bossConfig.killBonus;
   }
 
   game.endGame(ctx, 'win', true);

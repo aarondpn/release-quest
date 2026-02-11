@@ -1,4 +1,4 @@
-import { HP_DAMAGE, BOSS_CONFIG, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG, PIPELINE_BUG_CONFIG, MEMORY_LEAK_CONFIG, LOGICAL_W, LOGICAL_H } from './config.ts';
+import { getDifficultyConfig, BOSS_CONFIG, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG, PIPELINE_BUG_CONFIG, MEMORY_LEAK_CONFIG, LOGICAL_W, LOGICAL_H } from './config.ts';
 import { randomPosition, currentLevelConfig } from './state.ts';
 import * as network from './network.ts';
 import { createTimerBag } from './timer-bag.ts';
@@ -63,6 +63,7 @@ function spawnBug(ctx: GameContext): void {
   const { state, counters } = ctx;
   if (state.phase !== 'playing') return;
   const cfg = currentLevelConfig(state);
+  const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
   if (state.bugsSpawned >= cfg.bugsTotal) {
     if (ctx.matchLog) {
       ctx.matchLog.log('spawn-skip', { reason: 'all-spawned', bugsSpawned: state.bugsSpawned, bugsTotal: cfg.bugsTotal });
@@ -74,10 +75,10 @@ function spawnBug(ctx: GameContext): void {
 
   // Roll for pipeline chain (level 2+, needs room for 3+ bugs)
   const minChain = PIPELINE_BUG_CONFIG.minChainLength;
-  if (state.level >= PIPELINE_BUG_CONFIG.startLevel
+  if (state.level >= diffConfig.specialBugs.pipelineBugStartLevel
     && Object.keys(state.bugs).length + minChain <= cfg.maxOnScreen + minChain
     && state.bugsSpawned + minChain <= cfg.bugsTotal
-    && Math.random() < PIPELINE_BUG_CONFIG.chance) {
+    && Math.random() < diffConfig.specialBugs.pipelineBugChance) {
     const maxLen = Math.min(
       PIPELINE_BUG_CONFIG.maxChainLength,
       cfg.bugsTotal - state.bugsSpawned
@@ -91,7 +92,7 @@ function spawnBug(ctx: GameContext): void {
   // Roll for merge conflict (2+ players, needs room for 2 bugs)
   if (playerCount >= MERGE_CONFLICT_CONFIG.minPlayers
     && Object.keys(state.bugs).length + 2 <= cfg.maxOnScreen
-    && Math.random() < MERGE_CONFLICT_CONFIG.chance) {
+    && Math.random() < diffConfig.specialBugs.mergeConflictChance) {
     spawnMergeConflict(ctx, cfg);
     return;
   }
@@ -100,16 +101,16 @@ function spawnBug(ctx: GameContext): void {
   let variant: Partial<BugEntity> | null = null;
 
   // Heisenbug: any level
-  if (Math.random() < HEISENBUG_CONFIG.chance) {
+  if (Math.random() < diffConfig.specialBugs.heisenbugChance) {
     variant = { isHeisenbug: true, fleesRemaining: HEISENBUG_CONFIG.maxFlees, lastFleeTime: 0 };
   }
   // Memory leak: any level (cap scales with player count so there's always a free player)
-  else if (Math.random() < MEMORY_LEAK_CONFIG.chance
+  else if (Math.random() < diffConfig.specialBugs.memoryLeakChance
     && Object.values(state.bugs).filter(b => b.isMemoryLeak).length < Math.max(1, playerCount - 1)) {
     variant = { isMemoryLeak: true, growthStage: 0 };
   }
   // Feature-not-a-bug: level 2+
-  else if (state.level >= CODE_REVIEW_CONFIG.startLevel && Math.random() < CODE_REVIEW_CONFIG.featureChance) {
+  else if (state.level >= diffConfig.specialBugs.codeReviewStartLevel && Math.random() < diffConfig.specialBugs.codeReviewChance) {
     variant = { isFeature: true };
   }
 
@@ -184,7 +185,8 @@ function spawnMergeConflict(ctx: GameContext, cfg: { escapeTime: number; maxOnSc
   // Shared escape handler — assigned to _onEscape so hammer stun/resume can restart it
   const escapeHandler = () => {
     if (!state.bugs[id1] && !state.bugs[id2]) return;
-    const damage = MERGE_CONFLICT_CONFIG.doubleDamage ? HP_DAMAGE * 2 : HP_DAMAGE;
+    const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
+    const damage = MERGE_CONFLICT_CONFIG.doubleDamage ? diffConfig.hpDamage * 2 : diffConfig.hpDamage;
     if (state.bugs[id1]) { bug1._timers.clearAll(); delete state.bugs[id1]; }
     if (state.bugs[id2]) { bug2._timers.clearAll(); delete state.bugs[id2]; }
     state.hp -= damage;
@@ -304,12 +306,13 @@ function spawnPipelineChain(ctx: GameContext, cfg: { escapeTime: number; maxOnSc
   const escapeHandler = () => {
     const chain = state.pipelineChains[chainId];
     if (!chain) return;
+    const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
     // Clear chain wander from head bug
     const hBug = state.bugs[chain.headBugId];
     if (hBug) hBug._timers.clear('chainWander');
     const remaining = bugIds.filter(bid => state.bugs[bid]);
     if (remaining.length === 0) return;
-    const damage = HP_DAMAGE * remaining.length;
+    const damage = diffConfig.hpDamage * remaining.length;
     for (const bid of remaining) {
       if (state.bugs[bid]) {
         state.bugs[bid]._timers.clearAll();
@@ -344,18 +347,19 @@ function spawnPipelineChain(ctx: GameContext, cfg: { escapeTime: number; maxOnSc
 export function spawnMinion(ctx: GameContext): void {
   const { state } = ctx;
   if (state.phase !== 'boss') return;
+  const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
   const maxOnScreen = bossModule.getEffectiveMaxOnScreen(ctx);
 
   // Roll for feature variant during boss phase
   let variant: Partial<BugEntity> | null = null;
-  if (Math.random() < CODE_REVIEW_CONFIG.bossPhaseChance) {
+  if (Math.random() < diffConfig.specialBugs.codeReviewChance * 0.67) { // slightly lower during boss
     variant = { isFeature: true };
   }
 
   spawnEntity(ctx, {
     phaseCheck: 'boss',
     maxOnScreen,
-    escapeTime: BOSS_CONFIG.minionEscapeTime,
+    escapeTime: diffConfig.boss.minionEscapeTime,
     isMinion: true,
     onEscapeCheck: () => game.checkBossGameState(ctx),
     variant,

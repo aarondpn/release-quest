@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import type { LevelConfigEntry, EscalationEntry } from './types.ts';
+import type { LevelConfigEntry, EscalationEntry, DifficultyConfig, CustomDifficultyConfig } from './types.ts';
 
 interface FileConfig {
   server?: { port?: number };
@@ -39,6 +39,180 @@ export const LOGICAL_W = 800;
 export const LOGICAL_H = 500;
 export const COLORS = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#a855f7', '#ff9ff3', '#54a0ff', '#5f27cd', '#01a3a4'];
 export const ICONS = ['\u{1F431}', '\u{1F436}', '\u{1F430}', '\u{1F98A}', '\u{1F438}', '\u{1F427}', '\u{1F43C}', '\u{1F428}'];
+
+// Difficulty presets
+export const DIFFICULTY_PRESETS: Record<string, DifficultyConfig> = {
+  easy: {
+    startingHp: 150,
+    hpDamage: 10,
+    bugPoints: 10,
+    levels: {
+      1: { bugsTotal: 6, escapeTime: 6000, spawnRate: 2500, maxOnScreen: 2 },
+      2: { bugsTotal: 10, escapeTime: 5000, spawnRate: 2000, maxOnScreen: 2 },
+      3: { bugsTotal: 14, escapeTime: 4000, spawnRate: 1800, maxOnScreen: 3 },
+    },
+    boss: {
+      hp: 400,
+      clickDamage: 5,
+      clickPoints: 5,
+      killBonus: 200,
+      wanderInterval: 2500,
+      enrageThreshold: 0.5,
+      enrageWanderInterval: 1500,
+      minionSpawnRate: 5000,
+      enrageMinionSpawnRate: 3000,
+      minionEscapeTime: 4500,
+      minionMaxOnScreen: 2,
+      enrageMinionMaxOnScreen: 4,
+      clickCooldownMs: 100,
+      regenPerSecond: 1.5,
+      timeLimit: 150,
+      escalation: [
+        { timeRemaining: 100, spawnRate: 4000, maxOnScreen: 3 },
+        { timeRemaining: 60, spawnRate: 3200, maxOnScreen: 3 },
+        { timeRemaining: 30, spawnRate: 2500, maxOnScreen: 4 },
+      ],
+    },
+    specialBugs: {
+      heisenbugChance: 0.10,
+      codeReviewChance: 0.08,
+      codeReviewStartLevel: 2,
+      mergeConflictChance: 0.05,
+      pipelineBugChance: 0.08,
+      pipelineBugStartLevel: 2,
+      memoryLeakChance: 0.08,
+    },
+    powerups: {
+      rubberDuckIntervalMin: 18000,
+      rubberDuckIntervalMax: 28000,
+      rubberDuckBuffDuration: 7000,
+      hotfixHammerIntervalMin: 22000,
+      hotfixHammerIntervalMax: 38000,
+      hotfixHammerStunDuration: 2500,
+    },
+  },
+  medium: {
+    startingHp: 100,
+    hpDamage: 15,
+    bugPoints: 10,
+    levels: {
+      1: { bugsTotal: 8, escapeTime: 5000, spawnRate: 2200, maxOnScreen: 2 },
+      2: { bugsTotal: 12, escapeTime: 3800, spawnRate: 1600, maxOnScreen: 3 },
+      3: { bugsTotal: 16, escapeTime: 3200, spawnRate: 1500, maxOnScreen: 4 },
+    },
+    boss: {
+      hp: 500,
+      clickDamage: 5,
+      clickPoints: 5,
+      killBonus: 200,
+      wanderInterval: 2000,
+      enrageThreshold: 0.5,
+      enrageWanderInterval: 1200,
+      minionSpawnRate: 4000,
+      enrageMinionSpawnRate: 2200,
+      minionEscapeTime: 3500,
+      minionMaxOnScreen: 3,
+      enrageMinionMaxOnScreen: 5,
+      clickCooldownMs: 100,
+      regenPerSecond: 2,
+      timeLimit: 120,
+      escalation: [
+        { timeRemaining: 90, spawnRate: 3200, maxOnScreen: 4 },
+        { timeRemaining: 60, spawnRate: 2600, maxOnScreen: 4 },
+        { timeRemaining: 30, spawnRate: 2000, maxOnScreen: 5 },
+      ],
+    },
+    specialBugs: {
+      heisenbugChance: 0.15,
+      codeReviewChance: 0.12,
+      codeReviewStartLevel: 2,
+      mergeConflictChance: 0.08,
+      pipelineBugChance: 0.10,
+      pipelineBugStartLevel: 2,
+      memoryLeakChance: 0.12,
+    },
+    powerups: {
+      rubberDuckIntervalMin: 20000,
+      rubberDuckIntervalMax: 30000,
+      rubberDuckBuffDuration: 6000,
+      hotfixHammerIntervalMin: 25000,
+      hotfixHammerIntervalMax: 40000,
+      hotfixHammerStunDuration: 2000,
+    },
+  },
+  hard: {
+    startingHp: 75,
+    hpDamage: 20,
+    bugPoints: 15,
+    levels: {
+      1: { bugsTotal: 10, escapeTime: 4000, spawnRate: 1800, maxOnScreen: 3 },
+      2: { bugsTotal: 15, escapeTime: 3000, spawnRate: 1200, maxOnScreen: 4 },
+      3: { bugsTotal: 20, escapeTime: 2500, spawnRate: 1000, maxOnScreen: 5 },
+    },
+    boss: {
+      hp: 600,
+      clickDamage: 5,
+      clickPoints: 5,
+      killBonus: 300,
+      wanderInterval: 1500,
+      enrageThreshold: 0.6,
+      enrageWanderInterval: 900,
+      minionSpawnRate: 3000,
+      enrageMinionSpawnRate: 1800,
+      minionEscapeTime: 2800,
+      minionMaxOnScreen: 4,
+      enrageMinionMaxOnScreen: 6,
+      clickCooldownMs: 100,
+      regenPerSecond: 3,
+      timeLimit: 100,
+      escalation: [
+        { timeRemaining: 75, spawnRate: 2400, maxOnScreen: 5 },
+        { timeRemaining: 50, spawnRate: 1800, maxOnScreen: 5 },
+        { timeRemaining: 25, spawnRate: 1400, maxOnScreen: 6 },
+      ],
+    },
+    specialBugs: {
+      heisenbugChance: 0.20,
+      codeReviewChance: 0.15,
+      codeReviewStartLevel: 1,
+      mergeConflictChance: 0.12,
+      pipelineBugChance: 0.15,
+      pipelineBugStartLevel: 1,
+      memoryLeakChance: 0.15,
+    },
+    powerups: {
+      rubberDuckIntervalMin: 25000,
+      rubberDuckIntervalMax: 35000,
+      rubberDuckBuffDuration: 5000,
+      hotfixHammerIntervalMin: 30000,
+      hotfixHammerIntervalMax: 45000,
+      hotfixHammerStunDuration: 1500,
+    },
+  },
+};
+
+function deepMerge<T>(target: T, source: any): T {
+  if (!source) return target;
+  
+  const output = { ...target } as any;
+  
+  for (const key in source) {
+    if (source[key] !== undefined && source[key] !== null) {
+      if (typeof source[key] === 'object' && !Array.isArray(source[key]) && source[key] !== null) {
+        output[key] = deepMerge(output[key] || {}, source[key]);
+      } else {
+        output[key] = source[key];
+      }
+    }
+  }
+  
+  return output as T;
+}
+
+export function getDifficultyConfig(difficulty: string = 'medium', customConfig?: CustomDifficultyConfig): DifficultyConfig {
+  const preset = DIFFICULTY_PRESETS[difficulty] || DIFFICULTY_PRESETS.medium;
+  return deepMerge(preset, customConfig || {});
+}
 
 export const LEVEL_CONFIG: Record<number, LevelConfigEntry> = {
   1: { bugsTotal: 8,  escapeTime: 5000, spawnRate: 2200, maxOnScreen: 2 },
