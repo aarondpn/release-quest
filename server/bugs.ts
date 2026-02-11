@@ -103,8 +103,9 @@ function spawnBug(ctx: GameContext): void {
   if (Math.random() < HEISENBUG_CONFIG.chance) {
     variant = { isHeisenbug: true, fleesRemaining: HEISENBUG_CONFIG.maxFlees, lastFleeTime: 0 };
   }
-  // Memory leak: any level
-  else if (Math.random() < MEMORY_LEAK_CONFIG.chance) {
+  // Memory leak: any level (cap scales with player count so there's always a free player)
+  else if (Math.random() < MEMORY_LEAK_CONFIG.chance
+    && Object.values(state.bugs).filter(b => b.isMemoryLeak).length < Math.max(1, playerCount - 1)) {
     variant = { isMemoryLeak: true, growthStage: 0 };
   }
   // Feature-not-a-bug: level 2+
