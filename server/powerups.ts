@@ -1,4 +1,4 @@
-import { getDifficultyConfig, RUBBER_DUCK_CONFIG, HOTFIX_HAMMER_CONFIG } from './config.ts';
+import { getDifficultyConfig } from './config.ts';
 import { randomPosition } from './state.ts';
 import * as network from './network.ts';
 import * as boss from './boss.ts';
@@ -18,6 +18,7 @@ function scheduleDuckSpawn(ctx: GameContext): void {
 
 function spawnDuck(ctx: GameContext): void {
   const { lobbyId, state, counters } = ctx;
+  const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
   if (state.phase !== 'playing' && state.phase !== 'boss') {
     scheduleDuckSpawn(ctx);
     return;
@@ -41,7 +42,7 @@ function spawnDuck(ctx: GameContext): void {
     state.rubberDuck.x = np.x;
     state.rubberDuck.y = np.y;
     network.broadcastToLobby(lobbyId, { type: 'duck-wander', x: np.x, y: np.y });
-  }, RUBBER_DUCK_CONFIG.wanderInterval);
+  }, diffConfig.powerups.rubberDuckWanderInterval);
 
   // Despawn after timeout
   ctx.timers.duckDespawn = setTimeout(() => {
@@ -50,7 +51,7 @@ function spawnDuck(ctx: GameContext): void {
     state.rubberDuck = null;
     network.broadcastToLobby(lobbyId, { type: 'duck-despawn' });
     scheduleDuckSpawn(ctx);
-  }, RUBBER_DUCK_CONFIG.despawnTime);
+  }, diffConfig.powerups.rubberDuckDespawnTime);
 }
 
 export function collectDuck(ctx: GameContext, pid: string): void {
@@ -65,8 +66,8 @@ export function collectDuck(ctx: GameContext, pid: string): void {
   if (ctx.timers.duckDespawn) { clearTimeout(ctx.timers.duckDespawn); ctx.timers.duckDespawn = null; }
 
   // Award points
-  state.score += RUBBER_DUCK_CONFIG.duckPoints;
-  player.score += RUBBER_DUCK_CONFIG.duckPoints;
+  state.score += diffConfig.powerups.rubberDuckPoints;
+  player.score += diffConfig.powerups.rubberDuckPoints;
 
   state.rubberDuck = null;
 
@@ -121,6 +122,7 @@ function scheduleHammerSpawn(ctx: GameContext): void {
 
 function spawnHammer(ctx: GameContext): void {
   const { lobbyId, state, counters } = ctx;
+  const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
   if (state.phase !== 'playing' && state.phase !== 'boss') {
     scheduleHammerSpawn(ctx);
     return;
@@ -143,7 +145,7 @@ function spawnHammer(ctx: GameContext): void {
     state.hotfixHammer = null;
     network.broadcastToLobby(lobbyId, { type: 'hammer-despawn' });
     scheduleHammerSpawn(ctx);
-  }, HOTFIX_HAMMER_CONFIG.despawnTime);
+  }, diffConfig.powerups.hotfixHammerDespawnTime);
 }
 
 export function collectHammer(ctx: GameContext, pid: string): void {
@@ -157,8 +159,8 @@ export function collectHammer(ctx: GameContext, pid: string): void {
   if (ctx.timers.hammerDespawn) { clearTimeout(ctx.timers.hammerDespawn); ctx.timers.hammerDespawn = null; }
 
   // Award points
-  state.score += HOTFIX_HAMMER_CONFIG.hammerPoints;
-  player.score += HOTFIX_HAMMER_CONFIG.hammerPoints;
+  state.score += diffConfig.powerups.hotfixHammerPoints;
+  player.score += diffConfig.powerups.hotfixHammerPoints;
 
   state.hotfixHammer = null;
 
@@ -225,9 +227,10 @@ export function stunBoss(ctx: GameContext): void {
 export function resumeBoss(ctx: GameContext): void {
   const { state } = ctx;
   if (!state.boss || state.phase !== 'boss') return;
+  const bossConfig = getDifficultyConfig(state.difficulty, state.customConfig).boss;
 
   if (state.boss._wanderPaused) {
-    const wanderInterval = state.boss.enraged ? BOSS_CONFIG.enrageWanderInterval : BOSS_CONFIG.wanderInterval;
+    const wanderInterval = state.boss.enraged ? bossConfig.enrageWanderInterval : bossConfig.wanderInterval;
     boss.setupBossWander(ctx, wanderInterval);
     state.boss._wanderPaused = false;
   }

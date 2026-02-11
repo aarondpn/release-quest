@@ -225,6 +225,23 @@ dom.advancedToggleBtn.addEventListener('click', () => {
   dom.lobbyAdvancedConfig.classList.toggle('collapsed');
 });
 
+// ── Section toggle handlers ──
+document.querySelectorAll('.config-section-header').forEach(header => {
+  header.addEventListener('click', () => {
+    const sectionId = 'section-' + header.dataset.section;
+    const content = document.getElementById(sectionId);
+    const isCollapsed = content.classList.contains('collapsed');
+    
+    if (isCollapsed) {
+      content.classList.remove('collapsed');
+      header.classList.add('expanded');
+    } else {
+      content.classList.add('collapsed');
+      header.classList.remove('expanded');
+    }
+  });
+});
+
 // ── Advanced config reset ──
 dom.advancedResetBtn.addEventListener('click', () => {
   dom.configStartingHp.value = '';

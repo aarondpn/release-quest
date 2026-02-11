@@ -1,4 +1,4 @@
-import { getDifficultyConfig, BOSS_CONFIG, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG, PIPELINE_BUG_CONFIG, MEMORY_LEAK_CONFIG, LOGICAL_W, LOGICAL_H } from './config.ts';
+import { getDifficultyConfig, HEISENBUG_MECHANICS, CODE_REVIEW_MECHANICS, MERGE_CONFLICT_MECHANICS, PIPELINE_BUG_MECHANICS, MEMORY_LEAK_MECHANICS, LOGICAL_W, LOGICAL_H } from './config.ts';
 import { randomPosition, currentLevelConfig } from './state.ts';
 import * as network from './network.ts';
 import { createTimerBag } from './timer-bag.ts';

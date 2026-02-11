@@ -1,4 +1,4 @@
-import { LOGICAL_W, LOGICAL_H, LEVEL_CONFIG, MAX_LEVEL, getDifficultyConfig } from './config.ts';
+import { LOGICAL_W, LOGICAL_H, MAX_LEVEL, getDifficultyConfig } from './config.ts';
 import type { GameState, GameCounters, LevelConfigEntry, PlayerScoreEntry, DifficultyConfig, CustomDifficultyConfig } from './types.ts';
 
 export function createGameState(difficulty: string = 'medium', customConfig?: CustomDifficultyConfig): GameState {

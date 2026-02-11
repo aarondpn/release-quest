@@ -1,4 +1,4 @@
-import { getDifficultyConfig, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG, PIPELINE_BUG_CONFIG, MEMORY_LEAK_CONFIG, LOGICAL_W, LOGICAL_H } from './config.ts';
+import { getDifficultyConfig, HEISENBUG_MECHANICS, CODE_REVIEW_MECHANICS, MERGE_CONFLICT_MECHANICS, PIPELINE_BUG_MECHANICS, MEMORY_LEAK_MECHANICS, LOGICAL_W, LOGICAL_H } from './config.ts';
 import { randomPosition } from './state.ts';
 import * as network from './network.ts';
 import * as game from './game.ts';
@@ -128,7 +128,7 @@ types.heisenbug = {
     delete state.bugs[bug.id];
 
     player.bugsSquashed = (player.bugsSquashed || 0) + 1;
-    let points = diffConfig.bugPoints * HEISENBUG_CONFIG.pointsMultiplier;
+    let points = diffConfig.bugPoints * HEISENBUG_MECHANICS.pointsMultiplier;
     if (powerups.isDuckBuffActive(ctx)) points *= 2;
     state.score += points;
     player.score += points;
@@ -159,12 +159,12 @@ types.heisenbug = {
   onCursorNear(bug: BugEntity, ctx: GameContext, _pid: string, x: number, y: number) {
     if (!bug.isHeisenbug || bug.fleesRemaining! <= 0) return;
     const now = Date.now();
-    if (now - bug.lastFleeTime! < HEISENBUG_CONFIG.fleeCooldown) return;
+    if (now - bug.lastFleeTime! < HEISENBUG_MECHANICS.fleeCooldown) return;
 
     const dx = bug.x - x;
     const dy = bug.y - y;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist >= HEISENBUG_CONFIG.fleeRadius) return;
+    if (dist >= HEISENBUG_MECHANICS.fleeRadius) return;
 
     const newPos = randomPosition();
     bug.x = newPos.x;
@@ -215,7 +215,7 @@ types.feature = {
     bug._timers.clearAll();
     delete state.bugs[bug.id];
 
-    state.hp -= CODE_REVIEW_CONFIG.hpPenalty;
+    state.hp -= CODE_REVIEW_MECHANICS.hpPenalty;
     if (state.hp < 0) state.hp = 0;
 
     if (ctx.matchLog) {
@@ -256,22 +256,22 @@ types.memoryLeak = {
   },
 
   setupTimers(bug: BugEntity, ctx: GameContext) {
-    if (bug.growthStage! < MEMORY_LEAK_CONFIG.maxGrowthStage) {
+    if (bug.growthStage! < MEMORY_LEAK_MECHANICS.maxGrowthStage) {
       const { lobbyId, state } = ctx;
       bug._timers.setInterval('growth', () => {
         if (!state.bugs[bug.id]) return;
-        if (bug.growthStage! < MEMORY_LEAK_CONFIG.maxGrowthStage) {
+        if (bug.growthStage! < MEMORY_LEAK_MECHANICS.maxGrowthStage) {
           bug.growthStage!++;
           network.broadcastToLobby(lobbyId, { type: 'memory-leak-grow', bugId: bug.id, growthStage: bug.growthStage });
         }
-      }, MEMORY_LEAK_CONFIG.growthInterval);
+      }, MEMORY_LEAK_MECHANICS.growthInterval);
     }
   },
 
   onEscape(bug: BugEntity, ctx: GameContext, onEscapeCheck: () => void) {
     const diffConfig = getDifficultyConfig(ctx.state.difficulty);
     bug._timers.clearAll();
-    const damage = MEMORY_LEAK_CONFIG.damageByStage[bug.growthStage!] || diffConfig.hpDamage;
+    const damage = MEMORY_LEAK_MECHANICS.damageByStage[bug.growthStage!] || diffConfig.hpDamage;
     delete ctx.state.bugs[bug.id];
     ctx.state.hp -= damage;
     if (ctx.state.hp < 0) ctx.state.hp = 0;
@@ -302,7 +302,7 @@ types.memoryLeak = {
       bug.holders.set(pid, Date.now());
 
       const elapsedSinceFirst = Date.now() - bug.firstHolderStartTime!;
-      const requiredTime = MEMORY_LEAK_CONFIG.holdTimeByStage[bug.holdStartStage!];
+      const requiredTime = MEMORY_LEAK_MECHANICS.holdTimeByStage[bug.holdStartStage!];
       const effectiveRequiredTime = requiredTime / bug.holders.size;
 
       network.broadcastToLobby(ctx.lobbyId, {
@@ -328,7 +328,7 @@ types.memoryLeak = {
 
     if (!bug.holders || !bug.holders.has(pid)) return;
 
-    const requiredTime = MEMORY_LEAK_CONFIG.holdTimeByStage[bug.holdStartStage!];
+    const requiredTime = MEMORY_LEAK_MECHANICS.holdTimeByStage[bug.holdStartStage!];
     const elapsedSinceFirst = Date.now() - bug.firstHolderStartTime!;
 
     bug.holders.delete(pid);
@@ -382,7 +382,7 @@ types.memoryLeak = {
     const holderCount = allHolders.length;
     delete state.bugs[bug.id];
 
-    let points = MEMORY_LEAK_CONFIG.pointsByStage[bug.holdStartStage!] || diffConfig.bugPoints;
+    let points = MEMORY_LEAK_MECHANICS.pointsByStage[bug.holdStartStage!] || diffConfig.bugPoints;
     if (powerups.isDuckBuffActive(ctx)) points *= 2;
 
     for (const holderId of allHolders) {
@@ -436,7 +436,7 @@ types.mergeConflict = {
     const { state } = ctx;
     const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
     const partner = state.bugs[bug.mergePartner!];
-    const damage = MERGE_CONFLICT_CONFIG.doubleDamage ? diffConfig.hpDamage * 2 : diffConfig.hpDamage;
+    const damage = MERGE_CONFLICT_MECHANICS.doubleDamage ? diffConfig.hpDamage * 2 : diffConfig.hpDamage;
     bug._timers.clearAll();
     delete state.bugs[bug.id];
     if (partner) {
@@ -465,7 +465,7 @@ types.mergeConflict = {
     bug.mergeClickedBy = pid;
     bug.mergeClickedAt = Date.now();
 
-    if (partner && partner.mergeClicked && (Date.now() - partner.mergeClickedAt!) < MERGE_CONFLICT_CONFIG.resolveWindow) {
+    if (partner && partner.mergeClicked && (Date.now() - partner.mergeClickedAt!) < MERGE_CONFLICT_MECHANICS.resolveWindow) {
       // Both clicked in time — resolve!
       bug._timers.clearAll();
       partner._timers.clearAll();
@@ -475,8 +475,8 @@ types.mergeConflict = {
       const clickers = new Set([pid, partner.mergeClickedBy!]);
       for (const clickerId of clickers) {
         if (state.players[clickerId]) {
-          state.players[clickerId].score += MERGE_CONFLICT_CONFIG.bonusPoints;
-          state.score += MERGE_CONFLICT_CONFIG.bonusPoints;
+          state.players[clickerId].score += MERGE_CONFLICT_MECHANICS.bonusPoints;
+          state.score += MERGE_CONFLICT_MECHANICS.bonusPoints;
           state.players[clickerId].bugsSquashed = (state.players[clickerId].bugsSquashed || 0) + 1;
         }
       }
@@ -507,7 +507,7 @@ types.mergeConflict = {
           bug.mergeClickedBy = null;
           bug.mergeClickedAt = 0;
         }
-      }, MERGE_CONFLICT_CONFIG.resolveWindow);
+      }, MERGE_CONFLICT_MECHANICS.resolveWindow);
     }
   },
 };
@@ -595,7 +595,7 @@ types.pipeline = {
       chain.nextIndex++;
 
       player.bugsSquashed = (player.bugsSquashed || 0) + 1;
-      let points = PIPELINE_BUG_CONFIG.pointsPerBug;
+      let points = PIPELINE_BUG_MECHANICS.pointsPerBug;
       if (powerups.isDuckBuffActive(ctx)) points *= 2;
       state.score += points;
       player.score += points;
@@ -613,7 +613,7 @@ types.pipeline = {
 
       if (chain.nextIndex >= chain.length) {
         // Chain complete — bonus!
-        let bonus = PIPELINE_BUG_CONFIG.chainBonus;
+        let bonus = PIPELINE_BUG_MECHANICS.chainBonus;
         if (powerups.isDuckBuffActive(ctx)) bonus *= 2;
         state.score += bonus;
         player.score += bonus;

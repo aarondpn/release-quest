@@ -240,9 +240,15 @@ export interface DifficultyConfig {
     rubberDuckIntervalMin: number;
     rubberDuckIntervalMax: number;
     rubberDuckBuffDuration: number;
+    rubberDuckWanderInterval: number;
+    rubberDuckDespawnTime: number;
+    rubberDuckPoints: number;
+    rubberDuckPointsMultiplier: number;
     hotfixHammerIntervalMin: number;
     hotfixHammerIntervalMax: number;
     hotfixHammerStunDuration: number;
+    hotfixHammerDespawnTime: number;
+    hotfixHammerPoints: number;
   };
 }
 

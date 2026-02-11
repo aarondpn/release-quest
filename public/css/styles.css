@@ -1620,6 +1620,63 @@ header p {
   opacity: 1;
 }
 
+.config-section {
+  margin-bottom: 12px;
+}
+
+.config-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: rgba(168, 85, 247, 0.1);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.config-section-header:hover {
+  background: rgba(168, 85, 247, 0.2);
+  border-color: rgba(168, 85, 247, 0.5);
+}
+
+.section-toggle {
+  font-size: 10px;
+  color: var(--purple);
+  transition: transform 0.2s;
+  display: inline-block;
+  width: 12px;
+}
+.config-section-header.expanded .section-toggle {
+  transform: rotate(90deg);
+}
+
+.section-title {
+  font-size: 7px;
+  color: var(--purple);
+  letter-spacing: 1px;
+  font-weight: bold;
+}
+
+.config-section-content {
+  margin-top: 8px;
+  padding: 0 4px;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.3s ease, opacity 0.3s ease, margin-top 0.3s ease;
+}
+.config-section-content:not(.collapsed) {
+  max-height: 500px;
+  opacity: 1;
+  margin-top: 12px;
+}
+
+.config-section-content .advanced-config-grid {
+  margin-bottom: 0;
+}
+
+
 
 .lobby-name-input {
   font-family: 'Press Start 2P', monospace;

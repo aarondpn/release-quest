@@ -1,4 +1,4 @@
-import { getDifficultyConfig, RUBBER_DUCK_CONFIG } from './config.ts';
+import { getDifficultyConfig } from './config.ts';
 import { randomPosition } from './state.ts';
 import * as network from './network.ts';
 import { createTimerBag } from './timer-bag.ts';
@@ -154,7 +154,8 @@ function bossTick(ctx: GameContext): void {
 export function handleBossClick(ctx: GameContext, pid: string): void {
   const { lobbyId, state } = ctx;
   if (state.phase !== 'boss' || !state.boss) return;
-  const bossConfig = getDifficultyConfig(state.difficulty, state.customConfig).boss;
+  const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
+  const bossConfig = diffConfig.boss;
   const player = state.players[pid];
   if (!player) return;
 
@@ -165,7 +166,7 @@ export function handleBossClick(ctx: GameContext, pid: string): void {
   // Duck buff doubles click damage
   let damage = bossConfig.clickDamage;
   if (powerups.isDuckBuffActive(ctx)) {
-    damage *= RUBBER_DUCK_CONFIG.pointsMultiplier;
+    damage *= diffConfig.powerups.rubberDuckPointsMultiplier;
   }
 
   state.boss.hp -= damage;
