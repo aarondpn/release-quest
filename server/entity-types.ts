@@ -238,6 +238,20 @@ types.memoryLeak = {
     return { isMemoryLeak: true, growthStage: bug.growthStage };
   },
 
+  createWander(bug: BugEntity, ctx: GameContext) {
+    const { lobbyId, state } = ctx;
+    const bugId = bug.id;
+    bug._timers.setInterval('wander', () => {
+      if (!state.bugs[bugId] || state.hammerStunActive) return;
+      // Don't move while players are actively defusing
+      if (bug.holders && bug.holders.size > 0) return;
+      const newPos = randomPosition();
+      bug.x = newPos.x;
+      bug.y = newPos.y;
+      network.broadcastToLobby(lobbyId, { type: 'bug-wander', bugId, x: newPos.x, y: newPos.y });
+    }, bug.escapeTime * 0.45);
+  },
+
   setupTimers(bug: BugEntity, ctx: GameContext) {
     if (bug.growthStage! < MEMORY_LEAK_CONFIG.maxGrowthStage) {
       const { lobbyId, state } = ctx;
