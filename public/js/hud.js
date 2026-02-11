@@ -272,6 +272,10 @@ function spawnLobbyBugs() {
   const container = document.getElementById('lobby-bg-bugs');
   if (!container) return;
 
+  // Set arena dimensions for transform-based crawl animations
+  container.style.setProperty('--arena-w', container.offsetWidth + 'px');
+  container.style.setProperty('--arena-h', container.offsetHeight + 'px');
+
   // Cap at 8 bugs on screen
   if (container.children.length >= 8) return;
 

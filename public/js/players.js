@@ -39,8 +39,7 @@ export function updateRemoteCursor(playerId, lx, ly) {
   const el = clientState.remoteCursors[playerId];
   if (!el) return;
   const pos = logicalToPixel(lx, ly);
-  el.style.left = pos.x + 'px';
-  el.style.top = pos.y + 'px';
+  el.style.transform = 'translate(' + pos.x + 'px,' + pos.y + 'px)';
 }
 
 export function clearRemoteCursors() {

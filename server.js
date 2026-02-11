@@ -317,6 +317,7 @@ wss.on('connection', (ws) => {
           }
 
           network.wsToLobby.set(ws, lobbyId);
+          network.addClientToLobby(lobbyId, ws);
 
           const ctx = getCtxForPlayer(pid);
           if (!ctx) return;
@@ -966,6 +967,7 @@ wss.on('connection', (ws) => {
 async function handleLeaveLobby(ws, pid, lobbyId) {
   const mem = lobby.getLobbyState(lobbyId);
   network.wsToLobby.delete(ws);
+  network.removeClientFromLobby(lobbyId, ws);
 
   try {
     await lobby.leaveLobby(lobbyId, pid);
