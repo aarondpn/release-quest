@@ -43,7 +43,7 @@ export const ICONS = ['\u{1F431}', '\u{1F436}', '\u{1F430}', '\u{1F98A}', '\u{1F
 export const LEVEL_CONFIG: Record<number, LevelConfigEntry> = {
   1: { bugsTotal: 8,  escapeTime: 5000, spawnRate: 2200, maxOnScreen: 2 },
   2: { bugsTotal: 12, escapeTime: 3800, spawnRate: 1600, maxOnScreen: 3 },
-  3: { bugsTotal: 16, escapeTime: 2800, spawnRate: 1200, maxOnScreen: 4 },
+  3: { bugsTotal: 16, escapeTime: 3200, spawnRate: 1500, maxOnScreen: 4 },
 };
 
 export const BOSS_CONFIG: {
@@ -139,7 +139,7 @@ export const MEMORY_LEAK_CONFIG = {
   damageByStage: [5, 10, 15, 20],
   pointsByStage: [10, 15, 20, 25],
   escapeTimeMultiplier: 1.3,
-  holdTimeByStage: [800, 1200, 1600, 2000],
+  holdTimeByStage: [400, 600, 800, 1000],
 };
 
 export const AUTH_CONFIG = {
