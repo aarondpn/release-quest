@@ -6,6 +6,7 @@ export const clientState = {
   hasJoined: false,
   ws: null,
   bugs: {},
+  bugPositions: {},
   remoteCursors: {},
   players: {},
   lastCursorSend: 0,

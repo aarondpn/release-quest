@@ -1,6 +1,6 @@
 import { SQUASH_WORDS } from './config.js';
 import { dom, clientState } from './state.js';
-import { logicalToPixel } from './coordinates.js';
+import { logicalToPixel, getArenaRect } from './coordinates.js';
 
 export function createBugElement(bugId, lx, ly, variant) {
   const el = document.createElement('div');
@@ -48,6 +48,8 @@ export function createBugElement(bugId, lx, ly, variant) {
   const pos = logicalToPixel(lx, ly);
   el.style.left = pos.x + 'px';
   el.style.top = pos.y + 'px';
+
+  clientState.bugPositions[bugId] = { x: lx, y: ly };
 
   // Memory leak requires hold mechanic
   if (variant && variant.isMemoryLeak) {
@@ -148,7 +150,7 @@ export function updateMergeTether(conflictId) {
   const el1 = clientState.bugs[t.bug1];
   const el2 = clientState.bugs[t.bug2];
   if (!el1 || !el2) return;
-  const arenaRect = dom.arena.getBoundingClientRect();
+  const arenaRect = getArenaRect();
   const r1 = el1.getBoundingClientRect();
   const r2 = el2.getBoundingClientRect();
   const x1 = r1.left - arenaRect.left + r1.width / 2;
@@ -245,7 +247,7 @@ function tryCreatePipelineTether(chainId) {
 export function updatePipelineTether(chainId) {
   if (!clientState.pipelineTethers || !clientState.pipelineTethers[chainId]) return;
   const t = clientState.pipelineTethers[chainId];
-  const arenaRect = dom.arena.getBoundingClientRect();
+  const arenaRect = getArenaRect();
   for (const seg of t.lines) {
     const el1 = clientState.bugs[seg.from];
     const el2 = clientState.bugs[seg.to];
@@ -291,6 +293,7 @@ export function removeBugElement(bugId, animate) {
   }
   
   delete clientState.bugs[bugId];
+  delete clientState.bugPositions[bugId];
   if (animate) {
     el.classList.add('popping');
     setTimeout(() => el.remove(), 200);
@@ -316,6 +319,7 @@ export function clearAllBugs() {
     el.remove();
   }
   clientState.bugs = {};
+  clientState.bugPositions = {};
   // Clear merge tethers
   stopTetherTracking();
   if (clientState.mergeTethers) {

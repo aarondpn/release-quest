@@ -10,6 +10,26 @@ import { showLobbyBrowser, hideLobbyBrowser, renderLobbyList, showLobbyError } f
 import { updateAuthUI, hideAuthOverlay, showAuthError } from './auth-ui.js';
 import { renderLeaderboard } from './leaderboard-ui.js';
 
+// Cursor batching: buffer incoming positions and flush once per frame
+const pendingCursors = {};
+let cursorRafId = null;
+
+function flushCursors() {
+  for (const playerId in pendingCursors) {
+    const pos = pendingCursors[playerId];
+    updateRemoteCursor(playerId, pos.x, pos.y);
+    delete pendingCursors[playerId];
+  }
+  cursorRafId = null;
+}
+
+function queueCursorUpdate(playerId, x, y) {
+  pendingCursors[playerId] = { x, y };
+  if (!cursorRafId) {
+    cursorRafId = requestAnimationFrame(flushCursors);
+  }
+}
+
 export function sendMessage(msg) {
   if (clientState.ws && clientState.ws.readyState === 1) {
     clientState.ws.send(JSON.stringify(msg));
@@ -232,7 +252,7 @@ function handleMessage(msg) {
     }
 
     case 'player-cursor': {
-      updateRemoteCursor(msg.playerId, msg.x, msg.y);
+      queueCursorUpdate(msg.playerId, msg.x, msg.y);
       break;
     }
 
@@ -292,6 +312,7 @@ function handleMessage(msg) {
         el.style.transition = 'left ' + dur + 'ms linear, top ' + dur + 'ms linear';
         el.style.left = pos.x + 'px';
         el.style.top = pos.y + 'px';
+        clientState.bugPositions[msg.bugId] = { x: msg.x, y: msg.y };
       }
 
       break;
@@ -461,6 +482,7 @@ function handleMessage(msg) {
         const pos = logicalToPixel(msg.x, msg.y);
         bugEl.style.left = pos.x + 'px';
         bugEl.style.top = pos.y + 'px';
+        clientState.bugPositions[msg.bugId] = { x: msg.x, y: msg.y };
         // Re-enable transition after a frame
         requestAnimationFrame(() => { bugEl.style.transition = ''; });
         // Stabilized
@@ -684,6 +706,7 @@ function handleMessage(msg) {
           const pxPos = logicalToPixel(pos.x, pos.y);
           bugEl.style.left = pxPos.x + 'px';
           bugEl.style.top = pxPos.y + 'px';
+          clientState.bugPositions[bid] = { x: pos.x, y: pos.y };
           requestAnimationFrame(() => { bugEl.style.transition = ''; });
           // Flash red to indicate error
           bugEl.classList.add('pipeline-reset');
