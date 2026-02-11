@@ -1,6 +1,8 @@
-const { RUBBER_DUCK_CONFIG, HOTFIX_HAMMER_CONFIG } = require('./config');
+const { RUBBER_DUCK_CONFIG, HOTFIX_HAMMER_CONFIG, MEMORY_LEAK_CONFIG, BOSS_CONFIG } = require('./config');
 const { randomPosition } = require('./state');
 const network = require('./network');
+const boss = require('./boss');
+const bugs = require('./bugs');
 
 function startDuckSpawning(ctx) {
   scheduleDuckSpawn(ctx);
@@ -185,21 +187,11 @@ function stunAllBugs(ctx) {
   const { state } = ctx;
   for (const bugId in state.bugs) {
     const bug = state.bugs[bugId];
-    if (bug.escapeTimer) {
-      clearTimeout(bug.escapeTimer);
-      bug.escapeTimer = null;
-      bug.isStunned = true;
-      bug.remainingEscapeTime = bug.escapeTime - (Date.now() - bug.escapeStartedAt);
-    }
-    if (bug.wanderInterval) {
-      clearInterval(bug.wanderInterval);
-      bug.wanderInterval = null;
-    }
-    if (bug.growthInterval) {
-      clearInterval(bug.growthInterval);
-      bug.growthInterval = null;
-      bug.growthPaused = true;
-    }
+    bug.isStunned = true;
+    bug.remainingEscapeTime = Math.max(0, bug.escapeTime - (Date.now() - bug.escapeStartedAt));
+    if (bug.escapeTimer) { clearTimeout(bug.escapeTimer); bug.escapeTimer = null; }
+    if (bug.wanderInterval) { clearInterval(bug.wanderInterval); bug.wanderInterval = null; }
+    if (bug.growthInterval) { clearInterval(bug.growthInterval); bug.growthInterval = null; }
   }
 }
 
@@ -208,37 +200,38 @@ function resumeAllBugs(ctx) {
   const phaseCheck = state.phase;
   for (const bugId in state.bugs) {
     const bug = state.bugs[bugId];
-    if (bug.isStunned) {
-      bug.isStunned = false;
-      bug.escapeStartedAt = Date.now();
-      const actualEscapeTime = bug.remainingEscapeTime || bug.escapeTime;
-      
-      // Restart escape timer (only if _onEscape exists)
-      if (bug._onEscape && typeof bug._onEscape === 'function') {
-        bug.escapeTimer = setTimeout(bug._onEscape, actualEscapeTime);
-      }
-      
-      // Restart wandering
+    if (!bug.isStunned) continue;
+    bug.isStunned = false;
+
+    const remainingTime = bug.remainingEscapeTime;
+    bug.escapeStartedAt = Date.now();
+    bug.escapeTime = remainingTime;
+
+    // Restart escape timer
+    if (bug._onEscape) {
+      bug.escapeTimer = setTimeout(bug._onEscape, remainingTime);
+    }
+
+    // Pipeline bugs use chain-level snake wander (self-resumes via hammerStunActive flag)
+    if (!bug.isPipeline && remainingTime > 0) {
       bug.wanderInterval = setInterval(() => {
-        if (state.phase !== phaseCheck || !state.bugs[bugId]) return;
+        if (state.phase !== phaseCheck || !state.bugs[bugId] || state.hammerStunActive) return;
         const newPos = randomPosition();
         bug.x = newPos.x;
         bug.y = newPos.y;
         network.broadcastToLobby(lobbyId, { type: 'bug-wander', bugId, x: newPos.x, y: newPos.y });
       }, bug.escapeTime * 0.45);
-      
-      // Restart growth interval for memory leaks
-      if (bug.growthPaused && bug.isMemoryLeak) {
-        const MEMORY_LEAK_CONFIG = require('./config').MEMORY_LEAK_CONFIG;
-        bug.growthPaused = false;
-        bug.growthInterval = setInterval(() => {
-          if (state.phase !== phaseCheck || !state.bugs[bugId]) return;
-          if (bug.growthStage < MEMORY_LEAK_CONFIG.maxGrowthStage) {
-            bug.growthStage++;
-            network.broadcastToLobby(lobbyId, { type: 'memory-leak-grow', bugId, growthStage: bug.growthStage });
-          }
-        }, MEMORY_LEAK_CONFIG.growthInterval);
-      }
+    }
+
+    // Restart memory leak growth
+    if (bug.isMemoryLeak && bug.growthStage < MEMORY_LEAK_CONFIG.maxGrowthStage) {
+      bug.growthInterval = setInterval(() => {
+        if (state.phase !== phaseCheck || !state.bugs[bugId]) return;
+        if (bug.growthStage < MEMORY_LEAK_CONFIG.maxGrowthStage) {
+          bug.growthStage++;
+          network.broadcastToLobby(lobbyId, { type: 'memory-leak-grow', bugId, growthStage: bug.growthStage });
+        }
+      }, MEMORY_LEAK_CONFIG.growthInterval);
     }
   }
 }
@@ -263,15 +256,9 @@ function stunBoss(ctx) {
 }
 
 function resumeBoss(ctx) {
-  const boss = require('./boss');
-  const bugs = require('./bugs');
   const { lobbyId, state } = ctx;
   if (!state.boss || state.phase !== 'boss') return;
-  
-  const { BOSS_CONFIG } = require('./config');
-  const network = require('./network');
-  const { randomPosition } = require('./state');
-  
+
   // Resume boss wandering
   if (state.boss._wanderPaused) {
     const wanderInterval = state.boss.enraged ? BOSS_CONFIG.enrageWanderInterval : BOSS_CONFIG.wanderInterval;

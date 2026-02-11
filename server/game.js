@@ -17,6 +17,7 @@ function startGame(ctx) {
   state.gameStartedAt = Date.now();
   boss.clearBossTimers(ctx);
   powerups.clearDuck(ctx);
+  powerups.clearHammer(ctx);
 
   // Close any previous match log
   if (ctx.matchLog) ctx.matchLog.close();
