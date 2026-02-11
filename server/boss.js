@@ -1,9 +1,18 @@
 const { BOSS_CONFIG, RUBBER_DUCK_CONFIG } = require('./config');
-const { randomPosition, getPlayerScores } = require('./state');
+const { randomPosition } = require('./state');
 const network = require('./network');
-const stats = require('./stats');
+const { createTimerBag } = require('./timer-bag');
+
+function ensureBossTimers(ctx) {
+  if (!ctx.timers._boss) ctx.timers._boss = createTimerBag();
+  return ctx.timers._boss;
+}
 
 function clearBossTimers(ctx) {
+  if (ctx.timers._boss) {
+    ctx.timers._boss.clearAll();
+  }
+  // Legacy cleanup for any raw timers still on ctx.timers
   if (ctx.timers.bossWander) { clearInterval(ctx.timers.bossWander); ctx.timers.bossWander = null; }
   if (ctx.timers.bossMinionSpawn) { clearInterval(ctx.timers.bossMinionSpawn); ctx.timers.bossMinionSpawn = null; }
   if (ctx.timers.bossTick) { clearInterval(ctx.timers.bossTick); ctx.timers.bossTick = null; }
@@ -25,8 +34,28 @@ function getEffectiveMaxOnScreen(ctx) {
   return base;
 }
 
+function setupBossWander(ctx, interval) {
+  const bt = ensureBossTimers(ctx);
+  const { lobbyId, state } = ctx;
+  bt.setInterval('bossWander', () => {
+    if (state.phase !== 'boss' || !state.boss || state.hammerStunActive) return;
+    const newPos = randomPosition();
+    state.boss.x = newPos.x;
+    state.boss.y = newPos.y;
+    network.broadcastToLobby(lobbyId, { type: 'boss-wander', x: newPos.x, y: newPos.y });
+  }, interval);
+}
+
+function setupMinionSpawning(ctx, rate) {
+  const bt = ensureBossTimers(ctx);
+  const { state } = ctx;
+  bt.setInterval('bossMinionSpawn', () => {
+    if (state.hammerStunActive) return;
+    require('./bugs').spawnMinion(ctx);
+  }, rate);
+}
+
 function startBoss(ctx) {
-  const bugs = require('./bugs');
   const { lobbyId, state } = ctx;
   state.phase = 'boss';
   const pos = randomPosition();
@@ -63,23 +92,13 @@ function startBoss(ctx) {
     timeRemaining: BOSS_CONFIG.timeLimit,
   });
 
-  ctx.timers.bossWander = setInterval(() => {
-    if (state.phase !== 'boss' || !state.boss || state.hammerStunActive) return;
-    const newPos = randomPosition();
-    state.boss.x = newPos.x;
-    state.boss.y = newPos.y;
-    network.broadcastToLobby(lobbyId, { type: 'boss-wander', x: newPos.x, y: newPos.y });
-  }, BOSS_CONFIG.wanderInterval);
-
-  ctx.timers.bossMinionSpawn = setInterval(() => {
-    if (state.hammerStunActive) return;
-    bugs.spawnMinion(ctx);
-  }, BOSS_CONFIG.minionSpawnRate);
-  ctx.timers.bossTick = setInterval(() => bossTick(ctx), 1000);
+  const bt = ensureBossTimers(ctx);
+  setupBossWander(ctx, BOSS_CONFIG.wanderInterval);
+  setupMinionSpawning(ctx, BOSS_CONFIG.minionSpawnRate);
+  bt.setInterval('bossTick', () => bossTick(ctx), 1000);
 }
 
 function bossTick(ctx) {
-  const bugs = require('./bugs');
   const { lobbyId, state } = ctx;
   if (state.phase !== 'boss' || !state.boss) return;
 
@@ -106,11 +125,7 @@ function bossTick(ctx) {
           timeRemaining: state.boss.timeRemaining,
         });
       }
-      if (ctx.timers.bossMinionSpawn) clearInterval(ctx.timers.bossMinionSpawn);
-      ctx.timers.bossMinionSpawn = setInterval(() => {
-        if (state.hammerStunActive) return;
-        bugs.spawnMinion(ctx);
-      }, getEffectiveSpawnRate(ctx));
+      setupMinionSpawning(ctx, getEffectiveSpawnRate(ctx));
     }
   }
 
@@ -125,32 +140,12 @@ function bossTick(ctx) {
   });
 
   if (state.boss.timeRemaining <= 0) {
-    state.phase = 'gameover';
-    clearBossTimers(ctx);
-    bugs.clearAllBugs(ctx);
-    state.boss = null;
-    if (ctx.matchLog) {
-      ctx.matchLog.log('game-end', {
-        outcome: 'loss-timeout',
-        score: state.score,
-        level: state.level,
-        duration: Date.now() - (state.gameStartedAt || 0),
-      });
-      ctx.matchLog.close();
-      ctx.matchLog = null;
-    }
-    network.broadcastToLobby(lobbyId, {
-      type: 'game-over',
-      score: state.score,
-      level: state.level,
-      players: getPlayerScores(state),
-    });
-    if (ctx.playerInfo) stats.recordGameEnd(state, ctx.playerInfo, false);
+    const game = require('./game');
+    game.endGame(ctx, 'loss-timeout', false);
   }
 }
 
 function handleBossClick(ctx, pid) {
-  const bugs = require('./bugs');
   const { lobbyId, state } = ctx;
   if (state.phase !== 'boss' || !state.boss) return;
   const player = state.players[pid];
@@ -177,21 +172,8 @@ function handleBossClick(ctx, pid) {
   if (!state.boss.enraged && state.boss.hp <= state.boss.maxHp * BOSS_CONFIG.enrageThreshold) {
     state.boss.enraged = true;
     justEnraged = true;
-
-    if (ctx.timers.bossWander) clearInterval(ctx.timers.bossWander);
-    ctx.timers.bossWander = setInterval(() => {
-      if (state.phase !== 'boss' || !state.boss || state.hammerStunActive) return;
-      const newPos = randomPosition();
-      state.boss.x = newPos.x;
-      state.boss.y = newPos.y;
-      network.broadcastToLobby(lobbyId, { type: 'boss-wander', x: newPos.x, y: newPos.y });
-    }, BOSS_CONFIG.enrageWanderInterval);
-
-    if (ctx.timers.bossMinionSpawn) clearInterval(ctx.timers.bossMinionSpawn);
-    ctx.timers.bossMinionSpawn = setInterval(() => {
-      if (state.hammerStunActive) return;
-      bugs.spawnMinion(ctx);
-    }, getEffectiveSpawnRate(ctx));
+    setupBossWander(ctx, BOSS_CONFIG.enrageWanderInterval);
+    setupMinionSpawning(ctx, getEffectiveSpawnRate(ctx));
   }
 
   if (ctx.matchLog) {
@@ -221,8 +203,8 @@ function handleBossClick(ctx, pid) {
 }
 
 function defeatBoss(ctx) {
-  const bugs = require('./bugs');
-  const { lobbyId, state } = ctx;
+  const game = require('./game');
+  const { state } = ctx;
   const playerCount = Object.keys(state.players).length;
   if (playerCount > 0) {
     const bonusEach = Math.floor(BOSS_CONFIG.killBonus / playerCount);
@@ -232,29 +214,7 @@ function defeatBoss(ctx) {
     state.score += BOSS_CONFIG.killBonus;
   }
 
-  clearBossTimers(ctx);
-  bugs.clearAllBugs(ctx);
-  state.phase = 'win';
-
-  if (ctx.matchLog) {
-    ctx.matchLog.log('game-end', {
-      outcome: 'win',
-      score: state.score,
-      level: state.level,
-      duration: Date.now() - (state.gameStartedAt || 0),
-    });
-    ctx.matchLog.close();
-    ctx.matchLog = null;
-  }
-
-  network.broadcastToLobby(lobbyId, {
-    type: 'boss-defeated',
-    score: state.score,
-    players: getPlayerScores(state),
-  });
-
-  if (ctx.playerInfo) stats.recordGameEnd(state, ctx.playerInfo, true);
-  state.boss = null;
+  game.endGame(ctx, 'win', true);
 }
 
-module.exports = { startBoss, bossTick, handleBossClick, defeatBoss, clearBossTimers, getEffectiveSpawnRate, getEffectiveMaxOnScreen };
+module.exports = { startBoss, bossTick, handleBossClick, defeatBoss, clearBossTimers, getEffectiveSpawnRate, getEffectiveMaxOnScreen, setupBossWander, setupMinionSpawning };

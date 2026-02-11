@@ -3,8 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const { WebSocketServer } = require('ws');
 
-const { SERVER_CONFIG, LOGICAL_W, LOGICAL_H, COLORS, ICONS, BUG_POINTS, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG, PIPELINE_BUG_CONFIG, MEMORY_LEAK_CONFIG } = require('./server/config');
-const { randomPosition, getStateSnapshot } = require('./server/state');
+const { SERVER_CONFIG, LOGICAL_W, LOGICAL_H, COLORS, ICONS } = require('./server/config');
+const { getStateSnapshot } = require('./server/state');
 const network = require('./server/network');
 const db = require('./server/db');
 const lobby = require('./server/lobby');
@@ -12,6 +12,7 @@ const boss = require('./server/boss');
 const game = require('./server/game');
 const powerups = require('./server/powerups');
 const auth = require('./server/auth');
+const entityTypes = require('./server/entity-types');
 
 // Global counters for unique player IDs/colors across all lobbies
 let nextPlayerId = 1;
@@ -373,246 +374,10 @@ wss.on('connection', (ws) => {
         if (!ctx) break;
         const { state: st } = ctx;
         if (st.phase !== 'playing' && st.phase !== 'boss') break;
-        const bugId = msg.bugId;
-        const bug = st.bugs[bugId];
+        const bug = st.bugs[msg.bugId];
         if (!bug) break;
-
-        const player = st.players[pid];
-        if (!player) break;
-
-        // Memory leak: requires hold mechanic, ignore regular clicks
-        if (bug.isMemoryLeak) {
-          break;
-        }
-
-        // Feature-not-a-bug: penalize player
-        if (bug.isFeature) {
-          clearTimeout(bug.escapeTimer);
-          clearInterval(bug.wanderInterval);
-          delete st.bugs[bugId];
-
-          st.hp -= CODE_REVIEW_CONFIG.hpPenalty;
-          if (st.hp < 0) st.hp = 0;
-
-          if (ctx.matchLog) {
-            ctx.matchLog.log('squash', { bugId, type: 'feature', by: pid, activeBugs: Object.keys(st.bugs).length, hp: st.hp });
-          }
-
-          network.broadcastToLobby(ctx.lobbyId, {
-            type: 'feature-squashed',
-            bugId,
-            playerId: pid,
-            playerColor: player.color,
-            hp: st.hp,
-          });
-
-          if (st.phase === 'boss') game.checkBossGameState(ctx);
-          else game.checkGameState(ctx);
-          break;
-        }
-
-        // Pipeline chain logic
-        if (bug.isPipeline) {
-          const chain = st.pipelineChains[bug.chainId];
-          if (!chain) break;
-
-          if (bug.chainIndex === chain.nextIndex) {
-            // Correct order — squash this bug (wander is managed by chain, not individual bug)
-            delete st.bugs[bugId];
-            chain.nextIndex++;
-
-            player.bugsSquashed = (player.bugsSquashed || 0) + 1;
-            let points = PIPELINE_BUG_CONFIG.pointsPerBug;
-            if (powerups.isDuckBuffActive(ctx)) points *= 2;
-            st.score += points;
-            player.score += points;
-
-            if (ctx.matchLog) {
-              ctx.matchLog.log('squash', { bugId, type: 'pipeline', chainId: bug.chainId, chainIndex: bug.chainIndex, by: pid, score: st.score });
-            }
-
-            network.broadcastToLobby(ctx.lobbyId, {
-              type: 'pipeline-bug-squashed',
-              bugId, chainId: bug.chainId, chainIndex: bug.chainIndex,
-              playerId: pid, playerColor: player.color,
-              score: st.score, playerScore: player.score, points,
-            });
-
-            if (chain.nextIndex >= chain.length) {
-              // Chain complete — bonus!
-              let bonus = PIPELINE_BUG_CONFIG.chainBonus;
-              if (powerups.isDuckBuffActive(ctx)) bonus *= 2;
-              st.score += bonus;
-              player.score += bonus;
-
-              clearInterval(chain.wanderInterval);
-              clearTimeout(bug.escapeTimer);
-              delete st.pipelineChains[bug.chainId];
-
-              if (ctx.matchLog) {
-                ctx.matchLog.log('squash', { type: 'pipeline-chain-complete', chainId: bug.chainId, by: pid, score: st.score });
-              }
-
-              network.broadcastToLobby(ctx.lobbyId, {
-                type: 'pipeline-chain-resolved',
-                chainId: bug.chainId,
-                playerId: pid, playerColor: player.color,
-                score: st.score, playerScore: player.score, bonus,
-              });
-            }
-
-            if (st.phase === 'boss') game.checkBossGameState(ctx);
-            else game.checkGameState(ctx);
-          } else {
-            // Wrong order — respawn all remaining bugs in snake formation
-            const remaining = chain.bugIds.filter(bid => st.bugs[bid]);
-            chain.nextIndex = Math.min(...remaining.map(bid => st.bugs[bid].chainIndex));
-            const startPos = randomPosition();
-            const angle = Math.random() * Math.PI * 2;
-            chain.snakeAngle = angle + Math.PI; // reset heading
-            const spacing = 40;
-            const pad = 40;
-            const newPositions = {};
-            remaining.forEach((bid, i) => {
-              const b = st.bugs[bid];
-              b.x = Math.max(pad, Math.min(LOGICAL_W - pad, startPos.x + Math.cos(angle) * spacing * i));
-              b.y = Math.max(pad, Math.min(LOGICAL_H - pad, startPos.y + Math.sin(angle) * spacing * i));
-              newPositions[bid] = { x: b.x, y: b.y };
-            });
-
-            if (ctx.matchLog) {
-              ctx.matchLog.log('pipeline-reset', { chainId: bug.chainId, by: pid, remaining: remaining.length });
-            }
-
-            network.broadcastToLobby(ctx.lobbyId, {
-              type: 'pipeline-chain-reset',
-              chainId: bug.chainId,
-              positions: newPositions,
-              playerId: pid,
-            });
-          }
-          break;
-        }
-
-        // Merge conflict logic
-        if (bug.mergeConflict) {
-          const partner = st.bugs[bug.mergePartner];
-
-          // Same player can't resolve both sides — ignore the click
-          if (partner && partner.mergeClicked && partner.mergeClickedBy === pid) {
-            break;
-          }
-
-          bug.mergeClicked = true;
-          bug.mergeClickedBy = pid;
-          bug.mergeClickedAt = Date.now();
-
-          if (partner && partner.mergeClicked && (Date.now() - partner.mergeClickedAt) < MERGE_CONFLICT_CONFIG.resolveWindow) {
-            // Both clicked in time — resolve!
-            clearTimeout(bug.escapeTimer);
-            clearInterval(bug.wanderInterval);
-            clearTimeout(partner.escapeTimer);
-            clearInterval(partner.wanderInterval);
-            if (bug.mergeResetTimer) clearTimeout(bug.mergeResetTimer);
-            if (partner.mergeResetTimer) clearTimeout(partner.mergeResetTimer);
-            delete st.bugs[bugId];
-            delete st.bugs[partner.id];
-
-            // Award bonus to both clickers
-            const clickers = new Set([pid, partner.mergeClickedBy]);
-            for (const clickerId of clickers) {
-              if (st.players[clickerId]) {
-                st.players[clickerId].score += MERGE_CONFLICT_CONFIG.bonusPoints;
-                st.score += MERGE_CONFLICT_CONFIG.bonusPoints;
-                st.players[clickerId].bugsSquashed = (st.players[clickerId].bugsSquashed || 0) + 1;
-              }
-            }
-
-            if (ctx.matchLog) {
-              ctx.matchLog.log('squash', { bugId, type: 'merge-conflict', by: [...clickers], activeBugs: Object.keys(st.bugs).length, score: st.score });
-            }
-
-            network.broadcastToLobby(ctx.lobbyId, {
-              type: 'merge-conflict-resolved',
-              bugId,
-              partnerId: partner.id,
-              clickers: [...clickers],
-              score: st.score,
-              players: Object.fromEntries(
-                [...clickers].filter(c => st.players[c]).map(c => [c, st.players[c].score])
-              ),
-            });
-
-            if (st.phase === 'boss') game.checkBossGameState(ctx);
-            else game.checkGameState(ctx);
-          } else {
-            // Only one clicked — set timeout for reset
-            network.broadcastToLobby(ctx.lobbyId, { type: 'merge-conflict-halfclick', bugId });
-            bug.mergeResetTimer = setTimeout(() => {
-              if (st.bugs[bugId]) {
-                bug.mergeClicked = false;
-                bug.mergeClickedBy = null;
-                bug.mergeClickedAt = 0;
-              }
-            }, MERGE_CONFLICT_CONFIG.resolveWindow);
-          }
-          break;
-        }
-
-        // Normal bug / Heisenbug / Memory Leak / Clone squash
-        clearTimeout(bug.escapeTimer);
-        clearInterval(bug.wanderInterval);
-        if (bug.growthInterval) clearInterval(bug.growthInterval);
-        delete st.bugs[bugId];
-
-        player.bugsSquashed = (player.bugsSquashed || 0) + 1;
-
-        // Calculate points
-        let points = BUG_POINTS;
-        if (bug.isHeisenbug) {
-          points = BUG_POINTS * HEISENBUG_CONFIG.pointsMultiplier;
-        }
-        if (bug.isMemoryLeak) {
-          // Reward proactive clicking: earlier = more points
-          points = MEMORY_LEAK_CONFIG.pointsByStage[bug.growthStage] || BUG_POINTS;
-        }
-
-        // Duck buff: double points
-        if (powerups.isDuckBuffActive(ctx)) {
-          points *= 2;
-        }
-
-        st.score += points;
-        player.score += points;
-
-        if (ctx.matchLog) {
-          ctx.matchLog.log('squash', {
-            bugId,
-            type: bug.isHeisenbug ? 'heisenbug' : (bug.isMemoryLeak ? 'memory-leak' : (bug.isMinion ? 'minion' : 'normal')),
-            by: pid,
-            activeBugs: Object.keys(st.bugs).length,
-            score: st.score,
-            ...(bug.isMemoryLeak ? { growthStage: bug.growthStage } : {}),
-          });
-        }
-
-        network.broadcastToLobby(ctx.lobbyId, {
-          type: 'bug-squashed',
-          bugId,
-          playerId: pid,
-          playerColor: player.color,
-          score: st.score,
-          playerScore: player.score,
-          isHeisenbug: bug.isHeisenbug || false,
-          isMemoryLeak: bug.isMemoryLeak || false,
-          points,
-        });
-
-        if (st.phase === 'boss') {
-          game.checkBossGameState(ctx);
-        } else {
-          game.checkGameState(ctx);
-        }
+        const descriptor = entityTypes.getDescriptor(bug);
+        descriptor.onClick(bug, ctx, pid, msg);
         break;
       }
 
@@ -621,102 +386,9 @@ wss.on('connection', (ws) => {
         if (!ctx) break;
         const { state: st } = ctx;
         if (st.phase !== 'playing' && st.phase !== 'boss') break;
-        const bugId = msg.bugId;
-        const bug = st.bugs[bugId];
+        const bug = st.bugs[msg.bugId];
         if (!bug || !bug.isMemoryLeak) break;
-
-        // Initialize holders tracking if needed
-        if (!bug.holders) {
-          bug.holders = new Map();
-          bug.holdStartStage = bug.growthStage;
-          bug.firstHolderStartTime = Date.now(); // Track when first holder started
-        }
-
-        // Add this player to holders
-        if (!bug.holders.has(pid)) {
-          bug.holders.set(pid, Date.now());
-          
-          const elapsedSinceFirst = Date.now() - bug.firstHolderStartTime;
-          const requiredTime = MEMORY_LEAK_CONFIG.holdTimeByStage[bug.holdStartStage];
-          const effectiveRequiredTime = requiredTime / bug.holders.size;
-          
-          // Broadcast hold update with sync info
-          network.broadcastToLobby(ctx.lobbyId, {
-            type: 'memory-leak-hold-update',
-            bugId,
-            playerId: pid,
-            holderCount: bug.holders.size,
-            requiredHoldTime: requiredTime,
-            elapsedTime: elapsedSinceFirst,
-          });
-          
-          // Set up auto-completion timer if this is the first holder or recalculate for new holder count
-          if (bug.completionTimer) {
-            clearTimeout(bug.completionTimer);
-          }
-          
-          const remainingTime = Math.max(0, effectiveRequiredTime - elapsedSinceFirst);
-          bug.completionTimer = setTimeout(() => {
-            // Check if bug and holders still exist
-            if (!st.bugs[bugId] || !bug.holders || bug.holders.size === 0) return;
-            
-            // Clear the leak automatically
-            clearTimeout(bug.escapeTimer);
-            clearInterval(bug.wanderInterval);
-            if (bug.growthInterval) clearInterval(bug.growthInterval);
-            
-            // Collect all holders for rewards
-            const allHolders = Array.from(bug.holders.keys());
-            const holderCount = allHolders.length;
-            delete st.bugs[bugId];
-
-            // Award points to all holders
-            let points = MEMORY_LEAK_CONFIG.pointsByStage[bug.holdStartStage] || BUG_POINTS;
-            
-            // Duck buff: double points
-            if (powerups.isDuckBuffActive(ctx)) {
-              points *= 2;
-            }
-
-            for (const holderId of allHolders) {
-              if (st.players[holderId]) {
-                st.players[holderId].bugsSquashed = (st.players[holderId].bugsSquashed || 0) + 1;
-                st.players[holderId].score += points;
-                st.score += points;
-              }
-            }
-
-            if (ctx.matchLog) {
-              ctx.matchLog.log('squash', {
-                bugId,
-                type: 'memory-leak',
-                by: allHolders,
-                growthStage: bug.holdStartStage,
-                holderCount,
-                activeBugs: Object.keys(st.bugs).length,
-                score: st.score,
-              });
-            }
-
-            network.broadcastToLobby(ctx.lobbyId, {
-              type: 'memory-leak-cleared',
-              bugId,
-              holders: allHolders,
-              holderCount,
-              score: st.score,
-              players: Object.fromEntries(
-                allHolders.filter(h => st.players[h]).map(h => [h, st.players[h].score])
-              ),
-              points,
-            });
-
-            if (st.phase === 'boss') {
-              game.checkBossGameState(ctx);
-            } else {
-              game.checkGameState(ctx);
-            }
-          }, remainingTime);
-        }
+        entityTypes.getDescriptor(bug).onHoldStart(bug, ctx, pid);
         break;
       }
 
@@ -725,135 +397,9 @@ wss.on('connection', (ws) => {
         if (!ctx) break;
         const { state: st } = ctx;
         if (st.phase !== 'playing' && st.phase !== 'boss') break;
-        const bugId = msg.bugId;
-        const bug = st.bugs[bugId];
+        const bug = st.bugs[msg.bugId];
         if (!bug || !bug.isMemoryLeak) break;
-
-        const player = st.players[pid];
-        if (!player) break;
-
-        // Check if this player was holding
-        if (!bug.holders || !bug.holders.has(pid)) break;
-        
-        const playerStartTime = bug.holders.get(pid);
-        const playerHoldDuration = Date.now() - playerStartTime;
-        const requiredTime = MEMORY_LEAK_CONFIG.holdTimeByStage[bug.holdStartStage];
-        const oldHolderCount = bug.holders.size;
-        
-        // With multiple holders, effective required time for collective completion
-        const elapsedSinceFirst = Date.now() - bug.firstHolderStartTime;
-        const effectiveRequiredTime = requiredTime / oldHolderCount;
-        
-        // Player released - remove them from holders
-        bug.holders.delete(pid);
-        
-        // If no holders left, reset completely and cancel timer
-        if (bug.holders.size === 0) {
-          if (bug.completionTimer) {
-            clearTimeout(bug.completionTimer);
-            bug.completionTimer = null;
-          }
-          delete bug.holders;
-          delete bug.holdStartStage;
-          delete bug.firstHolderStartTime;
-          
-          network.broadcastToLobby(ctx.lobbyId, {
-            type: 'memory-leak-hold-update',
-            bugId,
-            playerId: pid,
-            holderCount: 0,
-            requiredHoldTime: requiredTime,
-            elapsedTime: elapsedSinceFirst,
-            dropOut: true,
-          });
-          break;
-        }
-        
-        // Recalculate completion timer with new holder count
-        if (bug.completionTimer) {
-          clearTimeout(bug.completionTimer);
-        }
-        
-        const newEffectiveTime = requiredTime / bug.holders.size;
-        const remainingTime = Math.max(0, newEffectiveTime - elapsedSinceFirst);
-        
-        bug.completionTimer = setTimeout(() => {
-          // Check if bug and holders still exist
-          if (!st.bugs[bugId] || !bug.holders || bug.holders.size === 0) return;
-          
-          // Clear the leak automatically
-          clearTimeout(bug.escapeTimer);
-          clearInterval(bug.wanderInterval);
-          if (bug.growthInterval) clearInterval(bug.growthInterval);
-          
-          // Collect all holders for rewards
-          const allHolders = Array.from(bug.holders.keys());
-          const holderCount = allHolders.length;
-          delete st.bugs[bugId];
-
-          // Award points to all holders
-          let points = MEMORY_LEAK_CONFIG.pointsByStage[bug.holdStartStage] || BUG_POINTS;
-          
-          // Duck buff: double points
-          if (powerups.isDuckBuffActive(ctx)) {
-            points *= 2;
-          }
-
-          for (const holderId of allHolders) {
-            if (st.players[holderId]) {
-              st.players[holderId].bugsSquashed = (st.players[holderId].bugsSquashed || 0) + 1;
-              st.players[holderId].score += points;
-              st.score += points;
-            }
-          }
-
-          if (ctx.matchLog) {
-            ctx.matchLog.log('squash', {
-              bugId,
-              type: 'memory-leak',
-              by: allHolders,
-              growthStage: bug.holdStartStage,
-              holderCount,
-              activeBugs: Object.keys(st.bugs).length,
-              score: st.score,
-            });
-          }
-
-          network.broadcastToLobby(ctx.lobbyId, {
-            type: 'memory-leak-cleared',
-            bugId,
-            holders: allHolders,
-            holderCount,
-            score: st.score,
-            players: Object.fromEntries(
-              allHolders.filter(h => st.players[h]).map(h => [h, st.players[h].score])
-            ),
-            points,
-          });
-
-          if (st.phase === 'boss') {
-            game.checkBossGameState(ctx);
-          } else {
-            game.checkGameState(ctx);
-          }
-        }, remainingTime);
-        
-        // Notify remaining holders of the dropout
-        network.broadcastToLobby(ctx.lobbyId, {
-          type: 'memory-leak-hold-update',
-          bugId,
-          playerId: pid,
-          holderCount: bug.holders.size,
-          requiredHoldTime: requiredTime,
-          elapsedTime: elapsedSinceFirst,
-          dropOut: true,
-        });
-
-        if (st.phase === 'boss') {
-          game.checkBossGameState(ctx);
-        } else {
-          game.checkGameState(ctx);
-        }
+        entityTypes.getDescriptor(bug).onHoldComplete(bug, ctx, pid);
         break;
       }
 
@@ -902,43 +448,11 @@ wss.on('connection', (ws) => {
           y: msg.y,
         }, ws);
 
-        // Heisenbug flee check
-        const now = Date.now();
+        // Heisenbug flee check — dispatch to descriptor
         for (const bid of Object.keys(st.bugs)) {
           const b = st.bugs[bid];
-          if (!b || !b.isHeisenbug || b.fleesRemaining <= 0) continue;
-          if (now - b.lastFleeTime < HEISENBUG_CONFIG.fleeCooldown) continue;
-
-          const dx = b.x - msg.x;
-          const dy = b.y - msg.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < HEISENBUG_CONFIG.fleeRadius) {
-            const newPos = randomPosition();
-            b.x = newPos.x;
-            b.y = newPos.y;
-            b.fleesRemaining--;
-            b.lastFleeTime = now;
-
-            // Reset wander timer so bug stays put at new position briefly
-            if (b.wanderInterval) {
-              clearInterval(b.wanderInterval);
-              b.wanderInterval = setInterval(() => {
-                if (!st.bugs[bid]) return;
-                const wp = randomPosition();
-                b.x = wp.x;
-                b.y = wp.y;
-                network.broadcastToLobby(lobbyId, { type: 'bug-wander', bugId: bid, x: wp.x, y: wp.y });
-              }, b.escapeTime * 0.45);
-            }
-
-            network.broadcastToLobby(lobbyId, {
-              type: 'bug-flee',
-              bugId: bid,
-              x: newPos.x,
-              y: newPos.y,
-              fleesRemaining: b.fleesRemaining,
-            });
-          }
+          const desc = entityTypes.getDescriptor(b);
+          if (desc.onCursorNear) desc.onCursorNear(b, ctx, pid, msg.x, msg.y);
         }
 
         break;

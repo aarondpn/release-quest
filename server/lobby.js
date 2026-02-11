@@ -93,12 +93,13 @@ async function destroyLobby(lobbyId) {
       clearTimeout(mem.timers[key]);
       clearInterval(mem.timers[key]);
     }
+    // Clear boss TimerBag
+    if (mem.timers._boss && mem.timers._boss.clearAll) {
+      mem.timers._boss.clearAll();
+    }
     // Clear bug timers
     for (const bugId of Object.keys(mem.state.bugs)) {
-      const bug = mem.state.bugs[bugId];
-      if (bug.escapeTimer) clearTimeout(bug.escapeTimer);
-      if (bug.wanderInterval) clearInterval(bug.wanderInterval);
-      if (bug.mergeResetTimer) clearTimeout(bug.mergeResetTimer);
+      mem.state.bugs[bugId]._timers.clearAll();
     }
     lobbies.delete(lobbyId);
   }
