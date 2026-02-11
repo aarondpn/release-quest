@@ -22,6 +22,7 @@ export const clientState = {
   isLoggedIn: false,
   duckElement: null,
   hammerElement: null,
+  difficultyPresets: null,
 };
 
 export const dom = {
@@ -79,7 +80,16 @@ export const dom = {
   configBugPoints: null,
   configBossHp: null,
   configBossTime: null,
+  configBossClickDamage: null,
+  configBossKillBonus: null,
+  configBossRegen: null,
   configHeisenbug: null,
+  configCodeReview: null,
+  configMergeConflict: null,
+  configPipelineBug: null,
+  configMemoryLeak: null,
+  configDuckDuration: null,
+  configHammerDuration: null,
 };
 
 export function initDom() {
@@ -113,7 +123,16 @@ export function initDom() {
   dom.configBugPoints = document.getElementById('config-bug-points');
   dom.configBossHp = document.getElementById('config-boss-hp');
   dom.configBossTime = document.getElementById('config-boss-time');
+  dom.configBossClickDamage = document.getElementById('config-boss-click-damage');
+  dom.configBossKillBonus = document.getElementById('config-boss-kill-bonus');
+  dom.configBossRegen = document.getElementById('config-boss-regen');
   dom.configHeisenbug = document.getElementById('config-heisenbug');
+  dom.configCodeReview = document.getElementById('config-code-review');
+  dom.configMergeConflict = document.getElementById('config-merge-conflict');
+  dom.configPipelineBug = document.getElementById('config-pipeline-bug');
+  dom.configMemoryLeak = document.getElementById('config-memory-leak');
+  dom.configDuckDuration = document.getElementById('config-duck-duration');
+  dom.configHammerDuration = document.getElementById('config-hammer-duration');
   dom.authStatus = document.getElementById('auth-status');
   dom.authShowLoginBtn = document.getElementById('auth-show-login-btn');
   dom.authLogoutBtn = document.getElementById('auth-logout-btn');

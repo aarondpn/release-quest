@@ -9,6 +9,16 @@ import { initLeaderboardSend, showLeaderboardTab, showLobbiesTab } from './leade
 
 initDom();
 
+// Fetch difficulty presets from server
+fetch('/api/difficulty-presets')
+  .then(res => res.json())
+  .then(presets => {
+    clientState.difficultyPresets = presets;
+    // Initialize with medium difficulty values
+    updateDifficultyPlaceholders('medium');
+  })
+  .catch(err => console.error('Failed to load difficulty presets:', err));
+
 // Icon picker setup
 PLAYER_ICONS.forEach((icon, i) => {
   const el = document.createElement('div');
@@ -22,6 +32,31 @@ PLAYER_ICONS.forEach((icon, i) => {
   dom.iconPicker.appendChild(el);
 });
 clientState.selectedIcon = PLAYER_ICONS[0];
+
+// Initialize difficulty preset placeholders
+function updateDifficultyPlaceholders(difficulty) {
+  if (!clientState.difficultyPresets) return;
+  const preset = clientState.difficultyPresets[difficulty];
+  if (preset) {
+    dom.configStartingHp.placeholder = preset.startingHp;
+    dom.configHpDamage.placeholder = preset.hpDamage;
+    dom.configBugPoints.placeholder = preset.bugPoints;
+    dom.configBossHp.placeholder = preset.boss.hp;
+    dom.configBossTime.placeholder = preset.boss.timeLimit;
+    dom.configBossClickDamage.placeholder = preset.boss.clickDamage;
+    dom.configBossKillBonus.placeholder = preset.boss.killBonus;
+    dom.configBossRegen.placeholder = preset.boss.regenPerSecond;
+    dom.configHeisenbug.placeholder = Math.round(preset.specialBugs.heisenbugChance * 100);
+    dom.configCodeReview.placeholder = Math.round(preset.specialBugs.codeReviewChance * 100);
+    dom.configMergeConflict.placeholder = Math.round(preset.specialBugs.mergeConflictChance * 100);
+    dom.configPipelineBug.placeholder = Math.round(preset.specialBugs.pipelineBugChance * 100);
+    dom.configMemoryLeak.placeholder = Math.round(preset.specialBugs.memoryLeakChance * 100);
+    dom.configDuckDuration.placeholder = preset.powerups.rubberDuckBuffDuration;
+    dom.configHammerDuration.placeholder = preset.powerups.hotfixHammerStunDuration;
+  }
+}
+// Set initial values for medium difficulty will be called after fetch
+
 
 function submitJoin() {
   if (!clientState.ws || clientState.ws.readyState !== 1) return;
@@ -74,12 +109,52 @@ dom.createLobbyBtn.addEventListener('click', () => {
   }
   if (dom.configBossTime.value) {
     if (!customConfig.boss) customConfig.boss = {};
-    customConfig.boss.timeSeconds = parseInt(dom.configBossTime.value, 10);
+    customConfig.boss.timeLimit = parseInt(dom.configBossTime.value, 10);
+  }
+  if (dom.configBossClickDamage.value) {
+    if (!customConfig.boss) customConfig.boss = {};
+    customConfig.boss.clickDamage = parseInt(dom.configBossClickDamage.value, 10);
+  }
+  if (dom.configBossKillBonus.value) {
+    if (!customConfig.boss) customConfig.boss = {};
+    customConfig.boss.killBonus = parseInt(dom.configBossKillBonus.value, 10);
+  }
+  if (dom.configBossRegen.value) {
+    if (!customConfig.boss) customConfig.boss = {};
+    customConfig.boss.regenPerSecond = parseFloat(dom.configBossRegen.value);
   }
   if (dom.configHeisenbug.value) {
     if (!customConfig.bugs) customConfig.bugs = {};
     if (!customConfig.bugs.specialBugs) customConfig.bugs.specialBugs = {};
-    customConfig.bugs.specialBugs.heisenPercentage = parseInt(dom.configHeisenbug.value, 10);
+    customConfig.bugs.specialBugs.heisenbugChance = parseInt(dom.configHeisenbug.value, 10) / 100;
+  }
+  if (dom.configCodeReview.value) {
+    if (!customConfig.bugs) customConfig.bugs = {};
+    if (!customConfig.bugs.specialBugs) customConfig.bugs.specialBugs = {};
+    customConfig.bugs.specialBugs.codeReviewChance = parseInt(dom.configCodeReview.value, 10) / 100;
+  }
+  if (dom.configMergeConflict.value) {
+    if (!customConfig.bugs) customConfig.bugs = {};
+    if (!customConfig.bugs.specialBugs) customConfig.bugs.specialBugs = {};
+    customConfig.bugs.specialBugs.mergeConflictChance = parseInt(dom.configMergeConflict.value, 10) / 100;
+  }
+  if (dom.configPipelineBug.value) {
+    if (!customConfig.bugs) customConfig.bugs = {};
+    if (!customConfig.bugs.specialBugs) customConfig.bugs.specialBugs = {};
+    customConfig.bugs.specialBugs.pipelineBugChance = parseInt(dom.configPipelineBug.value, 10) / 100;
+  }
+  if (dom.configMemoryLeak.value) {
+    if (!customConfig.bugs) customConfig.bugs = {};
+    if (!customConfig.bugs.specialBugs) customConfig.bugs.specialBugs = {};
+    customConfig.bugs.specialBugs.memoryLeakChance = parseInt(dom.configMemoryLeak.value, 10) / 100;
+  }
+  if (dom.configDuckDuration.value) {
+    if (!customConfig.powerups) customConfig.powerups = {};
+    customConfig.powerups.rubberDuckBuffDuration = parseInt(dom.configDuckDuration.value, 10);
+  }
+  if (dom.configHammerDuration.value) {
+    if (!customConfig.powerups) customConfig.powerups = {};
+    customConfig.powerups.hotfixHammerStunDuration = parseInt(dom.configHammerDuration.value, 10);
   }
   
   const message = { type: 'create-lobby', name, maxPlayers, difficulty };
@@ -119,11 +194,15 @@ dom.lobbyDifficulty.querySelector('.custom-select-trigger').addEventListener('cl
 dom.lobbyDifficulty.querySelector('.custom-select-options').addEventListener('click', (e) => {
   const opt = e.target.closest('.custom-select-option');
   if (!opt) return;
-  dom.lobbyDifficulty.dataset.value = opt.dataset.value;
+  const difficulty = opt.dataset.value;
+  dom.lobbyDifficulty.dataset.value = difficulty;
   dom.lobbyDifficulty.querySelector('.custom-select-trigger').textContent = opt.textContent + ' \u25BE';
   dom.lobbyDifficulty.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('selected'));
   opt.classList.add('selected');
   dom.lobbyDifficulty.classList.remove('open');
+  
+  // Update placeholder values in advanced config
+  updateDifficultyPlaceholders(difficulty);
 });
 document.addEventListener('click', () => dom.lobbyDifficulty.classList.remove('open'));
 
@@ -139,7 +218,16 @@ dom.advancedResetBtn.addEventListener('click', () => {
   dom.configBugPoints.value = '';
   dom.configBossHp.value = '';
   dom.configBossTime.value = '';
+  dom.configBossClickDamage.value = '';
+  dom.configBossKillBonus.value = '';
+  dom.configBossRegen.value = '';
   dom.configHeisenbug.value = '';
+  dom.configCodeReview.value = '';
+  dom.configMergeConflict.value = '';
+  dom.configPipelineBug.value = '';
+  dom.configMemoryLeak.value = '';
+  dom.configDuckDuration.value = '';
+  dom.configHammerDuration.value = '';
 });
 
 // Cursor broadcasting

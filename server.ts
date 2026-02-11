@@ -4,7 +4,7 @@ import path from 'node:path';
 import { WebSocketServer } from 'ws';
 import type { WebSocket, RawData } from 'ws';
 
-import { SERVER_CONFIG, LOGICAL_W, LOGICAL_H, COLORS, ICONS } from './server/config.ts';
+import { SERVER_CONFIG, LOGICAL_W, LOGICAL_H, COLORS, ICONS, DIFFICULTY_PRESETS } from './server/config.ts';
 import { getStateSnapshot } from './server/state.ts';
 import * as network from './server/network.ts';
 import * as db from './server/db.ts';
@@ -39,6 +39,15 @@ const MIME: Record<string, string> = {
 // ── HTTP server ──
 const httpServer = http.createServer((req, res) => {
   const urlPath = req.url!.split('?')[0];
+  
+  // API endpoints
+  if (urlPath === '/api/difficulty-presets') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(DIFFICULTY_PRESETS));
+    return;
+  }
+  
+  // Static file serving
   let filePath = urlPath === '/' ? '/index.html' : urlPath;
   filePath = path.join(import.meta.dirname, 'public', filePath);
 
