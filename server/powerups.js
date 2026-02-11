@@ -1,8 +1,8 @@
-const { RUBBER_DUCK_CONFIG, HOTFIX_HAMMER_CONFIG, MEMORY_LEAK_CONFIG, BOSS_CONFIG } = require('./config');
+const { RUBBER_DUCK_CONFIG, HOTFIX_HAMMER_CONFIG, BOSS_CONFIG } = require('./config');
 const { randomPosition } = require('./state');
 const network = require('./network');
 const boss = require('./boss');
-const bugs = require('./bugs');
+const { getDescriptor } = require('./entity-types');
 
 function startDuckSpawning(ctx) {
   scheduleDuckSpawn(ctx);
@@ -187,98 +187,49 @@ function stunAllBugs(ctx) {
   const { state } = ctx;
   for (const bugId in state.bugs) {
     const bug = state.bugs[bugId];
-    bug.isStunned = true;
-    bug.remainingEscapeTime = Math.max(0, bug.escapeTime - (Date.now() - bug.escapeStartedAt));
-    if (bug.escapeTimer) { clearTimeout(bug.escapeTimer); bug.escapeTimer = null; }
-    if (bug.wanderInterval) { clearInterval(bug.wanderInterval); bug.wanderInterval = null; }
-    if (bug.growthInterval) { clearInterval(bug.growthInterval); bug.growthInterval = null; }
+    getDescriptor(bug).onStun(bug, ctx);
   }
 }
 
 function resumeAllBugs(ctx) {
-  const { lobbyId, state } = ctx;
-  const phaseCheck = state.phase;
+  const { state } = ctx;
   for (const bugId in state.bugs) {
     const bug = state.bugs[bugId];
     if (!bug.isStunned) continue;
-    bug.isStunned = false;
-
-    const remainingTime = bug.remainingEscapeTime;
-    bug.escapeStartedAt = Date.now();
-    bug.escapeTime = remainingTime;
-
-    // Restart escape timer
-    if (bug._onEscape) {
-      bug.escapeTimer = setTimeout(bug._onEscape, remainingTime);
-    }
-
-    // Pipeline bugs use chain-level snake wander (self-resumes via hammerStunActive flag)
-    if (!bug.isPipeline && remainingTime > 0) {
-      bug.wanderInterval = setInterval(() => {
-        if (state.phase !== phaseCheck || !state.bugs[bugId] || state.hammerStunActive) return;
-        const newPos = randomPosition();
-        bug.x = newPos.x;
-        bug.y = newPos.y;
-        network.broadcastToLobby(lobbyId, { type: 'bug-wander', bugId, x: newPos.x, y: newPos.y });
-      }, bug.escapeTime * 0.45);
-    }
-
-    // Restart memory leak growth
-    if (bug.isMemoryLeak && bug.growthStage < MEMORY_LEAK_CONFIG.maxGrowthStage) {
-      bug.growthInterval = setInterval(() => {
-        if (state.phase !== phaseCheck || !state.bugs[bugId]) return;
-        if (bug.growthStage < MEMORY_LEAK_CONFIG.maxGrowthStage) {
-          bug.growthStage++;
-          network.broadcastToLobby(lobbyId, { type: 'memory-leak-grow', bugId, growthStage: bug.growthStage });
-        }
-      }, MEMORY_LEAK_CONFIG.growthInterval);
-    }
+    getDescriptor(bug).onResume(bug, ctx);
   }
 }
 
 function stunBoss(ctx) {
   const { state } = ctx;
   if (!state.boss || state.phase !== 'boss') return;
-  
-  // Pause boss wandering
-  if (ctx.timers.bossWander) {
-    clearInterval(ctx.timers.bossWander);
-    ctx.timers.bossWander = null;
-    state.boss._wanderPaused = true;
-  }
-  
-  // Pause minion spawning
-  if (ctx.timers.bossMinionSpawn) {
-    clearInterval(ctx.timers.bossMinionSpawn);
-    ctx.timers.bossMinionSpawn = null;
-    state.boss._minionSpawnPaused = true;
+
+  // Pause boss wandering and minion spawning via TimerBag
+  if (ctx.timers._boss) {
+    if (ctx.timers._boss.has('bossWander')) {
+      ctx.timers._boss.clear('bossWander');
+      state.boss._wanderPaused = true;
+    }
+    if (ctx.timers._boss.has('bossMinionSpawn')) {
+      ctx.timers._boss.clear('bossMinionSpawn');
+      state.boss._minionSpawnPaused = true;
+    }
   }
 }
 
 function resumeBoss(ctx) {
-  const { lobbyId, state } = ctx;
+  const { state } = ctx;
   if (!state.boss || state.phase !== 'boss') return;
 
-  // Resume boss wandering
   if (state.boss._wanderPaused) {
     const wanderInterval = state.boss.enraged ? BOSS_CONFIG.enrageWanderInterval : BOSS_CONFIG.wanderInterval;
-    ctx.timers.bossWander = setInterval(() => {
-      if (state.phase !== 'boss' || !state.boss || state.hammerStunActive) return;
-      const newPos = randomPosition();
-      state.boss.x = newPos.x;
-      state.boss.y = newPos.y;
-      network.broadcastToLobby(lobbyId, { type: 'boss-wander', x: newPos.x, y: newPos.y });
-    }, wanderInterval);
+    boss.setupBossWander(ctx, wanderInterval);
     state.boss._wanderPaused = false;
   }
-  
-  // Resume minion spawning
+
   if (state.boss._minionSpawnPaused) {
-    const spawnRate = boss.getEffectiveSpawnRate ? boss.getEffectiveSpawnRate(ctx) : BOSS_CONFIG.minionSpawnRate;
-    ctx.timers.bossMinionSpawn = setInterval(() => {
-      if (state.hammerStunActive) return;
-      bugs.spawnMinion(ctx);
-    }, spawnRate);
+    const spawnRate = boss.getEffectiveSpawnRate(ctx);
+    boss.setupMinionSpawning(ctx, spawnRate);
     state.boss._minionSpawnPaused = false;
   }
 }

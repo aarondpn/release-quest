@@ -1,6 +1,8 @@
 const { HP_DAMAGE, BOSS_CONFIG, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG, PIPELINE_BUG_CONFIG, MEMORY_LEAK_CONFIG, LOGICAL_W, LOGICAL_H } = require('./config');
 const { randomPosition, currentLevelConfig } = require('./state');
 const network = require('./network');
+const { createTimerBag } = require('./timer-bag');
+const { getDescriptor, getType } = require('./entity-types');
 
 function spawnEntity(ctx, { phaseCheck, maxOnScreen, escapeTime, isMinion, onEscapeCheck, variant }) {
   const { lobbyId, state, counters } = ctx;
@@ -18,7 +20,7 @@ function spawnEntity(ctx, { phaseCheck, maxOnScreen, escapeTime, isMinion, onEsc
 
   const id = 'bug_' + (counters.nextBugId++);
   const pos = randomPosition();
-  const bug = { id, x: pos.x, y: pos.y, escapeTimer: null, wanderInterval: null };
+  const bug = { id, x: pos.x, y: pos.y, _timers: createTimerBag() };
   if (isMinion) bug.isMinion = true;
 
   if (variant) Object.assign(bug, variant);
@@ -28,115 +30,32 @@ function spawnEntity(ctx, { phaseCheck, maxOnScreen, escapeTime, isMinion, onEsc
 
   state.bugs[id] = bug;
 
+  const descriptor = getDescriptor(bug);
+  descriptor.init(bug, ctx, { phaseCheck });
+
   if (ctx.matchLog) {
-    const logData = {
+    ctx.matchLog.log(isMinion ? 'minion-spawn' : 'spawn', {
       bugId: id,
-      type: isMinion ? 'minion' : (variant && variant.isHeisenbug ? 'heisenbug' : variant && variant.isMemoryLeak ? 'memory-leak' : variant && variant.isFeature ? 'feature' : variant && variant.mergeConflict ? 'merge-conflict' : 'normal'),
+      type: getType(bug),
       activeBugs: Object.keys(state.bugs).length,
-    };
-    if (!isMinion) {
-      logData.bugsSpawned = state.bugsSpawned;
-      logData.bugsTotal = currentLevelConfig(state).bugsTotal;
-    }
-    ctx.matchLog.log(isMinion ? 'minion-spawn' : 'spawn', logData);
+      ...(!isMinion ? { bugsSpawned: state.bugsSpawned, bugsTotal: currentLevelConfig(state).bugsTotal } : {}),
+    });
   }
 
   const broadcastPayload = { id, x: bug.x, y: bug.y };
   if (isMinion) broadcastPayload.isMinion = true;
-  if (variant) {
-    if (variant.isHeisenbug) { broadcastPayload.isHeisenbug = true; broadcastPayload.fleesRemaining = variant.fleesRemaining; }
-    if (variant.isFeature) broadcastPayload.isFeature = true;
-    if (variant.isMemoryLeak) { broadcastPayload.isMemoryLeak = true; broadcastPayload.growthStage = variant.growthStage; }
-    if (variant.mergeConflict) {
-      broadcastPayload.mergeConflict = variant.mergeConflict;
-      broadcastPayload.mergePartner = variant.mergePartner;
-      broadcastPayload.mergeSide = variant.mergeSide;
-    }
-  }
+  Object.assign(broadcastPayload, descriptor.broadcastFields(bug));
 
   network.broadcastToLobby(lobbyId, { type: 'bug-spawned', bug: broadcastPayload });
 
-  // Memory leak growth interval
-  if (variant && variant.isMemoryLeak) {
-    bug.growthInterval = setInterval(() => {
-      if (state.phase !== phaseCheck || !state.bugs[id]) return;
-      if (bug.growthStage < MEMORY_LEAK_CONFIG.maxGrowthStage) {
-        bug.growthStage++;
-        network.broadcastToLobby(lobbyId, { type: 'memory-leak-grow', bugId: id, growthStage: bug.growthStage });
-      }
-    }, MEMORY_LEAK_CONFIG.growthInterval);
-  }
-
-  bug.wanderInterval = setInterval(() => {
-    if (state.phase !== phaseCheck || !state.bugs[id] || state.hammerStunActive) return;
-    const newPos = randomPosition();
-    bug.x = newPos.x;
-    bug.y = newPos.y;
-    network.broadcastToLobby(lobbyId, { type: 'bug-wander', bugId: id, x: newPos.x, y: newPos.y });
-  }, escapeTime * 0.45);
+  descriptor.setupTimers(bug, ctx);
+  descriptor.createWander(bug, ctx);
 
   bug._onEscape = () => {
     if (!state.bugs[id]) return;
-    clearInterval(bug.wanderInterval);
-    if (bug.growthInterval) clearInterval(bug.growthInterval);
-
-    // Feature bugs escape peacefully
-    if (bug.isFeature) {
-      delete state.bugs[id];
-      if (ctx.matchLog) {
-        ctx.matchLog.log('escape', { bugId: id, type: 'feature', activeBugs: Object.keys(state.bugs).length });
-      }
-      network.broadcastToLobby(lobbyId, { type: 'feature-escaped', bugId: id });
-      onEscapeCheck();
-      return;
-    }
-
-    // Memory leak: damage scales with growth stage
-    if (bug.isMemoryLeak) {
-      if (bug.completionTimer) clearTimeout(bug.completionTimer);
-      const damage = MEMORY_LEAK_CONFIG.damageByStage[bug.growthStage] || HP_DAMAGE;
-      delete state.bugs[id];
-      state.hp -= damage;
-      if (state.hp < 0) state.hp = 0;
-      if (ctx.matchLog) {
-        ctx.matchLog.log('escape', { bugId: id, type: 'memory-leak', growthStage: bug.growthStage, damage, activeBugs: Object.keys(state.bugs).length, hp: state.hp });
-      }
-      network.broadcastToLobby(lobbyId, { type: 'memory-leak-escaped', bugId: id, growthStage: bug.growthStage, damage, hp: state.hp });
-      onEscapeCheck();
-      return;
-    }
-
-    // Merge conflict: both escape together, double damage
-    if (bug.mergeConflict) {
-      const partner = state.bugs[bug.mergePartner];
-      const damage = MERGE_CONFLICT_CONFIG.doubleDamage ? HP_DAMAGE * 2 : HP_DAMAGE;
-      delete state.bugs[id];
-      if (partner) {
-        clearTimeout(partner.escapeTimer);
-        clearInterval(partner.wanderInterval);
-        delete state.bugs[partner.id];
-      }
-      state.hp -= damage;
-      if (state.hp < 0) state.hp = 0;
-      if (ctx.matchLog) {
-        ctx.matchLog.log('escape', { bugId: id, type: 'merge-conflict', activeBugs: Object.keys(state.bugs).length, hp: state.hp });
-      }
-      network.broadcastToLobby(lobbyId, { type: 'merge-conflict-escaped', bugId: id, partnerId: bug.mergePartner, hp: state.hp });
-      onEscapeCheck();
-      return;
-    }
-
-    delete state.bugs[id];
-    state.hp -= HP_DAMAGE;
-    if (state.hp < 0) state.hp = 0;
-
-    if (ctx.matchLog) {
-      ctx.matchLog.log('escape', { bugId: id, activeBugs: Object.keys(state.bugs).length, hp: state.hp });
-    }
-    network.broadcastToLobby(lobbyId, { type: 'bug-escaped', bugId: id, hp: state.hp });
-    onEscapeCheck();
+    descriptor.onEscape(bug, ctx, onEscapeCheck);
   };
-  bug.escapeTimer = setTimeout(bug._onEscape, escapeTime);
+  bug._timers.setTimeout('escape', bug._onEscape, escapeTime);
   return true;
 }
 
@@ -225,13 +144,13 @@ function spawnMergeConflict(ctx, cfg, game) {
   const pos2 = randomPosition();
 
   const bug1 = {
-    id: id1, x: pos1.x, y: pos1.y, escapeTimer: null, wanderInterval: null,
+    id: id1, x: pos1.x, y: pos1.y, _timers: createTimerBag(),
     mergeConflict: conflictId, mergePartner: id2, mergeSide: 'left',
     mergeClicked: false, mergeClickedBy: null, mergeClickedAt: 0,
     escapeTime, escapeStartedAt: Date.now(),
   };
   const bug2 = {
-    id: id2, x: pos2.x, y: pos2.y, escapeTimer: null, wanderInterval: null,
+    id: id2, x: pos2.x, y: pos2.y, _timers: createTimerBag(),
     mergeConflict: conflictId, mergePartner: id1, mergeSide: 'right',
     mergeClicked: false, mergeClickedBy: null, mergeClickedAt: 0,
     escapeTime, escapeStartedAt: Date.now(),
@@ -248,14 +167,14 @@ function spawnMergeConflict(ctx, cfg, game) {
   }});
 
   // Wander independently
-  bug1.wanderInterval = setInterval(() => {
+  bug1._timers.setInterval('wander', () => {
     if (state.phase !== 'playing' || !state.bugs[id1]) return;
     const np = randomPosition();
     bug1.x = np.x; bug1.y = np.y;
     network.broadcastToLobby(lobbyId, { type: 'bug-wander', bugId: id1, x: np.x, y: np.y });
   }, escapeTime * 0.45);
 
-  bug2.wanderInterval = setInterval(() => {
+  bug2._timers.setInterval('wander', () => {
     if (state.phase !== 'playing' || !state.bugs[id2]) return;
     const np = randomPosition();
     bug2.x = np.x; bug2.y = np.y;
@@ -266,8 +185,8 @@ function spawnMergeConflict(ctx, cfg, game) {
   const escapeHandler = () => {
     if (!state.bugs[id1] && !state.bugs[id2]) return;
     const damage = MERGE_CONFLICT_CONFIG.doubleDamage ? HP_DAMAGE * 2 : HP_DAMAGE;
-    if (state.bugs[id1]) { clearInterval(bug1.wanderInterval); delete state.bugs[id1]; }
-    if (state.bugs[id2]) { clearTimeout(bug2.escapeTimer); clearInterval(bug2.wanderInterval); delete state.bugs[id2]; }
+    if (state.bugs[id1]) { bug1._timers.clearAll(); delete state.bugs[id1]; }
+    if (state.bugs[id2]) { bug2._timers.clearAll(); delete state.bugs[id2]; }
     state.hp -= damage;
     if (state.hp < 0) state.hp = 0;
     if (ctx.matchLog) {
@@ -280,9 +199,9 @@ function spawnMergeConflict(ctx, cfg, game) {
   bug1._onEscape = escapeHandler;
   bug2._onEscape = escapeHandler;
 
-  bug1.escapeTimer = setTimeout(escapeHandler, escapeTime);
-  // bug2 shares the same escape timer
-  bug2.escapeTimer = bug1.escapeTimer;
+  bug1._timers.setTimeout('escape', escapeHandler, escapeTime);
+  // bug2 shares bug1's escape timer (clearing bug1's clears both)
+  bug2._sharedEscapeWith = id1;
 }
 
 function spawnPipelineChain(ctx, cfg, game, chainLength) {
@@ -305,7 +224,7 @@ function spawnPipelineChain(ctx, cfg, game, chainLength) {
     const x = Math.max(pad, Math.min(LOGICAL_W - pad, startPos.x + Math.cos(angle) * spacing * i));
     const y = Math.max(pad, Math.min(LOGICAL_H - pad, startPos.y + Math.sin(angle) * spacing * i));
     const bug = {
-      id, x, y, escapeTimer: null, wanderInterval: null,
+      id, x, y, _timers: createTimerBag(),
       isPipeline: true, chainId, chainIndex: i, chainLength,
       escapeTime, escapeStartedAt: Date.now(),
     };
@@ -320,12 +239,14 @@ function spawnPipelineChain(ctx, cfg, game, chainLength) {
   let snakeAngle = angle + Math.PI;
   const margin = 100;
 
-  const chainWanderInterval = setInterval(() => {
+  // Store chain wander on head bug's timer bag
+  const headBug = chainBugs[0];
+  headBug._timers.setInterval('chainWander', () => {
     if (state.phase !== 'playing' || state.hammerStunActive) return;
     const chain = state.pipelineChains[chainId];
-    if (!chain) { clearInterval(chainWanderInterval); return; }
+    if (!chain) { headBug._timers.clear('chainWander'); return; }
     const alive = chain.bugIds.filter(bid => state.bugs[bid]);
-    if (alive.length === 0) { clearInterval(chainWanderInterval); return; }
+    if (alive.length === 0) { headBug._timers.clear('chainWander'); return; }
 
     // Store old positions
     const oldPos = {};
@@ -367,7 +288,7 @@ function spawnPipelineChain(ctx, cfg, game, chainLength) {
 
   state.pipelineChains[chainId] = {
     bugIds, nextIndex: 0, length: chainLength,
-    wanderInterval: chainWanderInterval,
+    headBugId: headBug.id,
     snakeAngle,
   };
 
@@ -383,12 +304,17 @@ function spawnPipelineChain(ctx, cfg, game, chainLength) {
   const escapeHandler = () => {
     const chain = state.pipelineChains[chainId];
     if (!chain) return;
-    clearInterval(chain.wanderInterval);
+    // Clear chain wander from head bug
+    const hBug = state.bugs[chain.headBugId];
+    if (hBug) hBug._timers.clear('chainWander');
     const remaining = bugIds.filter(bid => state.bugs[bid]);
     if (remaining.length === 0) return;
     const damage = HP_DAMAGE * remaining.length;
     for (const bid of remaining) {
-      if (state.bugs[bid]) delete state.bugs[bid];
+      if (state.bugs[bid]) {
+        state.bugs[bid]._timers.clearAll();
+        delete state.bugs[bid];
+      }
     }
     delete state.pipelineChains[chainId];
     state.hp -= damage;
@@ -408,9 +334,10 @@ function spawnPipelineChain(ctx, cfg, game, chainLength) {
     bug._onEscape = escapeHandler;
   }
 
-  const timer = setTimeout(escapeHandler, escapeTime);
+  // All pipeline bugs share head bug's escape timer
+  headBug._timers.setTimeout('escape', escapeHandler, escapeTime);
   for (const bug of chainBugs) {
-    bug.escapeTimer = timer;
+    if (bug !== headBug) bug._sharedEscapeWith = headBug.id;
   }
 }
 
@@ -439,16 +366,8 @@ function spawnMinion(ctx) {
 
 function clearAllBugs(ctx) {
   const { state } = ctx;
-  for (const chainId of Object.keys(state.pipelineChains)) {
-    const chain = state.pipelineChains[chainId];
-    if (chain.wanderInterval) clearInterval(chain.wanderInterval);
-  }
   for (const id of Object.keys(state.bugs)) {
-    const bug = state.bugs[id];
-    clearTimeout(bug.escapeTimer);
-    clearInterval(bug.wanderInterval);
-    if (bug.growthInterval) clearInterval(bug.growthInterval);
-    if (bug.mergeResetTimer) clearTimeout(bug.mergeResetTimer);
+    state.bugs[id]._timers.clearAll();
   }
   state.bugs = {};
   state.pipelineChains = {};
