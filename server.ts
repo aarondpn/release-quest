@@ -33,6 +33,7 @@ const MIME: Record<string, string> = {
   '.jpg': 'image/jpeg',
   '.ico': 'image/x-icon',
   '.svg': 'image/svg+xml',
+  '.map': 'application/json',
 };
 
 // ── HTTP server ──

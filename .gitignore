@@ -1,2 +1,6 @@
 node_modules/
 logs/
+dist/
+*.min.js
+*.min.css
+*.min.js.map

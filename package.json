@@ -6,6 +6,8 @@
   "description": "Multiplayer bug-catching arcade game",
   "scripts": {
     "start": "node server.ts",
+    "build": "node build.mjs",
+    "dev": "node build.mjs --watch",
     "typecheck": "tsc --noEmit"
   },
   "engines": {
@@ -21,6 +23,7 @@
     "@types/node": "^22.0.0",
     "@types/pg": "^8.11.0",
     "@types/ws": "^8.5.0",
+    "esbuild": "^0.27.3",
     "typescript": "^5.8.0"
   }
 }
