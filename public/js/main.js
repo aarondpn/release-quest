@@ -85,7 +85,15 @@ dom.nameInput.addEventListener('keydown', (e) => {
 
 // ── Lobby create handler ──
 dom.createLobbyBtn.addEventListener('click', () => {
-  const name = dom.lobbyNameInput.value.trim().slice(0, 32) || 'Game Lobby';
+  const name = dom.lobbyNameInput.value.trim().slice(0, 32);
+  
+  // Validate lobby name is not empty
+  if (!name) {
+    dom.lobbyError.textContent = 'Please enter a lobby name';
+    dom.lobbyError.classList.remove('hidden');
+    return;
+  }
+  
   const maxPlayers = parseInt(dom.lobbyMaxPlayers.dataset.value, 10) || 4;
   const difficulty = dom.lobbyDifficulty.dataset.value || 'medium';
   
@@ -164,10 +172,16 @@ dom.createLobbyBtn.addEventListener('click', () => {
   
   sendMessage(message);
   dom.lobbyNameInput.value = '';
+  dom.lobbyError.classList.add('hidden');
 });
 
 dom.lobbyNameInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') dom.createLobbyBtn.click();
+});
+
+// Clear lobby error when user starts typing
+dom.lobbyNameInput.addEventListener('input', () => {
+  dom.lobbyError.classList.add('hidden');
 });
 
 // ── Custom select dropdown ──
