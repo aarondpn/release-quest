@@ -1,7 +1,8 @@
-const db = require('./db');
+import * as db from './db.ts';
+import type { GameState, PlayerInfo } from './types.ts';
 
-async function recordGameEnd(state, playerInfo, won) {
-  const promises = [];
+export async function recordGameEnd(state: GameState, playerInfo: Map<string, PlayerInfo>, won: boolean): Promise<void> {
+  const promises: Promise<void>[] = [];
 
   for (const pid of Object.keys(state.players)) {
     const info = playerInfo.get(pid);
@@ -23,5 +24,3 @@ async function recordGameEnd(state, playerInfo, won) {
     }
   }
 }
-
-module.exports = { recordGameEnd };

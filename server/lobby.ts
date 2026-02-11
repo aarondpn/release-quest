@@ -1,23 +1,24 @@
-const { LOBBY_CONFIG } = require('./config');
-const { createGameState, createCounters } = require('./state');
-const db = require('./db');
+import { LOBBY_CONFIG } from './config.ts';
+import { createGameState, createCounters } from './state.ts';
+import * as db from './db.ts';
+import type { GameContext, LobbyMemory, PlayerData, DbLobbyRow } from './types.ts';
 
 // In-memory registry: lobbyId -> { state, counters, timers }
-const lobbies = new Map();
+export const lobbies = new Map<number, LobbyMemory>();
 
 // Reverse lookup: playerId -> lobbyId
-const playerToLobby = new Map();
+export const playerToLobby = new Map<string, number>();
 
-async function createLobby(name, maxPlayers) {
+export async function createLobby(name: string, maxPlayers: number | undefined): Promise<{ lobby?: DbLobbyRow; error?: string }> {
   const lobbyCount = await db.getActiveLobbyCount();
   if (lobbyCount >= LOBBY_CONFIG.maxLobbies) {
     return { error: 'Maximum number of lobbies reached' };
   }
 
-  maxPlayers = Math.min(maxPlayers || LOBBY_CONFIG.defaultMaxPlayers, LOBBY_CONFIG.maxPlayersLimit);
-  maxPlayers = Math.max(1, maxPlayers);
+  let mp = Math.min(maxPlayers || LOBBY_CONFIG.defaultMaxPlayers, LOBBY_CONFIG.maxPlayersLimit);
+  mp = Math.max(1, mp);
 
-  const row = await db.createLobby(name, maxPlayers);
+  const row = await db.createLobby(name, mp);
 
   lobbies.set(row.id, {
     state: createGameState(),
@@ -28,7 +29,7 @@ async function createLobby(name, maxPlayers) {
   return { lobby: row };
 }
 
-async function joinLobby(lobbyId, playerId, playerData) {
+export async function joinLobby(lobbyId: number, playerId: string, playerData: PlayerData): Promise<{ lobby?: DbLobbyRow; mem?: LobbyMemory; error?: string }> {
   const lobby = await db.getLobby(lobbyId);
   if (!lobby) return { error: 'Lobby not found' };
   if (lobby.status !== 'active') return { error: 'Lobby is no longer active' };
@@ -50,17 +51,17 @@ async function joinLobby(lobbyId, playerId, playerData) {
     });
   }
 
-  const mem = lobbies.get(lobbyId);
+  const mem = lobbies.get(lobbyId)!;
   mem.state.players[playerId] = playerData;
 
   return { lobby, mem };
 }
 
-async function leaveLobby(lobbyId, playerId) {
+export async function leaveLobby(lobbyId: number, playerId: string): Promise<void> {
   try {
     await db.leaveLobby(lobbyId, playerId);
-  } catch (err) {
-    console.error('DB leaveLobby failed:', err.message);
+  } catch (err: unknown) {
+    console.error('DB leaveLobby failed:', (err as Error).message);
   }
   playerToLobby.delete(playerId);
 
@@ -85,7 +86,7 @@ async function leaveLobby(lobbyId, playerId) {
   }
 }
 
-async function destroyLobby(lobbyId) {
+export async function destroyLobby(lobbyId: number): Promise<void> {
   const mem = lobbies.get(lobbyId);
   if (mem) {
     // Clear any running game timers
@@ -106,12 +107,12 @@ async function destroyLobby(lobbyId) {
   await db.deleteLobby(lobbyId);
 }
 
-async function listLobbies() {
+export async function listLobbies(): Promise<DbLobbyRow[]> {
   return db.listLobbies();
 }
 
 // Periodic sweep: destroy any in-memory lobby with 0 players
-async function sweepEmptyLobbies() {
+export async function sweepEmptyLobbies(): Promise<void> {
   for (const [lobbyId, mem] of lobbies) {
     if (Object.keys(mem.state.players).length === 0) {
       console.log(`Sweeping empty lobby ${lobbyId}`);
@@ -120,23 +121,10 @@ async function sweepEmptyLobbies() {
   }
 }
 
-function getLobbyForPlayer(playerId) {
+export function getLobbyForPlayer(playerId: string): number | null {
   return playerToLobby.get(playerId) || null;
 }
 
-function getLobbyState(lobbyId) {
+export function getLobbyState(lobbyId: number): LobbyMemory | null {
   return lobbies.get(lobbyId) || null;
 }
-
-module.exports = {
-  lobbies,
-  playerToLobby,
-  createLobby,
-  joinLobby,
-  leaveLobby,
-  destroyLobby,
-  listLobbies,
-  sweepEmptyLobbies,
-  getLobbyForPlayer,
-  getLobbyState,
-};

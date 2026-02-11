@@ -1,5 +1,7 @@
-function createTimerBag() {
-  const timers = new Map();
+import type { TimerBag } from './types.ts';
+
+export function createTimerBag(): TimerBag {
+  const timers = new Map<string, { handle: ReturnType<typeof setTimeout>; type: 'timeout' | 'interval' }>();
   return {
     setTimeout(name, fn, ms) {
       this.clear(name);
@@ -26,5 +28,3 @@ function createTimerBag() {
     },
   };
 }
-
-module.exports = { createTimerBag };

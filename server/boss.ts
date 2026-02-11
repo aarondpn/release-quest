@@ -1,14 +1,18 @@
-const { BOSS_CONFIG, RUBBER_DUCK_CONFIG } = require('./config');
-const { randomPosition } = require('./state');
-const network = require('./network');
-const { createTimerBag } = require('./timer-bag');
+import { BOSS_CONFIG, RUBBER_DUCK_CONFIG } from './config.ts';
+import { randomPosition } from './state.ts';
+import * as network from './network.ts';
+import { createTimerBag } from './timer-bag.ts';
+import * as bugs from './bugs.ts';
+import * as game from './game.ts';
+import * as powerups from './powerups.ts';
+import type { GameContext } from './types.ts';
 
-function ensureBossTimers(ctx) {
+function ensureBossTimers(ctx: GameContext) {
   if (!ctx.timers._boss) ctx.timers._boss = createTimerBag();
   return ctx.timers._boss;
 }
 
-function clearBossTimers(ctx) {
+export function clearBossTimers(ctx: GameContext): void {
   if (ctx.timers._boss) {
     ctx.timers._boss.clearAll();
   }
@@ -18,7 +22,7 @@ function clearBossTimers(ctx) {
   if (ctx.timers.bossTick) { clearInterval(ctx.timers.bossTick); ctx.timers.bossTick = null; }
 }
 
-function getEffectiveSpawnRate(ctx) {
+export function getEffectiveSpawnRate(ctx: GameContext): number {
   const { state } = ctx;
   if (!state.boss) return BOSS_CONFIG.minionSpawnRate;
   const base = state.boss.currentSpawnRate;
@@ -26,7 +30,7 @@ function getEffectiveSpawnRate(ctx) {
   return base;
 }
 
-function getEffectiveMaxOnScreen(ctx) {
+export function getEffectiveMaxOnScreen(ctx: GameContext): number {
   const { state } = ctx;
   if (!state.boss) return BOSS_CONFIG.minionMaxOnScreen;
   const base = state.boss.currentMaxOnScreen;
@@ -34,7 +38,7 @@ function getEffectiveMaxOnScreen(ctx) {
   return base;
 }
 
-function setupBossWander(ctx, interval) {
+export function setupBossWander(ctx: GameContext, interval: number): void {
   const bt = ensureBossTimers(ctx);
   const { lobbyId, state } = ctx;
   bt.setInterval('bossWander', () => {
@@ -46,16 +50,15 @@ function setupBossWander(ctx, interval) {
   }, interval);
 }
 
-function setupMinionSpawning(ctx, rate) {
+export function setupMinionSpawning(ctx: GameContext, rate: number): void {
   const bt = ensureBossTimers(ctx);
-  const { state } = ctx;
   bt.setInterval('bossMinionSpawn', () => {
-    if (state.hammerStunActive) return;
-    require('./bugs').spawnMinion(ctx);
+    if (ctx.state.hammerStunActive) return;
+    bugs.spawnMinion(ctx);
   }, rate);
 }
 
-function startBoss(ctx) {
+export function startBoss(ctx: GameContext): void {
   const { lobbyId, state } = ctx;
   state.phase = 'boss';
   const pos = randomPosition();
@@ -98,7 +101,7 @@ function startBoss(ctx) {
   bt.setInterval('bossTick', () => bossTick(ctx), 1000);
 }
 
-function bossTick(ctx) {
+function bossTick(ctx: GameContext): void {
   const { lobbyId, state } = ctx;
   if (state.phase !== 'boss' || !state.boss) return;
 
@@ -140,12 +143,11 @@ function bossTick(ctx) {
   });
 
   if (state.boss.timeRemaining <= 0) {
-    const game = require('./game');
     game.endGame(ctx, 'loss-timeout', false);
   }
 }
 
-function handleBossClick(ctx, pid) {
+export function handleBossClick(ctx: GameContext, pid: string): void {
   const { lobbyId, state } = ctx;
   if (state.phase !== 'boss' || !state.boss) return;
   const player = state.players[pid];
@@ -157,7 +159,6 @@ function handleBossClick(ctx, pid) {
 
   // Duck buff doubles click damage
   let damage = BOSS_CONFIG.clickDamage;
-  const powerups = require('./powerups');
   if (powerups.isDuckBuffActive(ctx)) {
     damage *= RUBBER_DUCK_CONFIG.pointsMultiplier;
   }
@@ -202,8 +203,7 @@ function handleBossClick(ctx, pid) {
   }
 }
 
-function defeatBoss(ctx) {
-  const game = require('./game');
+function defeatBoss(ctx: GameContext): void {
   const { state } = ctx;
   const playerCount = Object.keys(state.players).length;
   if (playerCount > 0) {
@@ -216,5 +216,3 @@ function defeatBoss(ctx) {
 
   game.endGame(ctx, 'win', true);
 }
-
-module.exports = { startBoss, bossTick, handleBossClick, defeatBoss, clearBossTimers, getEffectiveSpawnRate, getEffectiveMaxOnScreen, setupBossWander, setupMinionSpawning };

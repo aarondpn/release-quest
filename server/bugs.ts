@@ -1,18 +1,21 @@
-const { HP_DAMAGE, BOSS_CONFIG, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG, PIPELINE_BUG_CONFIG, MEMORY_LEAK_CONFIG, LOGICAL_W, LOGICAL_H } = require('./config');
-const { randomPosition, currentLevelConfig } = require('./state');
-const network = require('./network');
-const { createTimerBag } = require('./timer-bag');
-const { getDescriptor, getType } = require('./entity-types');
+import { HP_DAMAGE, BOSS_CONFIG, HEISENBUG_CONFIG, CODE_REVIEW_CONFIG, MERGE_CONFLICT_CONFIG, PIPELINE_BUG_CONFIG, MEMORY_LEAK_CONFIG, LOGICAL_W, LOGICAL_H } from './config.ts';
+import { randomPosition, currentLevelConfig } from './state.ts';
+import * as network from './network.ts';
+import { createTimerBag } from './timer-bag.ts';
+import { getDescriptor, getType } from './entity-types.ts';
+import * as game from './game.ts';
+import * as bossModule from './boss.ts';
+import type { GameContext, BugEntity, SpawnEntityOptions } from './types.ts';
 
-function spawnEntity(ctx, { phaseCheck, maxOnScreen, escapeTime, isMinion, onEscapeCheck, variant }) {
+function spawnEntity(ctx: GameContext, opts: SpawnEntityOptions): boolean {
   const { lobbyId, state, counters } = ctx;
-  if (state.phase !== phaseCheck) return false;
-  if (Object.keys(state.bugs).length >= maxOnScreen) {
+  if (state.phase !== opts.phaseCheck) return false;
+  if (Object.keys(state.bugs).length >= opts.maxOnScreen) {
     if (ctx.matchLog) {
-      ctx.matchLog.log(isMinion ? 'minion-spawn-skip' : 'spawn-skip', {
+      ctx.matchLog.log(opts.isMinion ? 'minion-spawn-skip' : 'spawn-skip', {
         reason: 'max-on-screen',
         activeBugs: Object.keys(state.bugs).length,
-        maxOnScreen,
+        maxOnScreen: opts.maxOnScreen,
       });
     }
     return false;
@@ -20,30 +23,27 @@ function spawnEntity(ctx, { phaseCheck, maxOnScreen, escapeTime, isMinion, onEsc
 
   const id = 'bug_' + (counters.nextBugId++);
   const pos = randomPosition();
-  const bug = { id, x: pos.x, y: pos.y, _timers: createTimerBag() };
-  if (isMinion) bug.isMinion = true;
+  const bug: BugEntity = { id, x: pos.x, y: pos.y, _timers: createTimerBag(), escapeTime: opts.escapeTime, escapeStartedAt: Date.now() };
+  if (opts.isMinion) bug.isMinion = true;
 
-  if (variant) Object.assign(bug, variant);
-
-  bug.escapeTime = escapeTime;
-  bug.escapeStartedAt = Date.now();
+  if (opts.variant) Object.assign(bug, opts.variant);
 
   state.bugs[id] = bug;
 
   const descriptor = getDescriptor(bug);
-  descriptor.init(bug, ctx, { phaseCheck });
+  descriptor.init(bug, ctx, { phaseCheck: opts.phaseCheck });
 
   if (ctx.matchLog) {
-    ctx.matchLog.log(isMinion ? 'minion-spawn' : 'spawn', {
+    ctx.matchLog.log(opts.isMinion ? 'minion-spawn' : 'spawn', {
       bugId: id,
       type: getType(bug),
       activeBugs: Object.keys(state.bugs).length,
-      ...(!isMinion ? { bugsSpawned: state.bugsSpawned, bugsTotal: currentLevelConfig(state).bugsTotal } : {}),
+      ...(!opts.isMinion ? { bugsSpawned: state.bugsSpawned, bugsTotal: currentLevelConfig(state).bugsTotal } : {}),
     });
   }
 
-  const broadcastPayload = { id, x: bug.x, y: bug.y };
-  if (isMinion) broadcastPayload.isMinion = true;
+  const broadcastPayload: Record<string, unknown> = { id, x: bug.x, y: bug.y };
+  if (opts.isMinion) broadcastPayload.isMinion = true;
   Object.assign(broadcastPayload, descriptor.broadcastFields(bug));
 
   network.broadcastToLobby(lobbyId, { type: 'bug-spawned', bug: broadcastPayload });
@@ -53,13 +53,13 @@ function spawnEntity(ctx, { phaseCheck, maxOnScreen, escapeTime, isMinion, onEsc
 
   bug._onEscape = () => {
     if (!state.bugs[id]) return;
-    descriptor.onEscape(bug, ctx, onEscapeCheck);
+    descriptor.onEscape(bug, ctx, opts.onEscapeCheck);
   };
-  bug._timers.setTimeout('escape', bug._onEscape, escapeTime);
+  bug._timers.setTimeout('escape', bug._onEscape, opts.escapeTime);
   return true;
 }
 
-function spawnBug(ctx) {
+function spawnBug(ctx: GameContext): void {
   const { state, counters } = ctx;
   if (state.phase !== 'playing') return;
   const cfg = currentLevelConfig(state);
@@ -70,7 +70,6 @@ function spawnBug(ctx) {
     return;
   }
 
-  const game = require('./game');
   const playerCount = Object.keys(state.players).length;
 
   // Roll for pipeline chain (level 2+, needs room for 3+ bugs)
@@ -84,7 +83,7 @@ function spawnBug(ctx) {
       cfg.bugsTotal - state.bugsSpawned
     );
     if (maxLen >= minChain) {
-      spawnPipelineChain(ctx, cfg, game, minChain + Math.floor(Math.random() * (maxLen - minChain + 1)));
+      spawnPipelineChain(ctx, cfg, minChain + Math.floor(Math.random() * (maxLen - minChain + 1)));
       return;
     }
   }
@@ -93,12 +92,12 @@ function spawnBug(ctx) {
   if (playerCount >= MERGE_CONFLICT_CONFIG.minPlayers
     && Object.keys(state.bugs).length + 2 <= cfg.maxOnScreen
     && Math.random() < MERGE_CONFLICT_CONFIG.chance) {
-    spawnMergeConflict(ctx, cfg, game);
+    spawnMergeConflict(ctx, cfg);
     return;
   }
 
   // Roll for variant
-  let variant = null;
+  let variant: Partial<BugEntity> | null = null;
 
   // Heisenbug: any level
   if (Math.random() < HEISENBUG_CONFIG.chance) {
@@ -130,7 +129,7 @@ function spawnBug(ctx) {
   if (spawned) state.bugsSpawned++;
 }
 
-function spawnMergeConflict(ctx, cfg, game) {
+function spawnMergeConflict(ctx: GameContext, cfg: { escapeTime: number; maxOnScreen: number; bugsTotal: number; spawnRate: number }): void {
   const { lobbyId, state, counters } = ctx;
   const conflictId = 'conflict_' + (counters.nextConflictId++);
   const escapeTime = cfg.escapeTime * MERGE_CONFLICT_CONFIG.escapeTimeMultiplier;
@@ -143,13 +142,13 @@ function spawnMergeConflict(ctx, cfg, game) {
   const pos1 = randomPosition();
   const pos2 = randomPosition();
 
-  const bug1 = {
+  const bug1: BugEntity = {
     id: id1, x: pos1.x, y: pos1.y, _timers: createTimerBag(),
     mergeConflict: conflictId, mergePartner: id2, mergeSide: 'left',
     mergeClicked: false, mergeClickedBy: null, mergeClickedAt: 0,
     escapeTime, escapeStartedAt: Date.now(),
   };
-  const bug2 = {
+  const bug2: BugEntity = {
     id: id2, x: pos2.x, y: pos2.y, _timers: createTimerBag(),
     mergeConflict: conflictId, mergePartner: id1, mergeSide: 'right',
     mergeClicked: false, mergeClickedBy: null, mergeClickedAt: 0,
@@ -204,7 +203,7 @@ function spawnMergeConflict(ctx, cfg, game) {
   bug2._sharedEscapeWith = id1;
 }
 
-function spawnPipelineChain(ctx, cfg, game, chainLength) {
+function spawnPipelineChain(ctx: GameContext, cfg: { escapeTime: number; maxOnScreen: number; bugsTotal: number; spawnRate: number }, chainLength: number): void {
   const { lobbyId, state, counters } = ctx;
   const chainId = 'chain_' + (counters.nextChainId++);
   const escapeTime = cfg.escapeTime * PIPELINE_BUG_CONFIG.escapeTimeMultiplier;
@@ -217,13 +216,13 @@ function spawnPipelineChain(ctx, cfg, game, chainLength) {
   const angle = Math.random() * Math.PI * 2;
   const spacing = 40;
 
-  const bugIds = [];
-  const chainBugs = [];
+  const bugIds: string[] = [];
+  const chainBugs: BugEntity[] = [];
   for (let i = 0; i < chainLength; i++) {
     const id = 'bug_' + (counters.nextBugId++);
     const x = Math.max(pad, Math.min(LOGICAL_W - pad, startPos.x + Math.cos(angle) * spacing * i));
     const y = Math.max(pad, Math.min(LOGICAL_H - pad, startPos.y + Math.sin(angle) * spacing * i));
-    const bug = {
+    const bug: BugEntity = {
       id, x, y, _timers: createTimerBag(),
       isPipeline: true, chainId, chainIndex: i, chainLength,
       escapeTime, escapeStartedAt: Date.now(),
@@ -249,7 +248,7 @@ function spawnPipelineChain(ctx, cfg, game, chainLength) {
     if (alive.length === 0) { headBug._timers.clear('chainWander'); return; }
 
     // Store old positions
-    const oldPos = {};
+    const oldPos: Record<string, { x: number; y: number }> = {};
     for (const bid of alive) {
       const b = state.bugs[bid];
       oldPos[bid] = { x: b.x, y: b.y };
@@ -341,15 +340,13 @@ function spawnPipelineChain(ctx, cfg, game, chainLength) {
   }
 }
 
-function spawnMinion(ctx) {
+export function spawnMinion(ctx: GameContext): void {
   const { state } = ctx;
   if (state.phase !== 'boss') return;
-  const bossModule = require('./boss');
-  const game = require('./game');
   const maxOnScreen = bossModule.getEffectiveMaxOnScreen(ctx);
 
   // Roll for feature variant during boss phase
-  let variant = null;
+  let variant: Partial<BugEntity> | null = null;
   if (Math.random() < CODE_REVIEW_CONFIG.bossPhaseChance) {
     variant = { isFeature: true };
   }
@@ -364,7 +361,7 @@ function spawnMinion(ctx) {
   });
 }
 
-function clearAllBugs(ctx) {
+export function clearAllBugs(ctx: GameContext): void {
   const { state } = ctx;
   for (const id of Object.keys(state.bugs)) {
     state.bugs[id]._timers.clearAll();
@@ -373,16 +370,16 @@ function clearAllBugs(ctx) {
   state.pipelineChains = {};
 }
 
-function clearSpawnTimer(ctx) {
+export function clearSpawnTimer(ctx: GameContext): void {
   if (ctx.timers.spawnTimer) {
     clearInterval(ctx.timers.spawnTimer);
     ctx.timers.spawnTimer = null;
   }
 }
 
-function startSpawning(ctx, rate) {
+export function startSpawning(ctx: GameContext, rate: number): void {
   ctx.timers.spawnTimer = setInterval(() => spawnBug(ctx), rate);
   spawnBug(ctx);
 }
 
-module.exports = { spawnBug, spawnMinion, spawnMergeConflict, clearAllBugs, clearSpawnTimer, startSpawning, spawnEntity };
+export { spawnBug, spawnMergeConflict, spawnEntity };

@@ -1,28 +1,30 @@
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
-const { WebSocketServer } = require('ws');
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import { WebSocketServer } from 'ws';
+import type { WebSocket, RawData } from 'ws';
 
-const { SERVER_CONFIG, LOGICAL_W, LOGICAL_H, COLORS, ICONS } = require('./server/config');
-const { getStateSnapshot } = require('./server/state');
-const network = require('./server/network');
-const db = require('./server/db');
-const lobby = require('./server/lobby');
-const boss = require('./server/boss');
-const game = require('./server/game');
-const powerups = require('./server/powerups');
-const auth = require('./server/auth');
-const entityTypes = require('./server/entity-types');
+import { SERVER_CONFIG, LOGICAL_W, LOGICAL_H, COLORS, ICONS } from './server/config.ts';
+import { getStateSnapshot } from './server/state.ts';
+import * as network from './server/network.ts';
+import * as db from './server/db.ts';
+import * as lobby from './server/lobby.ts';
+import * as boss from './server/boss.ts';
+import * as game from './server/game.ts';
+import * as powerups from './server/powerups.ts';
+import * as auth from './server/auth.ts';
+import * as entityTypes from './server/entity-types.ts';
+import type { GameContext, PlayerInfo } from './server/types.ts';
 
 // Global counters for unique player IDs/colors across all lobbies
 let nextPlayerId = 1;
 let colorIndex = 0;
 
 // Pre-lobby player info: playerId -> { name, color, icon }
-const playerInfo = new Map();
+const playerInfo = new Map<string, PlayerInfo>();
 
 // ── MIME types for static file serving ──
-const MIME = {
+const MIME: Record<string, string> = {
   '.html': 'text/html',
   '.css': 'text/css',
   '.js': 'application/javascript',
@@ -35,9 +37,9 @@ const MIME = {
 
 // ── HTTP server ──
 const httpServer = http.createServer((req, res) => {
-  const urlPath = req.url.split('?')[0];
+  const urlPath = req.url!.split('?')[0];
   let filePath = urlPath === '/' ? '/index.html' : urlPath;
-  filePath = path.join(__dirname, 'public', filePath);
+  filePath = path.join(import.meta.dirname, 'public', filePath);
 
   const ext = path.extname(filePath);
   const contentType = MIME[ext] || 'application/octet-stream';
@@ -54,16 +56,16 @@ const httpServer = http.createServer((req, res) => {
 });
 
 // ── Helper to get lobby context for a player ──
-function getCtxForPlayer(pid) {
+function getCtxForPlayer(pid: string): GameContext | null {
   const lobbyId = lobby.getLobbyForPlayer(pid);
   if (!lobbyId) return null;
   const mem = lobby.getLobbyState(lobbyId);
   if (!mem) return null;
-  const ctx = { lobbyId, state: mem.state, counters: mem.counters, timers: mem.timers, playerInfo };
+  const ctx: GameContext = { lobbyId, state: mem.state, counters: mem.counters, timers: mem.timers, matchLog: null, playerInfo };
   // matchLog must persist across ctx instances so logging survives level transitions
   Object.defineProperty(ctx, 'matchLog', {
     get() { return mem.timers._matchLog || null; },
-    set(v) { mem.timers._matchLog = v; },
+    set(v: unknown) { mem.timers._matchLog = v; },
     enumerable: true,
   });
   return ctx;
@@ -74,7 +76,7 @@ const wss = new WebSocketServer({ server: httpServer });
 network.init(wss);
 
 // ── WebSocket connection handling ──
-wss.on('connection', (ws) => {
+wss.on('connection', (ws: WebSocket) => {
   const playerId = 'player_' + (nextPlayerId++);
   const color = COLORS[colorIndex % COLORS.length];
   const icon = ICONS[colorIndex % ICONS.length];
@@ -95,10 +97,10 @@ wss.on('connection', (ws) => {
     icon,
   });
 
-  ws.on('message', async (raw) => {
-    let msg;
+  ws.on('message', async (raw: RawData) => {
+    let msg: any;
     try {
-      msg = JSON.parse(raw);
+      msg = JSON.parse(raw.toString());
     } catch {
       return;
     }
@@ -111,10 +113,10 @@ wss.on('connection', (ws) => {
         const username = String(msg.username || '').trim();
         const password = String(msg.password || '');
         const displayName = String(msg.displayName || '').trim().slice(0, 16);
-        const icon = msg.icon || undefined;
+        const regIcon: string | undefined = msg.icon || undefined;
 
-        auth.register(username, password, displayName, icon).then(result => {
-          if (result.error) {
+        auth.register(username, password, displayName, regIcon).then(result => {
+          if (result.error !== undefined) {
             console.log(`[auth] ${pid} register failed: ${result.error}`);
             network.send(ws, { type: 'auth-result', action: 'register', success: false, error: result.error });
             return;
@@ -155,7 +157,7 @@ wss.on('connection', (ws) => {
         const password = String(msg.password || '');
 
         auth.login(username, password).then(result => {
-          if (result.error) {
+          if (result.error !== undefined) {
             console.log(`[auth] ${pid} login failed for "${username}": ${result.error}`);
             network.send(ws, { type: 'auth-result', action: 'login', success: false, error: result.error });
             return;
@@ -257,7 +259,7 @@ wss.on('connection', (ws) => {
       case 'list-lobbies': {
         lobby.listLobbies().then(lobbies => {
           network.send(ws, { type: 'lobby-list', lobbies });
-        }).catch(err => {
+        }).catch(() => {
           network.send(ws, { type: 'lobby-error', message: 'Failed to list lobbies' });
         });
         break;
@@ -273,11 +275,11 @@ wss.on('connection', (ws) => {
             network.send(ws, { type: 'lobby-error', message: result.error });
             return;
           }
-          console.log(`[lobby] ${pid} created lobby "${lobbyName}" (${result.lobby.code})`);
+          console.log(`[lobby] ${pid} created lobby "${lobbyName}" (${result.lobby!.code})`);
           network.send(ws, { type: 'lobby-created', lobby: result.lobby });
           // Broadcast updated lobby list to all unattached clients
           broadcastLobbyList();
-        }).catch(err => {
+        }).catch(() => {
           network.send(ws, { type: 'lobby-error', message: 'Failed to create lobby' });
         });
         break;
@@ -329,8 +331,8 @@ wss.on('connection', (ws) => {
           network.send(ws, {
             type: 'lobby-joined',
             lobbyId,
-            lobbyName: result.lobby.name,
-            lobbyCode: result.lobby.code,
+            lobbyName: result.lobby!.name,
+            lobbyCode: result.lobby!.code,
             ...getStateSnapshot(ctx.state),
           });
 
@@ -342,7 +344,7 @@ wss.on('connection', (ws) => {
           }, ws);
 
           broadcastLobbyList();
-        }).catch(err => {
+        }).catch(() => {
           network.send(ws, { type: 'lobby-error', message: 'Failed to join lobby' });
         });
         break;
@@ -388,7 +390,7 @@ wss.on('connection', (ws) => {
         if (st.phase !== 'playing' && st.phase !== 'boss') break;
         const bug = st.bugs[msg.bugId];
         if (!bug || !bug.isMemoryLeak) break;
-        entityTypes.getDescriptor(bug).onHoldStart(bug, ctx, pid);
+        entityTypes.getDescriptor(bug).onHoldStart!(bug, ctx, pid);
         break;
       }
 
@@ -399,7 +401,7 @@ wss.on('connection', (ws) => {
         if (st.phase !== 'playing' && st.phase !== 'boss') break;
         const bug = st.bugs[msg.bugId];
         if (!bug || !bug.isMemoryLeak) break;
-        entityTypes.getDescriptor(bug).onHoldComplete(bug, ctx, pid);
+        entityTypes.getDescriptor(bug).onHoldComplete!(bug, ctx, pid);
         break;
       }
 
@@ -436,12 +438,12 @@ wss.on('connection', (ws) => {
       case 'cursor-move': {
         const ctx = getCtxForPlayer(pid);
         if (!ctx) break;
-        const { state: st, lobbyId } = ctx;
+        const { state: st, lobbyId: lid } = ctx;
         const player = st.players[pid];
         if (!player) break;
         player.x = msg.x;
         player.y = msg.y;
-        network.broadcastToLobby(lobbyId, {
+        network.broadcastToLobby(lid, {
           type: 'player-cursor',
           playerId: pid,
           x: msg.x,
@@ -478,14 +480,14 @@ wss.on('connection', (ws) => {
   });
 });
 
-async function handleLeaveLobby(ws, pid, lobbyId) {
+async function handleLeaveLobby(ws: WebSocket, pid: string, lobbyId: number): Promise<void> {
   const mem = lobby.getLobbyState(lobbyId);
   network.wsToLobby.delete(ws);
   network.removeClientFromLobby(lobbyId, ws);
 
   try {
     await lobby.leaveLobby(lobbyId, pid);
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('Error leaving lobby:', err);
   }
 
@@ -500,16 +502,16 @@ async function handleLeaveLobby(ws, pid, lobbyId) {
 
     // Reset game if lobby is now empty (destroyLobby already called by leaveLobby)
     if (remaining === 0) {
-      game.resetToLobby({ lobbyId, state: mem.state, counters: mem.counters, timers: mem.timers });
+      game.resetToLobby({ lobbyId, state: mem.state, counters: mem.counters, timers: mem.timers, matchLog: null, playerInfo });
     }
   }
 }
 
-function broadcastLobbyList() {
+function broadcastLobbyList(): void {
   lobby.listLobbies().then(lobbies => {
     // Send to all clients not in a lobby
     const data = JSON.stringify({ type: 'lobby-list', lobbies });
-    wss.clients.forEach(client => {
+    wss.clients.forEach((client: WebSocket) => {
       if (client.readyState === 1 && !network.wsToLobby.has(client)) {
         client.send(data);
       }
@@ -518,12 +520,12 @@ function broadcastLobbyList() {
 }
 
 // ── Startup ──
-async function start() {
+async function start(): Promise<void> {
   try {
     await db.initialize();
     console.log('Database initialized');
-  } catch (err) {
-    console.error('Database initialization failed:', err.message);
+  } catch (err: unknown) {
+    console.error('Database initialization failed:', (err as Error).message);
     console.log('Starting without database — lobby persistence disabled');
   }
 

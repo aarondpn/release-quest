@@ -2,14 +2,25 @@
   "name": "release-quest",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Multiplayer bug-catching arcade game",
-  "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=24"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
     "pg": "^8.13.0",
     "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.0",
+    "@types/ws": "^8.5.0",
+    "typescript": "^5.8.0"
   }
 }

@@ -1,10 +1,10 @@
-FROM node:22-alpine
+FROM node:24-alpine
 WORKDIR /app
-COPY package.json ./
+COPY package.json package-lock.json ./
 RUN npm install --production
-COPY config.json ./
-COPY server.js ./
+COPY tsconfig.json config.json ./
+COPY server.ts ./
 COPY server/ ./server/
 COPY public/ ./public/
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["node", "server.ts"]

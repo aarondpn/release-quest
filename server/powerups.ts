@@ -1,20 +1,21 @@
-const { RUBBER_DUCK_CONFIG, HOTFIX_HAMMER_CONFIG, BOSS_CONFIG } = require('./config');
-const { randomPosition } = require('./state');
-const network = require('./network');
-const boss = require('./boss');
-const { getDescriptor } = require('./entity-types');
+import { RUBBER_DUCK_CONFIG, HOTFIX_HAMMER_CONFIG, BOSS_CONFIG } from './config.ts';
+import { randomPosition } from './state.ts';
+import * as network from './network.ts';
+import * as boss from './boss.ts';
+import { getDescriptor } from './entity-types.ts';
+import type { GameContext } from './types.ts';
 
-function startDuckSpawning(ctx) {
+export function startDuckSpawning(ctx: GameContext): void {
   scheduleDuckSpawn(ctx);
 }
 
-function scheduleDuckSpawn(ctx) {
+function scheduleDuckSpawn(ctx: GameContext): void {
   const delay = RUBBER_DUCK_CONFIG.spawnIntervalMin +
     Math.random() * (RUBBER_DUCK_CONFIG.spawnIntervalMax - RUBBER_DUCK_CONFIG.spawnIntervalMin);
   ctx.timers.duckSpawn = setTimeout(() => spawnDuck(ctx), delay);
 }
 
-function spawnDuck(ctx) {
+function spawnDuck(ctx: GameContext): void {
   const { lobbyId, state, counters } = ctx;
   if (state.phase !== 'playing' && state.phase !== 'boss') {
     scheduleDuckSpawn(ctx);
@@ -51,7 +52,7 @@ function spawnDuck(ctx) {
   }, RUBBER_DUCK_CONFIG.despawnTime);
 }
 
-function collectDuck(ctx, pid) {
+export function collectDuck(ctx: GameContext, pid: string): void {
   const { lobbyId, state } = ctx;
   if (!state.rubberDuck) return;
   const player = state.players[pid];
@@ -88,12 +89,12 @@ function collectDuck(ctx, pid) {
   scheduleDuckSpawn(ctx);
 }
 
-function isDuckBuffActive(ctx) {
+export function isDuckBuffActive(ctx: GameContext): boolean {
   const { state } = ctx;
-  return state.duckBuff && Date.now() < state.duckBuff.expiresAt;
+  return !!(state.duckBuff && Date.now() < state.duckBuff.expiresAt);
 }
 
-function clearDuck(ctx) {
+export function clearDuck(ctx: GameContext): void {
   const { state } = ctx;
   if (ctx.timers.duckSpawn) { clearTimeout(ctx.timers.duckSpawn); ctx.timers.duckSpawn = null; }
   if (ctx.timers.duckWander) { clearInterval(ctx.timers.duckWander); ctx.timers.duckWander = null; }
@@ -105,17 +106,17 @@ function clearDuck(ctx) {
 
 // ── Hotfix Hammer ──
 
-function startHammerSpawning(ctx) {
+export function startHammerSpawning(ctx: GameContext): void {
   scheduleHammerSpawn(ctx);
 }
 
-function scheduleHammerSpawn(ctx) {
+function scheduleHammerSpawn(ctx: GameContext): void {
   const delay = HOTFIX_HAMMER_CONFIG.spawnIntervalMin +
     Math.random() * (HOTFIX_HAMMER_CONFIG.spawnIntervalMax - HOTFIX_HAMMER_CONFIG.spawnIntervalMin);
   ctx.timers.hammerSpawn = setTimeout(() => spawnHammer(ctx), delay);
 }
 
-function spawnHammer(ctx) {
+function spawnHammer(ctx: GameContext): void {
   const { lobbyId, state, counters } = ctx;
   if (state.phase !== 'playing' && state.phase !== 'boss') {
     scheduleHammerSpawn(ctx);
@@ -123,7 +124,7 @@ function spawnHammer(ctx) {
   }
   if (state.hotfixHammer) return; // one at a time
 
-  const id = 'hammer_' + (counters.nextHammerId++);  
+  const id = 'hammer_' + (counters.nextHammerId++);
   const pos = randomPosition();
 
   state.hotfixHammer = { id, x: pos.x, y: pos.y };
@@ -142,7 +143,7 @@ function spawnHammer(ctx) {
   }, HOTFIX_HAMMER_CONFIG.despawnTime);
 }
 
-function collectHammer(ctx, pid) {
+export function collectHammer(ctx: GameContext, pid: string): void {
   const { lobbyId, state } = ctx;
   if (!state.hotfixHammer) return;
   const player = state.players[pid];
@@ -183,7 +184,7 @@ function collectHammer(ctx, pid) {
   scheduleHammerSpawn(ctx);
 }
 
-function stunAllBugs(ctx) {
+function stunAllBugs(ctx: GameContext): void {
   const { state } = ctx;
   for (const bugId in state.bugs) {
     const bug = state.bugs[bugId];
@@ -191,7 +192,7 @@ function stunAllBugs(ctx) {
   }
 }
 
-function resumeAllBugs(ctx) {
+function resumeAllBugs(ctx: GameContext): void {
   const { state } = ctx;
   for (const bugId in state.bugs) {
     const bug = state.bugs[bugId];
@@ -200,7 +201,7 @@ function resumeAllBugs(ctx) {
   }
 }
 
-function stunBoss(ctx) {
+export function stunBoss(ctx: GameContext): void {
   const { state } = ctx;
   if (!state.boss || state.phase !== 'boss') return;
 
@@ -217,7 +218,7 @@ function stunBoss(ctx) {
   }
 }
 
-function resumeBoss(ctx) {
+export function resumeBoss(ctx: GameContext): void {
   const { state } = ctx;
   if (!state.boss || state.phase !== 'boss') return;
 
@@ -234,7 +235,7 @@ function resumeBoss(ctx) {
   }
 }
 
-function clearHammer(ctx) {
+export function clearHammer(ctx: GameContext): void {
   const { state } = ctx;
   if (ctx.timers.hammerSpawn) { clearTimeout(ctx.timers.hammerSpawn); ctx.timers.hammerSpawn = null; }
   if (ctx.timers.hammerDespawn) { clearTimeout(ctx.timers.hammerDespawn); ctx.timers.hammerDespawn = null; }
@@ -242,5 +243,3 @@ function clearHammer(ctx) {
   state.hotfixHammer = null;
   state.hammerStunActive = false;
 }
-
-module.exports = { startDuckSpawning, collectDuck, isDuckBuffActive, clearDuck, startHammerSpawning, collectHammer, clearHammer, stunBoss, resumeBoss };
