@@ -74,13 +74,13 @@ function spawnBug(ctx: GameContext): void {
   const playerCount = Object.keys(state.players).length;
 
   // Roll for pipeline chain (level 2+, needs room for 3+ bugs)
-  const minChain = PIPELINE_BUG_CONFIG.minChainLength;
+  const minChain = PIPELINE_BUG_MECHANICS.minChainLength;
   if (state.level >= diffConfig.specialBugs.pipelineBugStartLevel
     && Object.keys(state.bugs).length + minChain <= cfg.maxOnScreen + minChain
     && state.bugsSpawned + minChain <= cfg.bugsTotal
     && Math.random() < diffConfig.specialBugs.pipelineBugChance) {
     const maxLen = Math.min(
-      PIPELINE_BUG_CONFIG.maxChainLength,
+      PIPELINE_BUG_MECHANICS.maxChainLength,
       cfg.bugsTotal - state.bugsSpawned
     );
     if (maxLen >= minChain) {
@@ -90,7 +90,7 @@ function spawnBug(ctx: GameContext): void {
   }
 
   // Roll for merge conflict (2+ players, needs room for 2 bugs)
-  if (playerCount >= MERGE_CONFLICT_CONFIG.minPlayers
+  if (playerCount >= MERGE_CONFLICT_MECHANICS.minPlayers
     && Object.keys(state.bugs).length + 2 <= cfg.maxOnScreen
     && Math.random() < diffConfig.specialBugs.mergeConflictChance) {
     spawnMergeConflict(ctx, cfg);
@@ -102,7 +102,7 @@ function spawnBug(ctx: GameContext): void {
 
   // Heisenbug: any level
   if (Math.random() < diffConfig.specialBugs.heisenbugChance) {
-    variant = { isHeisenbug: true, fleesRemaining: HEISENBUG_CONFIG.maxFlees, lastFleeTime: 0 };
+    variant = { isHeisenbug: true, fleesRemaining: HEISENBUG_MECHANICS.maxFlees, lastFleeTime: 0 };
   }
   // Memory leak: any level (cap scales with player count so there's always a free player)
   else if (Math.random() < diffConfig.specialBugs.memoryLeakChance
@@ -115,9 +115,9 @@ function spawnBug(ctx: GameContext): void {
   }
 
   const escapeTime = variant && variant.isHeisenbug
-    ? cfg.escapeTime * HEISENBUG_CONFIG.escapeTimeMultiplier
+    ? cfg.escapeTime * HEISENBUG_MECHANICS.escapeTimeMultiplier
     : (variant && variant.isMemoryLeak
-      ? cfg.escapeTime * MEMORY_LEAK_CONFIG.escapeTimeMultiplier
+      ? cfg.escapeTime * MEMORY_LEAK_MECHANICS.escapeTimeMultiplier
       : cfg.escapeTime);
 
   const spawned = spawnEntity(ctx, {
@@ -134,7 +134,7 @@ function spawnBug(ctx: GameContext): void {
 function spawnMergeConflict(ctx: GameContext, cfg: { escapeTime: number; maxOnScreen: number; bugsTotal: number; spawnRate: number }): void {
   const { lobbyId, state, counters } = ctx;
   const conflictId = 'conflict_' + (counters.nextConflictId++);
-  const escapeTime = cfg.escapeTime * MERGE_CONFLICT_CONFIG.escapeTimeMultiplier;
+  const escapeTime = cfg.escapeTime * MERGE_CONFLICT_MECHANICS.escapeTimeMultiplier;
   const id1 = 'bug_' + (counters.nextBugId++);
   const id2 = 'bug_' + (counters.nextBugId++);
 
@@ -186,7 +186,7 @@ function spawnMergeConflict(ctx: GameContext, cfg: { escapeTime: number; maxOnSc
   const escapeHandler = () => {
     if (!state.bugs[id1] && !state.bugs[id2]) return;
     const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
-    const damage = MERGE_CONFLICT_CONFIG.doubleDamage ? diffConfig.hpDamage * 2 : diffConfig.hpDamage;
+    const damage = MERGE_CONFLICT_MECHANICS.doubleDamage ? diffConfig.hpDamage * 2 : diffConfig.hpDamage;
     if (state.bugs[id1]) { bug1._timers.clearAll(); delete state.bugs[id1]; }
     if (state.bugs[id2]) { bug2._timers.clearAll(); delete state.bugs[id2]; }
     state.hp -= damage;
@@ -209,7 +209,7 @@ function spawnMergeConflict(ctx: GameContext, cfg: { escapeTime: number; maxOnSc
 function spawnPipelineChain(ctx: GameContext, cfg: { escapeTime: number; maxOnScreen: number; bugsTotal: number; spawnRate: number }, chainLength: number): void {
   const { lobbyId, state, counters } = ctx;
   const chainId = 'chain_' + (counters.nextChainId++);
-  const escapeTime = cfg.escapeTime * PIPELINE_BUG_CONFIG.escapeTimeMultiplier;
+  const escapeTime = cfg.escapeTime * PIPELINE_BUG_MECHANICS.escapeTimeMultiplier;
   const pad = 40;
 
   state.bugsSpawned += chainLength;
