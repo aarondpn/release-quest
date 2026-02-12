@@ -9,12 +9,36 @@ import { createMatchLog } from './match-logger.ts';
 import type { GameContext } from './types.ts';
 
 function teardownGame(ctx: GameContext): void {
-  bugs.clearSpawnTimer(ctx);
-  bugs.clearAllBugs(ctx);
-  boss.clearBossTimers(ctx);
-  powerups.clearDuck(ctx);
-  powerups.clearHammer(ctx);
-  if (ctx.matchLog) { ctx.matchLog.close(); ctx.matchLog = null; }
+  try {
+    bugs.clearSpawnTimer(ctx);
+  } catch (err) {
+    console.error('Error clearing spawn timer:', err);
+  }
+  try {
+    bugs.clearAllBugs(ctx);
+  } catch (err) {
+    console.error('Error clearing bugs:', err);
+  }
+  try {
+    boss.clearBossTimers(ctx);
+  } catch (err) {
+    console.error('Error clearing boss timers:', err);
+  }
+  try {
+    powerups.clearDuck(ctx);
+  } catch (err) {
+    console.error('Error clearing duck:', err);
+  }
+  try {
+    powerups.clearHammer(ctx);
+  } catch (err) {
+    console.error('Error clearing hammer:', err);
+  }
+  try {
+    if (ctx.matchLog) { ctx.matchLog.close(); ctx.matchLog = null; }
+  } catch (err) {
+    console.error('Error closing match log:', err);
+  }
 }
 
 export function endGame(ctx: GameContext, outcome: string, win: boolean): void {
@@ -107,55 +131,73 @@ function startLevel(ctx: GameContext): void {
 }
 
 export function checkGameState(ctx: GameContext): void {
-  const { lobbyId, state } = ctx;
-  if (state.phase !== 'playing') return;
+  try {
+    const { lobbyId, state } = ctx;
+    if (state.phase !== 'playing') return;
 
-  if (state.hp <= 0) {
-    endGame(ctx, 'loss', false);
-    return;
-  }
-
-  const cfg = currentLevelConfig(state);
-  const allSpawned = state.bugsSpawned >= cfg.bugsTotal;
-  const noneAlive = Object.keys(state.bugs).length === 0;
-
-  if (allSpawned && noneAlive) {
-    bugs.clearSpawnTimer(ctx);
-    if (state.level >= MAX_LEVEL) {
-      if (ctx.matchLog) {
-        ctx.matchLog.log('level-complete', { level: state.level, next: 'boss' });
-      }
-      network.broadcastToLobby(lobbyId, {
-        type: 'level-complete',
-        level: state.level,
-        score: state.score,
-      });
-      setTimeout(() => boss.startBoss(ctx), 2000);
-    } else {
-      if (ctx.matchLog) {
-        ctx.matchLog.log('level-complete', { level: state.level, nextLevel: state.level + 1 });
-      }
-      network.broadcastToLobby(lobbyId, {
-        type: 'level-complete',
-        level: state.level,
-        score: state.score,
-      });
-      setTimeout(() => {
-        if (state.phase !== 'playing' && state.phase !== 'lobby') {
-          if (Object.keys(state.players).length === 0) return;
-        }
-        state.level++;
-        startLevel(ctx);
-      }, 2000);
+    if (state.hp <= 0) {
+      endGame(ctx, 'loss', false);
+      return;
     }
+
+    const cfg = currentLevelConfig(state);
+    const allSpawned = state.bugsSpawned >= cfg.bugsTotal;
+    const noneAlive = Object.keys(state.bugs).length === 0;
+
+    if (allSpawned && noneAlive) {
+      bugs.clearSpawnTimer(ctx);
+      if (state.level >= MAX_LEVEL) {
+        if (ctx.matchLog) {
+          ctx.matchLog.log('level-complete', { level: state.level, next: 'boss' });
+        }
+        network.broadcastToLobby(lobbyId, {
+          type: 'level-complete',
+          level: state.level,
+          score: state.score,
+        });
+        setTimeout(() => {
+          try {
+            boss.startBoss(ctx);
+          } catch (err) {
+            console.error('Error starting boss:', err);
+          }
+        }, 2000);
+      } else {
+        if (ctx.matchLog) {
+          ctx.matchLog.log('level-complete', { level: state.level, nextLevel: state.level + 1 });
+        }
+        network.broadcastToLobby(lobbyId, {
+          type: 'level-complete',
+          level: state.level,
+          score: state.score,
+        });
+        setTimeout(() => {
+          try {
+            if (state.phase !== 'playing' && state.phase !== 'lobby') {
+              if (Object.keys(state.players).length === 0) return;
+            }
+            state.level++;
+            startLevel(ctx);
+          } catch (err) {
+            console.error('Error starting next level:', err);
+          }
+        }, 2000);
+      }
+    }
+  } catch (err) {
+    console.error('Error in checkGameState:', err);
   }
 }
 
 export function checkBossGameState(ctx: GameContext): void {
-  const { state } = ctx;
-  if (state.phase !== 'boss') return;
-  if (state.hp <= 0) {
-    endGame(ctx, 'loss', false);
+  try {
+    const { state } = ctx;
+    if (state.phase !== 'boss') return;
+    if (state.hp <= 0) {
+      endGame(ctx, 'loss', false);
+    }
+  } catch (err) {
+    console.error('Error in checkBossGameState:', err);
   }
 }
 

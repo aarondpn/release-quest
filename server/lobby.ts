@@ -92,22 +92,50 @@ export async function leaveLobby(lobbyId: number, playerId: string): Promise<voi
 export async function destroyLobby(lobbyId: number): Promise<void> {
   const mem = lobbies.get(lobbyId);
   if (mem) {
-    // Clear any running game timers
-    for (const key of Object.keys(mem.timers)) {
-      clearTimeout(mem.timers[key]);
-      clearInterval(mem.timers[key]);
+    try {
+      // Clear any running game timers
+      for (const key of Object.keys(mem.timers)) {
+        try {
+          clearTimeout(mem.timers[key]);
+          clearInterval(mem.timers[key]);
+        } catch (err) {
+          console.error(`Error clearing timer ${key}:`, err);
+        }
+      }
+    } catch (err) {
+      console.error('Error clearing lobby timers:', err);
     }
-    // Clear boss TimerBag
-    if (mem.timers._boss && mem.timers._boss.clearAll) {
-      mem.timers._boss.clearAll();
+    
+    try {
+      // Clear boss TimerBag
+      if (mem.timers._boss && mem.timers._boss.clearAll) {
+        mem.timers._boss.clearAll();
+      }
+    } catch (err) {
+      console.error('Error clearing boss timers:', err);
     }
-    // Clear bug timers
-    for (const bugId of Object.keys(mem.state.bugs)) {
-      mem.state.bugs[bugId]._timers.clearAll();
+    
+    try {
+      // Clear bug timers
+      for (const bugId of Object.keys(mem.state.bugs)) {
+        try {
+          mem.state.bugs[bugId]._timers.clearAll();
+        } catch (err) {
+          console.error(`Error clearing bug ${bugId} timers:`, err);
+        }
+      }
+    } catch (err) {
+      console.error('Error clearing bug timers:', err);
     }
+    
     lobbies.delete(lobbyId);
   }
-  await db.deleteLobby(lobbyId);
+  
+  try {
+    await db.deleteLobby(lobbyId);
+  } catch (err) {
+    console.error(`Error deleting lobby ${lobbyId} from DB:`, err);
+  }
 }
 
 export async function listLobbies(): Promise<DbLobbyRow[]> {

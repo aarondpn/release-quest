@@ -29,27 +29,47 @@ export function removeClientFromLobby(lobbyId: number, ws: WebSocket): void {
 }
 
 export function broadcast(msg: Record<string, unknown>, exclude?: WebSocket): void {
-  const data = JSON.stringify(msg);
-  wss!.clients.forEach(client => {
-    if (client !== exclude && client.readyState === 1) {
-      client.send(data);
-    }
-  });
+  try {
+    const data = JSON.stringify(msg);
+    wss!.clients.forEach(client => {
+      try {
+        if (client !== exclude && client.readyState === 1) {
+          client.send(data);
+        }
+      } catch (err) {
+        console.error('Error broadcasting to client:', err);
+      }
+    });
+  } catch (err) {
+    console.error('Error in broadcast:', err);
+  }
 }
 
 export function broadcastToLobby(lobbyId: number, msg: Record<string, unknown>, exclude?: WebSocket): void {
-  const set = lobbyClients.get(lobbyId);
-  if (!set) return;
-  const data = JSON.stringify(msg);
-  for (const client of set) {
-    if (client !== exclude && client.readyState === 1) {
-      client.send(data);
+  try {
+    const set = lobbyClients.get(lobbyId);
+    if (!set) return;
+    const data = JSON.stringify(msg);
+    for (const client of set) {
+      try {
+        if (client !== exclude && client.readyState === 1) {
+          client.send(data);
+        }
+      } catch (err) {
+        console.error(`Error broadcasting to lobby ${lobbyId} client:`, err);
+      }
     }
+  } catch (err) {
+    console.error(`Error in broadcastToLobby ${lobbyId}:`, err);
   }
 }
 
 export function send(ws: WebSocket, msg: Record<string, unknown>): void {
-  if (ws.readyState === 1) {
-    ws.send(JSON.stringify(msg));
+  try {
+    if (ws.readyState === 1) {
+      ws.send(JSON.stringify(msg));
+    }
+  } catch (err) {
+    console.error('Error sending message to client:', err);
   }
 }

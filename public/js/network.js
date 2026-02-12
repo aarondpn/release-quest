@@ -9,6 +9,7 @@ import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, show
 import { showLobbyBrowser, hideLobbyBrowser, renderLobbyList, showLobbyError } from './lobby-ui.js';
 import { updateAuthUI, hideAuthOverlay, showAuthError } from './auth-ui.js';
 import { renderLeaderboard } from './leaderboard-ui.js';
+import { showError, ERROR_LEVELS } from './error-handler.js';
 
 // Cursor batching: buffer incoming positions and flush once per frame
 const pendingCursors = {};
@@ -31,35 +32,79 @@ function queueCursorUpdate(playerId, x, y) {
 }
 
 export function sendMessage(msg) {
-  if (clientState.ws && clientState.ws.readyState === 1) {
-    clientState.ws.send(JSON.stringify(msg));
+  try {
+    if (clientState.ws && clientState.ws.readyState === 1) {
+      clientState.ws.send(JSON.stringify(msg));
+    }
+  } catch (err) {
+    console.error('Error sending message:', err);
+    showError('Failed to send message to server', ERROR_LEVELS.ERROR);
   }
 }
 
 export function connect() {
-  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-  clientState.ws = new WebSocket(proto + '://' + location.host + location.pathname);
+  try {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    clientState.ws = new WebSocket(proto + '://' + location.host + location.pathname);
 
-  clientState.ws.onopen = () => {
-    dom.connStatus.textContent = 'CONNECTED';
-    dom.connStatus.className = 'conn-status connected';
-  };
+    clientState.ws.onopen = () => {
+      try {
+        dom.connStatus.textContent = 'CONNECTED';
+        dom.connStatus.className = 'conn-status connected';
+      } catch (err) {
+        console.error('Error handling WebSocket open:', err);
+      }
+    };
 
-  clientState.ws.onclose = () => {
-    dom.connStatus.textContent = 'DISCONNECTED';
-    dom.connStatus.className = 'conn-status disconnected';
-    clientState.currentLobbyId = null;
+    clientState.ws.onerror = (err) => {
+      console.error('WebSocket error:', err);
+      showError('Connection error occurred', ERROR_LEVELS.ERROR);
+    };
+
+    clientState.ws.onclose = () => {
+      try {
+        dom.connStatus.textContent = 'DISCONNECTED';
+        dom.connStatus.className = 'conn-status disconnected';
+        clientState.currentLobbyId = null;
+        showError('Disconnected from server. Reconnecting...', ERROR_LEVELS.WARNING);
+        setTimeout(connect, 2000);
+      } catch (err) {
+        console.error('Error handling WebSocket close:', err);
+      }
+    };
+
+    clientState.ws.onmessage = (event) => {
+      try {
+        let msg;
+        try { 
+          msg = JSON.parse(event.data); 
+        } catch (parseErr) {
+          console.error('Failed to parse message:', parseErr);
+          return;
+        }
+        handleMessage(msg);
+      } catch (err) {
+        console.error('Error handling message:', err);
+        showError('Error processing server message', ERROR_LEVELS.ERROR);
+      }
+    };
+  } catch (err) {
+    console.error('Error connecting to WebSocket:', err);
+    showError('Failed to connect to server', ERROR_LEVELS.ERROR);
     setTimeout(connect, 2000);
-  };
-
-  clientState.ws.onmessage = (event) => {
-    let msg;
-    try { msg = JSON.parse(event.data); } catch { return; }
-    handleMessage(msg);
-  };
+  }
 }
 
 function handleMessage(msg) {
+  try {
+    handleMessageInternal(msg);
+  } catch (err) {
+    console.error(`Error handling message type '${msg.type}':`, err);
+    showError(`Error processing ${msg.type} message`, ERROR_LEVELS.ERROR);
+  }
+}
+
+function handleMessageInternal(msg) {
   switch (msg.type) {
 
     case 'auth-result': {
@@ -849,8 +894,13 @@ function createDuckElement(duck) {
   el.style.left = pos.x + 'px';
   el.style.top = pos.y + 'px';
   el.addEventListener('click', (e) => {
-    e.stopPropagation();
-    sendMessage({ type: 'click-duck' });
+    try {
+      e.stopPropagation();
+      sendMessage({ type: 'click-duck' });
+    } catch (err) {
+      console.error('Error handling duck click:', err);
+      showError('Error clicking duck', ERROR_LEVELS.ERROR);
+    }
   });
   dom.arena.appendChild(el);
   clientState.duckElement = el;
@@ -876,8 +926,13 @@ function createHammerElement(hammer) {
   el.style.left = pos.x + 'px';
   el.style.top = pos.y + 'px';
   el.addEventListener('click', (e) => {
-    e.stopPropagation();
-    sendMessage({ type: 'click-hammer' });
+    try {
+      e.stopPropagation();
+      sendMessage({ type: 'click-hammer' });
+    } catch (err) {
+      console.error('Error handling hammer click:', err);
+      showError('Error clicking hammer', ERROR_LEVELS.ERROR);
+    }
   });
   dom.arena.appendChild(el);
   clientState.hammerElement = el;

@@ -16,6 +16,60 @@ import * as auth from './server/auth.ts';
 import * as entityTypes from './server/entity-types.ts';
 import type { GameContext, PlayerInfo } from './server/types.ts';
 
+// ── Global error handlers ──
+process.on('uncaughtException', (err: Error) => {
+  console.error('[FATAL] Uncaught exception:', err);
+  console.error(err.stack);
+  // Log but don't exit — try to keep server alive
+});
+
+process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
+  console.error('[FATAL] Unhandled promise rejection:', reason);
+  console.error('Promise:', promise);
+});
+
+// Graceful shutdown handlers
+let isShuttingDown = false;
+async function gracefulShutdown(signal: string): Promise<void> {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  
+  console.log(`\n[${signal}] Shutting down gracefully...`);
+  
+  try {
+    // Close all WebSocket connections
+    wss.clients.forEach((client: WebSocket) => {
+      try {
+        client.close(1001, 'Server shutting down');
+      } catch (err) {
+        console.error('Error closing client:', err);
+      }
+    });
+    
+    // Close HTTP server
+    httpServer.close(() => {
+      console.log('HTTP server closed');
+    });
+    
+    // Close database
+    try {
+      await db.close();
+      console.log('Database closed');
+    } catch (err) {
+      console.error('Error closing database:', err);
+    }
+    
+    console.log('Shutdown complete');
+    process.exit(0);
+  } catch (err) {
+    console.error('Error during shutdown:', err);
+    process.exit(1);
+  }
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
 // Global counters for unique player IDs/colors across all lobbies
 let nextPlayerId = 1;
 let colorIndex = 0;
@@ -38,31 +92,51 @@ const MIME: Record<string, string> = {
 
 // ── HTTP server ──
 const httpServer = http.createServer((req, res) => {
-  const urlPath = req.url!.split('?')[0];
-  
-  // API endpoints
-  if (urlPath === '/api/difficulty-presets') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(DIFFICULTY_PRESETS));
-    return;
-  }
-  
-  // Static file serving
-  let filePath = urlPath === '/' ? '/index.html' : urlPath;
-  filePath = path.join(import.meta.dirname, 'public', filePath);
-
-  const ext = path.extname(filePath);
-  const contentType = MIME[ext] || 'application/octet-stream';
-
-  fs.readFile(filePath, (err, data) => {
-    if (err) {
-      res.writeHead(404, { 'Content-Type': 'text/plain' });
-      res.end('Not Found');
+  try {
+    const urlPath = req.url!.split('?')[0];
+    
+    // API endpoints
+    if (urlPath === '/api/difficulty-presets') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(DIFFICULTY_PRESETS));
       return;
     }
-    res.writeHead(200, { 'Content-Type': contentType });
-    res.end(data);
-  });
+    
+    // Static file serving
+    let filePath = urlPath === '/' ? '/index.html' : urlPath;
+    filePath = path.join(import.meta.dirname, 'public', filePath);
+
+    const ext = path.extname(filePath);
+    const contentType = MIME[ext] || 'application/octet-stream';
+
+    fs.readFile(filePath, (err, data) => {
+      try {
+        if (err) {
+          res.writeHead(404, { 'Content-Type': 'text/plain' });
+          res.end('Not Found');
+          return;
+        }
+        res.writeHead(200, { 'Content-Type': contentType });
+        res.end(data);
+      } catch (readErr) {
+        console.error('Error serving file:', readErr);
+        if (!res.headersSent) {
+          res.writeHead(500, { 'Content-Type': 'text/plain' });
+          res.end('Internal Server Error');
+        }
+      }
+    });
+  } catch (err) {
+    console.error('HTTP request error:', err);
+    try {
+      if (!res.headersSent) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Internal Server Error');
+      }
+    } catch (finalErr) {
+      console.error('Error sending error response:', finalErr);
+    }
+  }
 });
 
 // ── Helper to get lobby context for a player ──
@@ -107,6 +181,16 @@ wss.on('connection', (ws: WebSocket) => {
     icon,
   });
 
+  // WebSocket error handler
+  ws.on('error', (err: Error) => {
+    console.error(`[ws-error] ${playerId}:`, err.message);
+    try {
+      ws.close();
+    } catch (closeErr) {
+      console.error('Error closing WebSocket after error:', closeErr);
+    }
+  });
+
   ws.on('message', async (raw: RawData) => {
     let msg: any;
     try {
@@ -118,7 +202,42 @@ wss.on('connection', (ws: WebSocket) => {
     const pid = network.wsToPlayer.get(ws);
     if (!pid) return;
 
-    switch (msg.type) {
+    try {
+      await handleMessage(ws, msg, pid);
+    } catch (err) {
+      console.error(`[msg-error] ${pid} handling ${msg.type}:`, err);
+      try {
+        network.send(ws, { type: 'error', message: 'Internal server error' });
+      } catch (sendErr) {
+        console.error('Error sending error message:', sendErr);
+      }
+    }
+  });
+
+  ws.on('close', async () => {
+    try {
+      const pid = network.wsToPlayer.get(ws);
+      network.wsToPlayer.delete(ws);
+      network.wsToLobby.delete(ws);
+
+      if (pid) {
+        const currentLobbyId = lobby.getLobbyForPlayer(pid);
+        if (currentLobbyId) {
+          console.log(`[disconnect] ${pid} left lobby ${currentLobbyId} (disconnected)`);
+          await handleLeaveLobby(ws, pid, currentLobbyId);
+          broadcastLobbyList();
+        }
+        playerInfo.delete(pid);
+        console.log(`[disconnect] ${pid} disconnected (${wss.clients.size} online)`);
+      }
+    } catch (err) {
+      console.error('Error handling WebSocket close:', err);
+    }
+  });
+});
+
+async function handleMessage(ws: WebSocket, msg: any, pid: string): Promise<void> {
+  switch (msg.type) {
       case 'register': {
         const username = String(msg.username || '').trim();
         const password = String(msg.password || '');
@@ -474,25 +593,7 @@ wss.on('connection', (ws: WebSocket) => {
         break;
       }
     }
-  });
-
-  ws.on('close', async () => {
-    const pid = network.wsToPlayer.get(ws);
-    network.wsToPlayer.delete(ws);
-    network.wsToLobby.delete(ws);
-
-    if (pid) {
-      const currentLobbyId = lobby.getLobbyForPlayer(pid);
-      if (currentLobbyId) {
-        console.log(`[disconnect] ${pid} left lobby ${currentLobbyId} (disconnected)`);
-        await handleLeaveLobby(ws, pid, currentLobbyId);
-        broadcastLobbyList();
-      }
-      playerInfo.delete(pid);
-      console.log(`[disconnect] ${pid} disconnected (${wss.clients.size} online)`);
-    }
-  });
-});
+}
 
 async function handleLeaveLobby(ws: WebSocket, pid: string, lobbyId: number): Promise<void> {
   const mem = lobby.getLobbyState(lobbyId);

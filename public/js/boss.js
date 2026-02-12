@@ -2,6 +2,7 @@ import { LOGICAL_W, LOGICAL_H } from './config.js';
 import { dom, clientState } from './state.js';
 import { logicalToPixel } from './coordinates.js';
 import { shakeArena, showBossDamageNumber, showImpactRing } from './vfx.js';
+import { showError, ERROR_LEVELS } from './error-handler.js';
 
 export function createBossElement(x, y, hp, maxHp, enraged, timeRemaining) {
   removeBossElement();
@@ -22,9 +23,14 @@ export function createBossElement(x, y, hp, maxHp, enraged, timeRemaining) {
   el.style.top = pos.y + 'px';
 
   el.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (clientState.ws && clientState.ws.readyState === 1) {
-      clientState.ws.send(JSON.stringify({ type: 'click-boss' }));
+    try {
+      e.stopPropagation();
+      if (clientState.ws && clientState.ws.readyState === 1) {
+        clientState.ws.send(JSON.stringify({ type: 'click-boss' }));
+      }
+    } catch (err) {
+      console.error('Error handling boss click:', err);
+      showError('Error clicking boss', ERROR_LEVELS.ERROR);
     }
   });
 

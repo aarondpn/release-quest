@@ -1,6 +1,7 @@
 import { SQUASH_WORDS } from './config.js';
 import { dom, clientState } from './state.js';
 import { logicalToPixel, getArenaRect } from './coordinates.js';
+import { showError, ERROR_LEVELS } from './error-handler.js';
 
 export function createBugElement(bugId, lx, ly, variant) {
   const el = document.createElement('div');
@@ -57,29 +58,43 @@ export function createBugElement(bugId, lx, ly, variant) {
     let holdStartTime = null;
 
     const handleMouseDown = (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-      if (clientState.ws && clientState.ws.readyState === 1) {
-        holdStartTime = Date.now();
-        clientState.ws.send(JSON.stringify({ type: 'click-memory-leak-start', bugId }));
+      try {
+        e.stopPropagation();
+        e.preventDefault();
+        if (clientState.ws && clientState.ws.readyState === 1) {
+          holdStartTime = Date.now();
+          clientState.ws.send(JSON.stringify({ type: 'click-memory-leak-start', bugId }));
+        }
+      } catch (err) {
+        console.error('Error handling memory leak mousedown:', err);
+        showError('Error interacting with memory leak', ERROR_LEVELS.ERROR);
       }
     };
 
     const handleMouseUp = (e) => {
-      e.stopPropagation();
-      if (clientState.ws && clientState.ws.readyState === 1 && holdStartTime) {
-        clientState.ws.send(JSON.stringify({ type: 'click-memory-leak-complete', bugId }));
-        holdStartTime = null;
+      try {
+        e.stopPropagation();
+        if (clientState.ws && clientState.ws.readyState === 1 && holdStartTime) {
+          clientState.ws.send(JSON.stringify({ type: 'click-memory-leak-complete', bugId }));
+          holdStartTime = null;
+        }
+      } catch (err) {
+        console.error('Error handling memory leak mouseup:', err);
+        showError('Error interacting with memory leak', ERROR_LEVELS.ERROR);
       }
     };
 
     const handleMouseLeave = (e) => {
-      // Cancel hold if mouse leaves
-      if (holdStartTime) {
-        if (clientState.ws && clientState.ws.readyState === 1) {
-          clientState.ws.send(JSON.stringify({ type: 'click-memory-leak-complete', bugId }));
+      try {
+        // Cancel hold if mouse leaves
+        if (holdStartTime) {
+          if (clientState.ws && clientState.ws.readyState === 1) {
+            clientState.ws.send(JSON.stringify({ type: 'click-memory-leak-complete', bugId }));
+          }
+          holdStartTime = null;
         }
-        holdStartTime = null;
+      } catch (err) {
+        console.error('Error handling memory leak mouseleave:', err);
       }
     };
 
@@ -96,9 +111,14 @@ export function createBugElement(bugId, lx, ly, variant) {
   } else {
     // Normal click for other bugs
     const handleClick = (e) => {
-      e.stopPropagation();
-      if (clientState.ws && clientState.ws.readyState === 1) {
-        clientState.ws.send(JSON.stringify({ type: 'click-bug', bugId }));
+      try {
+        e.stopPropagation();
+        if (clientState.ws && clientState.ws.readyState === 1) {
+          clientState.ws.send(JSON.stringify({ type: 'click-bug', bugId }));
+        }
+      } catch (err) {
+        console.error('Error handling bug click:', err);
+        showError('Error clicking bug', ERROR_LEVELS.ERROR);
       }
     };
     

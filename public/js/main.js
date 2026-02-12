@@ -6,18 +6,47 @@ import { connect, sendMessage } from './network.js';
 import { showLobbyBrowser, initLobbySend } from './lobby-ui.js';
 import { initAuthSend, showAuthOverlay, hideAuthOverlay, switchTab, submitLogin, submitRegister, submitLogout } from './auth-ui.js';
 import { initLeaderboardSend, showLeaderboardTab, showLobbiesTab } from './leaderboard-ui.js';
+import { showError, ERROR_LEVELS } from './error-handler.js';
 
 initDom();
 
+// ── Global error handlers ──
+window.addEventListener('error', (event) => {
+  console.error('Global error:', event.error);
+  showError('An unexpected error occurred', ERROR_LEVELS.ERROR);
+  // Prevent default to avoid duplicate console errors
+  return true;
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('Unhandled promise rejection:', event.reason);
+  showError('An unexpected error occurred', ERROR_LEVELS.ERROR);
+  // Prevent default
+  event.preventDefault();
+});
+
 // Fetch difficulty presets from server
 fetch('/api/difficulty-presets')
-  .then(res => res.json())
+  .then(res => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  })
   .then(presets => {
     clientState.difficultyPresets = presets;
     // Initialize with medium difficulty values
     updateDifficultyPlaceholders('medium');
   })
-  .catch(err => console.error('Failed to load difficulty presets:', err));
+  .catch(err => {
+    console.error('Failed to load difficulty presets:', err);
+    showError('Failed to load difficulty presets. Using defaults.', ERROR_LEVELS.WARNING);
+    // Fallback to hardcoded defaults
+    clientState.difficultyPresets = {
+      easy: { startingHp: 150, hpDamage: 5, bugPoints: 15, boss: { hp: 800, timeLimit: 180, clickDamage: 10, killBonus: 500, regenPerSecond: 2 }, specialBugs: { heisenbugChance: 0.03, codeReviewChance: 0.03, mergeConflictChance: 0.02, pipelineBugChance: 0.02, memoryLeakChance: 0.01 }, powerups: { rubberDuckBuffDuration: 15, hotfixHammerStunDuration: 8 } },
+      medium: { startingHp: 100, hpDamage: 10, bugPoints: 10, boss: { hp: 1200, timeLimit: 150, clickDamage: 8, killBonus: 1000, regenPerSecond: 3 }, specialBugs: { heisenbugChance: 0.05, codeReviewChance: 0.05, mergeConflictChance: 0.03, pipelineBugChance: 0.03, memoryLeakChance: 0.02 }, powerups: { rubberDuckBuffDuration: 12, hotfixHammerStunDuration: 6 } },
+      hard: { startingHp: 75, hpDamage: 15, bugPoints: 8, boss: { hp: 1800, timeLimit: 120, clickDamage: 6, killBonus: 2000, regenPerSecond: 5 }, specialBugs: { heisenbugChance: 0.08, codeReviewChance: 0.08, mergeConflictChance: 0.05, pipelineBugChance: 0.05, memoryLeakChance: 0.03 }, powerups: { rubberDuckBuffDuration: 10, hotfixHammerStunDuration: 5 } }
+    };
+    updateDifficultyPlaceholders('medium');
+  });
 
 // Icon picker setup
 PLAYER_ICONS.forEach((icon, i) => {
@@ -59,23 +88,28 @@ function updateDifficultyPlaceholders(difficulty) {
 
 
 function submitJoin() {
-  if (!clientState.ws || clientState.ws.readyState !== 1) return;
-  let name, icon;
-  if (clientState.isLoggedIn && clientState.authUser) {
-    name = dom.nameInput.value.trim().slice(0, 16) || clientState.authUser.displayName;
-    icon = clientState.selectedIcon || clientState.authUser.icon;
-  } else {
-    name = dom.nameInput.value.trim().slice(0, 16) || clientState.myName || 'Anon';
-    icon = clientState.selectedIcon;
-  }
-  clientState.myName = name;
-  clientState.myIcon = icon;
-  sendMessage({ type: 'set-name', name, icon });
-  clientState.hasJoined = true;
-  dom.nameEntry.classList.add('hidden');
+  try {
+    if (!clientState.ws || clientState.ws.readyState !== 1) return;
+    let name, icon;
+    if (clientState.isLoggedIn && clientState.authUser) {
+      name = dom.nameInput.value.trim().slice(0, 16) || clientState.authUser.displayName;
+      icon = clientState.selectedIcon || clientState.authUser.icon;
+    } else {
+      name = dom.nameInput.value.trim().slice(0, 16) || clientState.myName || 'Anon';
+      icon = clientState.selectedIcon;
+    }
+    clientState.myName = name;
+    clientState.myIcon = icon;
+    sendMessage({ type: 'set-name', name, icon });
+    clientState.hasJoined = true;
+    dom.nameEntry.classList.add('hidden');
 
-  // Show lobby browser instead of going directly to game
-  showLobbyBrowser();
+    // Show lobby browser instead of going directly to game
+    showLobbyBrowser();
+  } catch (err) {
+    console.error('Error in submitJoin:', err);
+    showError('Failed to join. Please try again.', ERROR_LEVELS.ERROR);
+  }
 }
 
 dom.joinBtn.addEventListener('click', submitJoin);
@@ -85,94 +119,99 @@ dom.nameInput.addEventListener('keydown', (e) => {
 
 // ── Lobby create handler ──
 dom.createLobbyBtn.addEventListener('click', () => {
-  const name = dom.lobbyNameInput.value.trim().slice(0, 32);
-  
-  // Validate lobby name is not empty
-  if (!name) {
-    dom.lobbyError.textContent = 'Please enter a lobby name';
-    dom.lobbyError.classList.remove('hidden');
-    return;
+  try {
+    const name = dom.lobbyNameInput.value.trim().slice(0, 32);
+    
+    // Validate lobby name is not empty
+    if (!name) {
+      dom.lobbyError.textContent = 'Please enter a lobby name';
+      dom.lobbyError.classList.remove('hidden');
+      return;
+    }
+    
+    const maxPlayers = parseInt(dom.lobbyMaxPlayers.dataset.value, 10) || 4;
+    const difficulty = dom.lobbyDifficulty.dataset.value || 'medium';
+    
+    // Build custom config from advanced settings
+    const customConfig = {};
+    
+    if (dom.configStartingHp.value) {
+      customConfig.startingHp = parseInt(dom.configStartingHp.value, 10);
+    }
+    if (dom.configHpDamage.value) {
+      if (!customConfig.bugs) customConfig.bugs = {};
+      customConfig.bugs.hpDamage = parseInt(dom.configHpDamage.value, 10);
+    }
+    if (dom.configBugPoints.value) {
+      if (!customConfig.bugs) customConfig.bugs = {};
+      customConfig.bugs.points = parseInt(dom.configBugPoints.value, 10);
+    }
+    if (dom.configBossHp.value) {
+      if (!customConfig.boss) customConfig.boss = {};
+      customConfig.boss.hp = parseInt(dom.configBossHp.value, 10);
+    }
+    if (dom.configBossTime.value) {
+      if (!customConfig.boss) customConfig.boss = {};
+      customConfig.boss.timeLimit = parseInt(dom.configBossTime.value, 10);
+    }
+    if (dom.configBossClickDamage.value) {
+      if (!customConfig.boss) customConfig.boss = {};
+      customConfig.boss.clickDamage = parseInt(dom.configBossClickDamage.value, 10);
+    }
+    if (dom.configBossKillBonus.value) {
+      if (!customConfig.boss) customConfig.boss = {};
+      customConfig.boss.killBonus = parseInt(dom.configBossKillBonus.value, 10);
+    }
+    if (dom.configBossRegen.value) {
+      if (!customConfig.boss) customConfig.boss = {};
+      customConfig.boss.regenPerSecond = parseFloat(dom.configBossRegen.value);
+    }
+    if (dom.configHeisenbug.value) {
+      if (!customConfig.bugs) customConfig.bugs = {};
+      if (!customConfig.bugs.specialBugs) customConfig.bugs.specialBugs = {};
+      customConfig.bugs.specialBugs.heisenbugChance = parseInt(dom.configHeisenbug.value, 10) / 100;
+    }
+    if (dom.configCodeReview.value) {
+      if (!customConfig.bugs) customConfig.bugs = {};
+      if (!customConfig.bugs.specialBugs) customConfig.bugs.specialBugs = {};
+      customConfig.bugs.specialBugs.codeReviewChance = parseInt(dom.configCodeReview.value, 10) / 100;
+    }
+    if (dom.configMergeConflict.value) {
+      if (!customConfig.bugs) customConfig.bugs = {};
+      if (!customConfig.bugs.specialBugs) customConfig.bugs.specialBugs = {};
+      customConfig.bugs.specialBugs.mergeConflictChance = parseInt(dom.configMergeConflict.value, 10) / 100;
+    }
+    if (dom.configPipelineBug.value) {
+      if (!customConfig.bugs) customConfig.bugs = {};
+      if (!customConfig.bugs.specialBugs) customConfig.bugs.specialBugs = {};
+      customConfig.bugs.specialBugs.pipelineBugChance = parseInt(dom.configPipelineBug.value, 10) / 100;
+    }
+    if (dom.configMemoryLeak.value) {
+      if (!customConfig.bugs) customConfig.bugs = {};
+      if (!customConfig.bugs.specialBugs) customConfig.bugs.specialBugs = {};
+      customConfig.bugs.specialBugs.memoryLeakChance = parseInt(dom.configMemoryLeak.value, 10) / 100;
+    }
+    if (dom.configDuckDuration.value) {
+      if (!customConfig.powerups) customConfig.powerups = {};
+      customConfig.powerups.rubberDuckBuffDuration = parseInt(dom.configDuckDuration.value, 10);
+    }
+    if (dom.configHammerDuration.value) {
+      if (!customConfig.powerups) customConfig.powerups = {};
+      customConfig.powerups.hotfixHammerStunDuration = parseInt(dom.configHammerDuration.value, 10);
+    }
+    
+    const message = { type: 'create-lobby', name, maxPlayers, difficulty };
+    if (Object.keys(customConfig).length > 0) {
+      message.customConfig = customConfig;
+    }
+    
+    sendMessage(message);
+    dom.lobbyNameInput.value = '';
+    dom.lobbyError.classList.add('hidden');
+  } catch (err) {
+    console.error('Error creating lobby:', err);
+    showError('Failed to create lobby. Please try again.', ERROR_LEVELS.ERROR);
   }
-  
-  const maxPlayers = parseInt(dom.lobbyMaxPlayers.dataset.value, 10) || 4;
-  const difficulty = dom.lobbyDifficulty.dataset.value || 'medium';
-  
-  // Build custom config from advanced settings
-  const customConfig = {};
-  
-  if (dom.configStartingHp.value) {
-    customConfig.startingHp = parseInt(dom.configStartingHp.value, 10);
-  }
-  if (dom.configHpDamage.value) {
-    if (!customConfig.bugs) customConfig.bugs = {};
-    customConfig.bugs.hpDamage = parseInt(dom.configHpDamage.value, 10);
-  }
-  if (dom.configBugPoints.value) {
-    if (!customConfig.bugs) customConfig.bugs = {};
-    customConfig.bugs.points = parseInt(dom.configBugPoints.value, 10);
-  }
-  if (dom.configBossHp.value) {
-    if (!customConfig.boss) customConfig.boss = {};
-    customConfig.boss.hp = parseInt(dom.configBossHp.value, 10);
-  }
-  if (dom.configBossTime.value) {
-    if (!customConfig.boss) customConfig.boss = {};
-    customConfig.boss.timeLimit = parseInt(dom.configBossTime.value, 10);
-  }
-  if (dom.configBossClickDamage.value) {
-    if (!customConfig.boss) customConfig.boss = {};
-    customConfig.boss.clickDamage = parseInt(dom.configBossClickDamage.value, 10);
-  }
-  if (dom.configBossKillBonus.value) {
-    if (!customConfig.boss) customConfig.boss = {};
-    customConfig.boss.killBonus = parseInt(dom.configBossKillBonus.value, 10);
-  }
-  if (dom.configBossRegen.value) {
-    if (!customConfig.boss) customConfig.boss = {};
-    customConfig.boss.regenPerSecond = parseFloat(dom.configBossRegen.value);
-  }
-  if (dom.configHeisenbug.value) {
-    if (!customConfig.bugs) customConfig.bugs = {};
-    if (!customConfig.bugs.specialBugs) customConfig.bugs.specialBugs = {};
-    customConfig.bugs.specialBugs.heisenbugChance = parseInt(dom.configHeisenbug.value, 10) / 100;
-  }
-  if (dom.configCodeReview.value) {
-    if (!customConfig.bugs) customConfig.bugs = {};
-    if (!customConfig.bugs.specialBugs) customConfig.bugs.specialBugs = {};
-    customConfig.bugs.specialBugs.codeReviewChance = parseInt(dom.configCodeReview.value, 10) / 100;
-  }
-  if (dom.configMergeConflict.value) {
-    if (!customConfig.bugs) customConfig.bugs = {};
-    if (!customConfig.bugs.specialBugs) customConfig.bugs.specialBugs = {};
-    customConfig.bugs.specialBugs.mergeConflictChance = parseInt(dom.configMergeConflict.value, 10) / 100;
-  }
-  if (dom.configPipelineBug.value) {
-    if (!customConfig.bugs) customConfig.bugs = {};
-    if (!customConfig.bugs.specialBugs) customConfig.bugs.specialBugs = {};
-    customConfig.bugs.specialBugs.pipelineBugChance = parseInt(dom.configPipelineBug.value, 10) / 100;
-  }
-  if (dom.configMemoryLeak.value) {
-    if (!customConfig.bugs) customConfig.bugs = {};
-    if (!customConfig.bugs.specialBugs) customConfig.bugs.specialBugs = {};
-    customConfig.bugs.specialBugs.memoryLeakChance = parseInt(dom.configMemoryLeak.value, 10) / 100;
-  }
-  if (dom.configDuckDuration.value) {
-    if (!customConfig.powerups) customConfig.powerups = {};
-    customConfig.powerups.rubberDuckBuffDuration = parseInt(dom.configDuckDuration.value, 10);
-  }
-  if (dom.configHammerDuration.value) {
-    if (!customConfig.powerups) customConfig.powerups = {};
-    customConfig.powerups.hotfixHammerStunDuration = parseInt(dom.configHammerDuration.value, 10);
-  }
-  
-  const message = { type: 'create-lobby', name, maxPlayers, difficulty };
-  if (Object.keys(customConfig).length > 0) {
-    message.customConfig = customConfig;
-  }
-  
-  sendMessage(message);
-  dom.lobbyNameInput.value = '';
-  dom.lobbyError.classList.add('hidden');
 });
 
 dom.lobbyNameInput.addEventListener('keydown', (e) => {
@@ -263,38 +302,62 @@ dom.advancedResetBtn.addEventListener('click', () => {
 
 // Cursor broadcasting
 dom.arena.addEventListener('mousemove', (e) => {
-  const now = Date.now();
-  if (now - clientState.lastCursorSend < CURSOR_THROTTLE_MS) return;
-  clientState.lastCursorSend = now;
+  try {
+    const now = Date.now();
+    if (now - clientState.lastCursorSend < CURSOR_THROTTLE_MS) return;
+    clientState.lastCursorSend = now;
 
-  const rect = dom.arena.getBoundingClientRect();
-  const px = e.clientX - rect.left;
-  const py = e.clientY - rect.top;
-  const logical = pixelToLogical(px, py);
+    const rect = dom.arena.getBoundingClientRect();
+    const px = e.clientX - rect.left;
+    const py = e.clientY - rect.top;
+    const logical = pixelToLogical(px, py);
 
-  sendMessage({
-    type: 'cursor-move',
-    x: Math.round(logical.x * 10) / 10,
-    y: Math.round(logical.y * 10) / 10,
-  });
+    sendMessage({
+      type: 'cursor-move',
+      x: Math.round(logical.x * 10) / 10,
+      y: Math.round(logical.y * 10) / 10,
+    });
+  } catch (err) {
+    console.error('Error handling cursor move:', err);
+  }
 });
 
 // Button handlers
 document.getElementById('start-btn').addEventListener('click', () => {
-  sendMessage({ type: 'start-game' });
+  try {
+    sendMessage({ type: 'start-game' });
+  } catch (err) {
+    console.error('Error starting game:', err);
+    showError('Failed to start game', ERROR_LEVELS.ERROR);
+  }
 });
 
 document.getElementById('retry-btn').addEventListener('click', () => {
-  sendMessage({ type: 'start-game' });
+  try {
+    sendMessage({ type: 'start-game' });
+  } catch (err) {
+    console.error('Error retrying game:', err);
+    showError('Failed to restart game', ERROR_LEVELS.ERROR);
+  }
 });
 
 document.getElementById('continue-btn').addEventListener('click', () => {
-  sendMessage({ type: 'start-game' });
+  try {
+    sendMessage({ type: 'start-game' });
+  } catch (err) {
+    console.error('Error continuing game:', err);
+    showError('Failed to continue game', ERROR_LEVELS.ERROR);
+  }
 });
 
 // ── Leave lobby handlers ──
 function leaveLobby() {
-  sendMessage({ type: 'leave-lobby' });
+  try {
+    sendMessage({ type: 'leave-lobby' });
+  } catch (err) {
+    console.error('Error leaving lobby:', err);
+    showError('Failed to leave lobby', ERROR_LEVELS.ERROR);
+  }
 }
 
 document.getElementById('leave-btn-start').addEventListener('click', leaveLobby);

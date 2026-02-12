@@ -202,3 +202,7 @@ export async function getLeaderboard(limit: number = 10): Promise<LeaderboardEnt
   `, [limit]);
   return result.rows as LeaderboardEntry[];
 }
+
+export async function close(): Promise<void> {
+  await pool.end();
+}
