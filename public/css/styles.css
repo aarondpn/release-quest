@@ -1546,16 +1546,28 @@ header p {
 }
 
 .lobby-advanced-config {
+  display: grid;
+  grid-template-rows: 1fr;
   background: rgba(26, 26, 46, 0.8);
   border: 2px solid var(--purple);
   border-radius: 8px;
-  padding: 16px;
   margin: 12px auto;
   max-width: 600px;
-  transition: all 0.3s;
+  overflow: hidden;
+  transition: grid-template-rows 0.35s ease, opacity 0.3s ease, padding 0.35s ease, margin 0.35s ease, border-width 0.35s ease;
+  opacity: 1;
+  padding: 16px;
 }
 .lobby-advanced-config.collapsed {
-  display: none;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  padding: 0 16px;
+  margin: 0 auto;
+  border-width: 0;
+}
+.lobby-advanced-config > .advanced-config-inner {
+  overflow: hidden;
+  min-height: 0;
 }
 
 .advanced-config-header {
@@ -1643,7 +1655,7 @@ header p {
 .section-toggle {
   font-size: 10px;
   color: var(--purple);
-  transition: transform 0.2s;
+  transition: transform 0.3s ease;
   display: inline-block;
   width: 12px;
 }
@@ -1659,20 +1671,20 @@ header p {
 }
 
 .config-section-content {
-  margin-top: 8px;
-  padding: 0 4px;
-  overflow: hidden;
-  max-height: 0;
+  display: grid;
+  grid-template-rows: 0fr;
   opacity: 0;
-  transition: max-height 0.3s ease, opacity 0.3s ease, margin-top 0.3s ease;
+  transition: grid-template-rows 0.3s ease, opacity 0.25s ease, margin-top 0.3s ease;
+  margin-top: 0;
 }
 .config-section-content:not(.collapsed) {
-  max-height: 500px;
+  grid-template-rows: 1fr;
   opacity: 1;
   margin-top: 12px;
 }
-
-.config-section-content .advanced-config-grid {
+.config-section-content > .advanced-config-grid {
+  overflow: hidden;
+  min-height: 0;
   margin-bottom: 0;
 }
 
