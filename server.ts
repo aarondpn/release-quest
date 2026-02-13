@@ -387,7 +387,7 @@ async function handleMessage(ws: WebSocket, msg: any, pid: string): Promise<void
 
       case 'list-lobbies': {
         lobby.listLobbies().then(lobbies => {
-          network.send(ws, { type: 'lobby-list', lobbies });
+          network.send(ws, { type: 'lobby-list', lobbies: augmentLobbies(lobbies) });
         }).catch(() => {
           network.send(ws, { type: 'lobby-error', message: 'Failed to list lobbies' });
         });
@@ -659,10 +659,17 @@ async function handleLeaveLobby(ws: WebSocket, pid: string, lobbyId: number): Pr
   }
 }
 
+function augmentLobbies(lobbies: any[]): any[] {
+  return lobbies.map(l => {
+    const mem = lobby.lobbies.get(l.id);
+    return { ...l, started: mem ? mem.state.phase !== 'lobby' : false };
+  });
+}
+
 function broadcastLobbyList(): void {
   lobby.listLobbies().then(lobbies => {
     // Send to all clients not in a lobby
-    const data = JSON.stringify({ type: 'lobby-list', lobbies });
+    const data = JSON.stringify({ type: 'lobby-list', lobbies: augmentLobbies(lobbies) });
     wss.clients.forEach((client: WebSocket) => {
       if (client.readyState === 1 && !network.wsToLobby.has(client)) {
         client.send(data);

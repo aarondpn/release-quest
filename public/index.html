@@ -72,7 +72,7 @@
 
 <!-- Lobby browser overlay -->
 <div class="lobby-browser hidden" id="lobby-browser">
-  <div class="lobby-browser-title">GAME LOBBIES</div>
+  <div class="lobby-browser-title" data-text="GAME LOBBIES">GAME LOBBIES</div>
   <div class="lobby-browser-sub">Join or create a lobby</div>
 
   <div class="lobby-tabs">
@@ -103,7 +103,7 @@
         </div>
       </div>
       <button class="btn btn-small btn-advanced-toggle" id="advanced-toggle-btn">⚙️ ADVANCED</button>
-      <button class="btn btn-small" id="create-lobby-btn">CREATE</button>
+      <button class="btn btn-small lobby-create-btn" id="create-lobby-btn">CREATE</button>
     </div>
 
     <div class="lobby-advanced-config collapsed" id="lobby-advanced-config">
@@ -222,6 +222,7 @@
       </div>
     </div>
 
+    <div class="lobby-list-label">OPEN LOBBIES</div>
     <div class="lobby-list" id="lobby-list">
       <div class="lobby-list-empty">No lobbies yet. Create one!</div>
     </div>

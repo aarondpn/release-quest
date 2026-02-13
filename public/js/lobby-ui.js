@@ -37,7 +37,10 @@ export function renderLobbyList(lobbies) {
     const full = l.player_count >= l.max_players;
     const difficulty = (l.settings && l.settings.difficulty) || 'medium';
     const difficultyBadge = difficulty === 'easy' ? '🟢' : difficulty === 'hard' ? '🔴' : '🟡';
+    const statusClass = l.started ? 'lobby-list-status-playing' : 'lobby-list-status-waiting';
+    const statusTitle = l.started ? 'In game' : 'Waiting';
     return '<div class="lobby-list-item">' +
+      '<span class="lobby-list-status ' + statusClass + '" title="' + statusTitle + '"></span>' +
       '<div class="lobby-list-info">' +
         '<span class="lobby-list-name">' + escapeHtml(l.name) + '</span>' +
         '<span class="lobby-list-code">' + l.code + '</span>' +
