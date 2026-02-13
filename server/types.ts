@@ -320,3 +320,38 @@ export type AuthError = {
 };
 
 export type AuthResult = AuthSuccess | AuthError;
+
+// Recording types
+
+export interface RecordingEvent {
+  t: number;
+  msg: Record<string, unknown>;
+}
+
+export interface RecordingBuffer {
+  startTime: number;
+  events: RecordingEvent[];
+}
+
+export interface RecordingMetadata {
+  userId: number;
+  duration_ms: number;
+  outcome: string;
+  score: number;
+  difficulty: string;
+  player_count: number;
+  players: { name: string; icon: string; color: string; score: number }[];
+}
+
+export interface RecordingRow {
+  id: number;
+  user_id: number;
+  recorded_at: Date;
+  duration_ms: number;
+  outcome: string;
+  score: number;
+  difficulty: string;
+  player_count: number;
+  players: { name: string; icon: string; color: string; score: number }[];
+  events?: RecordingEvent[];
+}

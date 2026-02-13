@@ -6,6 +6,8 @@ import * as boss from './boss.ts';
 import * as powerups from './powerups.ts';
 import * as stats from './stats.ts';
 import { createMatchLog } from './match-logger.ts';
+import { startRecording, stopRecording } from './recording.ts';
+import * as db from './db.ts';
 import type { GameContext } from './types.ts';
 
 function teardownGame(ctx: GameContext): void {
@@ -61,6 +63,31 @@ export function endGame(ctx: GameContext, outcome: string, win: boolean): void {
     players: getPlayerScores(state),
   });
   if (ctx.playerInfo) stats.recordGameEnd(state, ctx.playerInfo, win);
+
+  // Save recording for logged-in players
+  const recording = stopRecording(lobbyId);
+  if (recording && ctx.playerInfo) {
+    const players = Object.values(state.players).map(p => {
+      const info = ctx.playerInfo.get(p.id);
+      return { name: p.name, icon: info?.icon || p.icon, color: p.color, score: p.score };
+    });
+    const meta = {
+      duration_ms: recording.duration_ms,
+      outcome: win ? 'win' : 'loss',
+      score: state.score,
+      difficulty: state.difficulty,
+      player_count: Object.keys(state.players).length,
+      players,
+    };
+    for (const pid of Object.keys(state.players)) {
+      const info = ctx.playerInfo.get(pid);
+      if (info?.userId) {
+        db.saveRecording(info.userId, meta, recording.events).catch(err => {
+          console.error('[recording] Failed to save recording:', err);
+        });
+      }
+    }
+  }
 }
 
 export function startGame(ctx: GameContext): void {
@@ -76,6 +103,7 @@ export function startGame(ctx: GameContext): void {
   state.gameStartedAt = Date.now();
 
   ctx.matchLog = createMatchLog(lobbyId);
+  startRecording(lobbyId);
 
   for (const pid of Object.keys(state.players)) {
     state.players[pid].score = 0;

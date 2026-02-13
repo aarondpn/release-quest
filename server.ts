@@ -568,6 +568,43 @@ async function handleMessage(ws: WebSocket, msg: any, pid: string): Promise<void
         break;
       }
 
+      case 'get-recordings': {
+        const info = playerInfo.get(pid);
+        if (!info?.userId) {
+          network.send(ws, { type: 'recordings-list', recordings: [] });
+          break;
+        }
+        db.getRecordingsList(info.userId).then(recordings => {
+          network.send(ws, { type: 'recordings-list', recordings });
+        }).catch(() => {
+          network.send(ws, { type: 'recording-error', message: 'Failed to load recordings' });
+        });
+        break;
+      }
+
+      case 'get-recording': {
+        const info = playerInfo.get(pid);
+        if (!info?.userId) {
+          network.send(ws, { type: 'recording-error', message: 'Not logged in' });
+          break;
+        }
+        const recordingId = parseInt(msg.id, 10);
+        if (!recordingId) {
+          network.send(ws, { type: 'recording-error', message: 'Invalid recording ID' });
+          break;
+        }
+        db.getRecording(recordingId, info.userId).then(recording => {
+          if (!recording) {
+            network.send(ws, { type: 'recording-error', message: 'Recording not found' });
+            return;
+          }
+          network.send(ws, { type: 'recording-data', recording });
+        }).catch(() => {
+          network.send(ws, { type: 'recording-error', message: 'Failed to load recording' });
+        });
+        break;
+      }
+
       case 'cursor-move': {
         const ctx = getCtxForPlayer(pid);
         if (!ctx) break;

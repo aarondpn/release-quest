@@ -1,4 +1,5 @@
 import type { WebSocket, WebSocketServer } from 'ws';
+import { recordEvent } from './recording.ts';
 
 let wss: WebSocketServer | null = null;
 export const wsToPlayer = new Map<WebSocket, string>();
@@ -59,6 +60,7 @@ export function broadcastToLobby(lobbyId: number, msg: Record<string, unknown>, 
         console.error(`Error broadcasting to lobby ${lobbyId} client:`, err);
       }
     }
+    recordEvent(lobbyId, msg);
   } catch (err) {
     console.error(`Error in broadcastToLobby ${lobbyId}:`, err);
   }

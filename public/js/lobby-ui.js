@@ -16,8 +16,10 @@ export function showLobbyBrowser() {
   // Reset to lobbies tab
   if (dom.lobbyListPanel) dom.lobbyListPanel.classList.remove('hidden');
   if (dom.leaderboardPanel) dom.leaderboardPanel.classList.add('hidden');
+  if (dom.replaysPanel) dom.replaysPanel.classList.add('hidden');
   if (dom.lobbiesTab) dom.lobbiesTab.classList.add('active');
   if (dom.leaderboardTab) dom.leaderboardTab.classList.remove('active');
+  if (dom.replaysTab) dom.replaysTab.classList.remove('active');
   if (_sendMessage) _sendMessage({ type: 'list-lobbies' });
 }
 

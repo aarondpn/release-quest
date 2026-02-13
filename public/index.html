@@ -78,6 +78,7 @@
   <div class="lobby-tabs">
     <button class="lobby-tab active" id="lobbies-tab">LOBBIES</button>
     <button class="lobby-tab" id="leaderboard-tab">LEADERBOARD</button>
+    <button class="lobby-tab" id="replays-tab">REPLAYS</button>
     <a href="/overview.html" class="lobby-tab lobby-tab-link" target="_blank">📚 WIKI</a>
   </div>
 
@@ -231,6 +232,13 @@
     </div>
   </div>
 
+  <div class="replays-panel hidden" id="replays-panel">
+    <div class="replays-header">YOUR REPLAYS</div>
+    <div class="replays-list" id="replays-list">
+      <div class="replays-empty">No recordings yet. Play a game!</div>
+    </div>
+  </div>
+
   <div class="lobby-error hidden" id="lobby-error"></div>
 </div>
 
@@ -346,6 +354,12 @@
       </div>
 
       <div class="live-dashboard hidden" id="live-dashboard"></div>
+
+      <div class="playback-controls hidden" id="playback-controls">
+        <span class="playback-badge">REPLAY</span>
+        <button class="playback-pause-btn">&10074;&10074;</button>
+        <button class="playback-speed-btn">1x</button>
+      </div>
     </div>
   </div>
 

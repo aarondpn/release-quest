@@ -23,6 +23,14 @@ export const clientState = {
   duckElement: null,
   hammerElement: null,
   difficultyPresets: null,
+  // Playback state
+  isPlayback: false,
+  playbackTimers: [],
+  playbackSpeed: 1,
+  playbackPaused: false,
+  playbackRecording: null,
+  playbackGameTimeOffset: 0,
+  playbackWallTimeRef: 0,
 };
 
 export const dom = {
@@ -71,6 +79,10 @@ export const dom = {
   leaderboardTab: null,
   lobbiesTab: null,
   liveDashboard: null,
+  replaysPanel: null,
+  replaysList: null,
+  replaysTab: null,
+  playbackControls: null,
   lobbyDifficulty: null,
   advancedToggleBtn: null,
   lobbyAdvancedConfig: null,
@@ -157,4 +169,8 @@ export function initDom() {
   dom.leaderboardTab = document.getElementById('leaderboard-tab');
   dom.lobbiesTab = document.getElementById('lobbies-tab');
   dom.liveDashboard = document.getElementById('live-dashboard');
+  dom.replaysPanel = document.getElementById('replays-panel');
+  dom.replaysList = document.getElementById('replays-list');
+  dom.replaysTab = document.getElementById('replays-tab');
+  dom.playbackControls = document.getElementById('playback-controls');
 }

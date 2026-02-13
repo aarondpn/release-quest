@@ -9,6 +9,8 @@ import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, show
 import { showLobbyBrowser, hideLobbyBrowser, renderLobbyList, showLobbyError } from './lobby-ui.js';
 import { updateAuthUI, hideAuthOverlay, showAuthError } from './auth-ui.js';
 import { renderLeaderboard } from './leaderboard-ui.js';
+import { renderRecordingsList } from './replays-ui.js';
+import { startPlayback } from './playback.js';
 import { showError, ERROR_LEVELS } from './error-handler.js';
 
 // Cursor batching: buffer incoming positions and flush once per frame
@@ -33,6 +35,10 @@ function queueCursorUpdate(playerId, x, y) {
 
 export function sendMessage(msg) {
   try {
+    // During playback, only allow replay-related messages
+    if (clientState.isPlayback) {
+      if (msg.type !== 'get-recordings' && msg.type !== 'get-recording') return;
+    }
     if (clientState.ws && clientState.ws.readyState === 1) {
       clientState.ws.send(JSON.stringify(msg));
     }
@@ -104,7 +110,7 @@ function handleMessage(msg) {
   }
 }
 
-function handleMessageInternal(msg) {
+export function handleMessageInternal(msg) {
   switch (msg.type) {
 
     case 'auth-result': {
@@ -878,6 +884,21 @@ function handleMessageInternal(msg) {
 
     case 'leaderboard': {
       renderLeaderboard(msg.entries);
+      break;
+    }
+
+    case 'recordings-list': {
+      renderRecordingsList(msg.recordings);
+      break;
+    }
+
+    case 'recording-data': {
+      startPlayback(msg.recording);
+      break;
+    }
+
+    case 'recording-error': {
+      showLobbyError(msg.message);
       break;
     }
   }

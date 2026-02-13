@@ -1,6 +1,6 @@
 import pg from 'pg';
 import { DATABASE_CONFIG } from './config.ts';
-import type { DbLobbyRow, DbUserRow, DbSessionRow, LeaderboardEntry } from './types.ts';
+import type { DbLobbyRow, DbUserRow, DbSessionRow, LeaderboardEntry, RecordingMetadata, RecordingEvent, RecordingRow } from './types.ts';
 
 const { Pool } = pg;
 const pool = new Pool(DATABASE_CONFIG);
@@ -58,6 +58,21 @@ export async function initialize(): Promise<void> {
       highest_score INTEGER NOT NULL DEFAULT 0,
       bugs_squashed INTEGER NOT NULL DEFAULT 0,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS game_recordings (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      duration_ms INTEGER NOT NULL,
+      outcome VARCHAR(16) NOT NULL,
+      score INTEGER NOT NULL,
+      difficulty VARCHAR(16) NOT NULL,
+      player_count INTEGER NOT NULL,
+      players JSONB NOT NULL,
+      events JSONB NOT NULL
     )
   `);
 
@@ -201,6 +216,42 @@ export async function getLeaderboard(limit: number = 10): Promise<LeaderboardEnt
     LIMIT $1
   `, [limit]);
   return result.rows as LeaderboardEntry[];
+}
+
+// Recording queries
+
+export async function saveRecording(userId: number, meta: Omit<RecordingMetadata, 'userId'>, events: RecordingEvent[]): Promise<void> {
+  await pool.query(
+    `INSERT INTO game_recordings (user_id, duration_ms, outcome, score, difficulty, player_count, players, events)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [userId, meta.duration_ms, meta.outcome, meta.score, meta.difficulty, meta.player_count, JSON.stringify(meta.players), JSON.stringify(events)]
+  );
+  // Keep only the 3 most recent recordings per user
+  await pool.query(
+    `DELETE FROM game_recordings WHERE id IN (
+       SELECT id FROM game_recordings WHERE user_id = $1
+       ORDER BY recorded_at DESC OFFSET 3
+     )`,
+    [userId]
+  );
+}
+
+export async function getRecordingsList(userId: number): Promise<RecordingRow[]> {
+  const result = await pool.query(
+    `SELECT id, user_id, recorded_at, duration_ms, outcome, score, difficulty, player_count, players
+     FROM game_recordings WHERE user_id = $1
+     ORDER BY recorded_at DESC`,
+    [userId]
+  );
+  return result.rows as RecordingRow[];
+}
+
+export async function getRecording(id: number, userId: number): Promise<RecordingRow | null> {
+  const result = await pool.query(
+    `SELECT * FROM game_recordings WHERE id = $1 AND user_id = $2`,
+    [id, userId]
+  );
+  return (result.rows[0] as RecordingRow) || null;
 }
 
 export async function close(): Promise<void> {

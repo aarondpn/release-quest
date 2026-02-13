@@ -6,6 +6,8 @@ import { connect, sendMessage } from './network.js';
 import { showLobbyBrowser, initLobbySend } from './lobby-ui.js';
 import { initAuthSend, showAuthOverlay, hideAuthOverlay, switchTab, submitLogin, submitRegister, submitLogout } from './auth-ui.js';
 import { initLeaderboardSend, showLeaderboardTab, showLobbiesTab } from './leaderboard-ui.js';
+import { initReplaysSend, showReplaysTab } from './replays-ui.js';
+import { stopPlayback, togglePause, cycleSpeed } from './playback.js';
 import { showError, ERROR_LEVELS } from './error-handler.js';
 
 initDom();
@@ -323,36 +325,27 @@ dom.arena.addEventListener('mousemove', (e) => {
 });
 
 // Button handlers
-document.getElementById('start-btn').addEventListener('click', () => {
+function handleGameAction() {
   try {
+    if (clientState.isPlayback) { stopPlayback(); return; }
     sendMessage({ type: 'start-game' });
   } catch (err) {
-    console.error('Error starting game:', err);
-    showError('Failed to start game', ERROR_LEVELS.ERROR);
+    console.error('Error with game action:', err);
+    showError('Failed to perform action', ERROR_LEVELS.ERROR);
   }
-});
+}
 
-document.getElementById('retry-btn').addEventListener('click', () => {
-  try {
-    sendMessage({ type: 'start-game' });
-  } catch (err) {
-    console.error('Error retrying game:', err);
-    showError('Failed to restart game', ERROR_LEVELS.ERROR);
-  }
-});
-
-document.getElementById('continue-btn').addEventListener('click', () => {
-  try {
-    sendMessage({ type: 'start-game' });
-  } catch (err) {
-    console.error('Error continuing game:', err);
-    showError('Failed to continue game', ERROR_LEVELS.ERROR);
-  }
-});
+document.getElementById('start-btn').addEventListener('click', handleGameAction);
+document.getElementById('retry-btn').addEventListener('click', handleGameAction);
+document.getElementById('continue-btn').addEventListener('click', handleGameAction);
 
 // ── Leave lobby handlers ──
 function leaveLobby() {
   try {
+    if (clientState.isPlayback) {
+      stopPlayback();
+      return;
+    }
     sendMessage({ type: 'leave-lobby' });
   } catch (err) {
     console.error('Error leaving lobby:', err);
@@ -373,6 +366,10 @@ initAuthSend(sendMessage);
 
 // Initialize leaderboard send function
 initLeaderboardSend(sendMessage);
+
+// Initialize replays send function
+initReplaysSend(sendMessage);
+
 
 // ── Auth handlers ──
 dom.authShowLoginBtn.addEventListener('click', showAuthOverlay);
@@ -398,6 +395,15 @@ dom.authRegConfirm.addEventListener('keydown', (e) => {
 // ── Leaderboard tab handlers ──
 dom.lobbiesTab.addEventListener('click', showLobbiesTab);
 dom.leaderboardTab.addEventListener('click', showLeaderboardTab);
+
+// ── Replays tab handler ──
+if (dom.replaysTab) dom.replaysTab.addEventListener('click', showReplaysTab);
+
+// ── Playback controls ──
+if (dom.playbackControls) {
+  dom.playbackControls.querySelector('.playback-pause-btn')?.addEventListener('click', togglePause);
+  dom.playbackControls.querySelector('.playback-speed-btn')?.addEventListener('click', cycleSpeed);
+}
 
 // Start
 connect();
