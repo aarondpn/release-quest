@@ -1,4 +1,5 @@
 import { dom, clientState } from './state.js';
+import { renderIcon } from './avatars.js';
 
 function escapeHtml(s) {
   const d = document.createElement('div');
@@ -62,7 +63,7 @@ export function renderScoreboard(container, playerList) {
   container.innerHTML = sorted.map(p =>
     '<div class="scoreboard-row">' +
       '<span class="scoreboard-name">' +
-        '<span style="font-size:14px;margin-right:4px">' + (p.icon || '') + '</span>' +
+        '<span style="margin-right:4px">' + renderIcon(p.icon || '', 14) + '</span>' +
         escapeHtml(p.name) + (p.id === clientState.myId ? ' (you)' : '') +
       '</span>' +
       '<span class="scoreboard-points">' + p.score + '</span>' +
@@ -137,7 +138,7 @@ function renderLiveDashboard() {
     row.querySelector('.live-dash-rank').textContent = rank;
 
     // Update name & icon
-    row.querySelector('.live-dash-icon').textContent = p.icon || '';
+    row.querySelector('.live-dash-icon').innerHTML = renderIcon(p.icon || '', 10);
     row.querySelector('.live-dash-name-text').textContent = escapeHtml(p.name);
 
     // Score change detection
@@ -259,7 +260,7 @@ export function updateLobbyRoster() {
   list.innerHTML = players.map((p, i) => {
     const isMe = p.id === clientState.myId;
     return '<div class="lobby-player-card' + (isMe ? ' is-me' : '') + '" style="animation-delay:' + (i * 0.08) + 's">' +
-      '<span class="lobby-player-icon">' + (p.icon || '') + '</span>' +
+      '<span class="lobby-player-icon">' + renderIcon(p.icon || '', 16) + '</span>' +
       '<span class="lobby-player-name">' + escapeHtml(p.name) + '</span>' +
       '<span class="lobby-player-dot" style="color:' + (p.color || 'var(--teal)') + ';background:' + (p.color || 'var(--teal)') + '"></span>' +
       (isMe ? '<span class="lobby-player-you">YOU</span>' : '') +

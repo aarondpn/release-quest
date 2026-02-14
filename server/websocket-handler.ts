@@ -1,6 +1,6 @@
 import type { WebSocket, RawData } from 'ws';
 import type { PlayerInfo } from './types.ts';
-import { LOGICAL_W, LOGICAL_H, ICONS } from './config.ts';
+import { LOGICAL_W, LOGICAL_H, ICONS, PREMIUM_ICON_IDS, ALL_ICONS } from './config.ts';
 import { getStateSnapshot } from './state.ts';
 import * as network from './network.ts';
 import * as db from './db.ts';
@@ -27,7 +27,7 @@ export async function handleMessage(
       const username = String(msg.username || '').trim();
       const password = String(msg.password || '');
       const displayName = String(msg.displayName || '').trim().slice(0, 16);
-      const regIcon: string | undefined = msg.icon || undefined;
+      const regIcon: string | undefined = msg.icon && ALL_ICONS.includes(msg.icon) ? msg.icon : undefined;
 
       auth.register(username, password, displayName, regIcon).then(result => {
         if (result.error !== undefined) {
@@ -152,6 +152,12 @@ export async function handleMessage(
       const newName = String(msg.name || '').trim().slice(0, 16);
       if (newName) info.name = newName;
       if (msg.icon && ICONS.includes(msg.icon)) info.icon = msg.icon;
+      if (msg.icon && PREMIUM_ICON_IDS.includes(msg.icon) && info.userId) info.icon = msg.icon;
+
+      // Persist icon change to database for logged-in users
+      if (info.userId && msg.icon && ALL_ICONS.includes(msg.icon)) {
+        db.updateUserIcon(info.userId, info.icon).catch(() => {});
+      }
 
       // If already in a lobby, update there too
       const ctx = getCtxForPlayer(pid, playerInfo);
@@ -160,6 +166,7 @@ export async function handleMessage(
         if (player) {
           if (newName) player.name = newName;
           if (msg.icon && ICONS.includes(msg.icon)) player.icon = msg.icon;
+          if (msg.icon && PREMIUM_ICON_IDS.includes(msg.icon) && info.userId) player.icon = msg.icon;
           network.broadcastToLobby(ctx.lobbyId, {
             type: 'player-joined',
             player: { id: pid, name: player.name, color: player.color, icon: player.icon, score: player.score },

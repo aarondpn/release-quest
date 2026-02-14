@@ -710,6 +710,54 @@ header p {
   box-shadow: 0 0 18px rgba(255,230,109,0.2);
   transform: scale(1.15);
 }
+.icon-picker-premium-label {
+  color: var(--purple);
+  opacity: 0.7;
+  text-shadow: 0 0 8px rgba(168,85,247,0.4);
+}
+.icon-option-premium {
+  border-color: rgba(168,85,247,0.35);
+  position: relative;
+}
+.icon-option-premium:hover:not(.locked) {
+  border-color: var(--purple);
+}
+.icon-option-premium.selected {
+  border-color: var(--purple);
+  background: rgba(168,85,247,0.08);
+  box-shadow: 0 0 18px rgba(168,85,247,0.25);
+}
+.icon-option.locked {
+  opacity: 0.35;
+  filter: grayscale(0.8);
+  cursor: not-allowed;
+}
+.icon-option.locked:hover {
+  transform: none;
+  border-color: #2a2a4a;
+  background: var(--surface);
+}
+.icon-lock-overlay {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  font-size: 10px;
+  line-height: 1;
+  pointer-events: none;
+}
+@keyframes locked-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+.icon-option.locked-shake {
+  animation: locked-shake 0.4s ease;
+}
+.avatar-icon.avatar-premium {
+  image-rendering: pixelated;
+}
 
 /* Staggered entrance */
 .name-entry-title { animation: ne-entrance 0.5s ease-out both; }

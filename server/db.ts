@@ -35,10 +35,13 @@ export async function initialize(): Promise<void> {
       username VARCHAR(16) NOT NULL UNIQUE,
       password_hash VARCHAR(72) NOT NULL,
       display_name VARCHAR(16) NOT NULL,
-      icon VARCHAR(8) NOT NULL DEFAULT '\u{1F47E}',
+      icon VARCHAR(16) NOT NULL DEFAULT '\u{1F431}',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+
+  // Widen icon column for premium avatar IDs (e.g. "av:knight")
+  await pool.query(`ALTER TABLE users ALTER COLUMN icon TYPE VARCHAR(16)`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS sessions (
@@ -87,11 +90,14 @@ export async function initialize(): Promise<void> {
       recording_id INTEGER NOT NULL REFERENCES game_recordings(id) ON DELETE CASCADE,
       player_id VARCHAR(64) NOT NULL,
       name VARCHAR(64) NOT NULL,
-      icon VARCHAR(8) NOT NULL DEFAULT '',
+      icon VARCHAR(16) NOT NULL DEFAULT '',
       color VARCHAR(16) NOT NULL,
       score INTEGER NOT NULL DEFAULT 0
     )
   `);
+
+  // Widen recording_players icon column for premium avatar IDs
+  await pool.query(`ALTER TABLE recording_players ALTER COLUMN icon TYPE VARCHAR(16)`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS recording_events (
@@ -218,6 +224,10 @@ export async function createUser(username: string, passwordHash: string, display
     [username, passwordHash, displayName, icon]
   );
   return result.rows[0] as DbUserRow;
+}
+
+export async function updateUserIcon(userId: number, icon: string): Promise<void> {
+  await pool.query(`UPDATE users SET icon = $1 WHERE id = $2`, [icon, userId]);
 }
 
 export async function getUserByUsername(username: string): Promise<DbUserRow | null> {

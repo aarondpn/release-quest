@@ -1,5 +1,6 @@
 import { dom, clientState } from './state.js';
 import { logicalToPixel } from './coordinates.js';
+import { renderIcon } from './avatars.js';
 
 function escapeHtml(s) {
   const d = document.createElement('div');
@@ -11,7 +12,7 @@ export function addRemoteCursor(playerId, name, color, icon) {
   if (playerId === clientState.myId) return;
   if (clientState.remoteCursors[playerId]) {
     const el = clientState.remoteCursors[playerId];
-    el.querySelector('.remote-cursor-icon').textContent = icon || '\u{1F431}';
+    el.querySelector('.remote-cursor-icon').innerHTML = renderIcon(icon || '\u{1F431}', 22);
     el.querySelector('.remote-cursor-name').textContent = name;
     el.style.color = color;
     return;
@@ -21,7 +22,7 @@ export function addRemoteCursor(playerId, name, color, icon) {
   el.className = 'remote-cursor';
   el.style.color = color;
   el.innerHTML =
-    '<span class="remote-cursor-icon">' + (icon || '\u{1F431}') + '</span>' +
+    '<span class="remote-cursor-icon">' + renderIcon(icon || '\u{1F431}', 22) + '</span>' +
     '<span class="remote-cursor-name">' + escapeHtml(name) + '</span>';
   dom.arena.appendChild(el);
   clientState.remoteCursors[playerId] = el;
@@ -59,7 +60,7 @@ export function addCursorTrailDot(playerId, lx, ly, color) {
   dot.style.top = pos.y + 'px';
   // Use the player's avatar icon
   const player = clientState.players[playerId];
-  dot.textContent = (player && player.icon) || '\u{1F431}';
+  dot.innerHTML = renderIcon((player && player.icon) || '\u{1F431}', 22);
   dom.arena.appendChild(dot);
   // Remove after a short delay
   setTimeout(() => dot.remove(), 100);

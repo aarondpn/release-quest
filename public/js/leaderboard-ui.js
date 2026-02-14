@@ -1,4 +1,5 @@
 import { dom } from './state.js';
+import { renderIcon } from './avatars.js';
 
 let _sendMessage = null;
 export function initLeaderboardSend(fn) { _sendMessage = fn; }
@@ -26,7 +27,7 @@ export function renderLeaderboard(entries) {
     const winRate = e.games_played > 0 ? Math.round((e.games_won / e.games_played) * 100) : 0;
     return '<div class="leaderboard-row' + rankClass + '">' +
       '<span class="leaderboard-rank">' + (i + 1) + '</span>' +
-      '<span class="leaderboard-icon">' + escapeHtml(e.icon) + '</span>' +
+      '<span class="leaderboard-icon">' + renderIcon(e.icon, 16) + '</span>' +
       '<span class="leaderboard-name">' + escapeHtml(e.display_name) + '</span>' +
       '<span class="leaderboard-score">' + Number(e.total_score).toLocaleString() + '</span>' +
       '<span class="leaderboard-wins">' + e.games_won + 'W</span>' +

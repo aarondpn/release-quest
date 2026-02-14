@@ -1,6 +1,7 @@
 import { dom, clientState } from './state.js';
 import { startPlayback } from './playback.js';
 import { showError, ERROR_LEVELS } from './error-handler.js';
+import { renderIcon } from './avatars.js';
 
 let _sendMessage = null;
 export function initReplaysSend(fn) { _sendMessage = fn; }
@@ -68,7 +69,7 @@ export function renderRecordingsList(recordings) {
     const outcomeBadge = r.outcome === 'win'
       ? '<span class="replay-outcome replay-win">WIN</span>'
       : '<span class="replay-outcome replay-loss">LOSS</span>';
-    const playerIcons = (r.players || []).map(p => escapeHtml(p.icon || '')).join('');
+    const playerIcons = (r.players || []).map(p => renderIcon(p.icon || '', 12)).join('');
     const isShared = !!r.share_token;
     const sharedBadge = isShared ? '<span class="replay-shared-badge">SHARED</span>' : '';
     const shareBtn = isShared

@@ -8,6 +8,7 @@ import { addRemoteCursor, removeRemoteCursor, updateRemoteCursor, clearRemoteCur
 import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, showEnrageFlash, showLevelFlash, showEscalationWarning, showBossRegenNumber, showHeisenbugFleeEffect, showFeaturePenaltyEffect, showDuckBuffOverlay, removeDuckBuffOverlay, showMergeResolvedEffect, showPipelineChainResolvedEffect, showPipelineChainResetEffect } from './vfx.js';
 import { showLobbyBrowser, hideLobbyBrowser, renderLobbyList, showLobbyError } from './lobby-ui.js';
 import { updateAuthUI, hideAuthOverlay, showAuthError } from './auth-ui.js';
+import { isPremium, STANDARD_ICONS } from './avatars.js';
 import { renderLeaderboard } from './leaderboard-ui.js';
 import { renderRecordingsList, handleRecordingShared, handleRecordingUnshared } from './replays-ui.js';
 import { startPlayback } from './playback.js';
@@ -120,7 +121,13 @@ export function handleMessageInternal(msg) {
           clientState.authUser = null;
           clientState.isLoggedIn = false;
           localStorage.removeItem('rq_session_token');
+          // Reset premium icon to standard on logout
+          if (isPremium(clientState.selectedIcon)) {
+            clientState.selectedIcon = STANDARD_ICONS[0];
+            clientState.myIcon = STANDARD_ICONS[0];
+          }
           updateAuthUI();
+          if (typeof window._buildIconPicker === 'function') window._buildIconPicker();
         } else {
           // login, register, or resume
           if (msg.token) {
@@ -140,10 +147,9 @@ export function handleMessageInternal(msg) {
           if (msg.user.icon) {
             clientState.myIcon = msg.user.icon;
             clientState.selectedIcon = msg.user.icon;
-            dom.iconPicker.querySelectorAll('.icon-option').forEach(o => {
-              o.classList.toggle('selected', o.textContent === msg.user.icon);
-            });
           }
+          // Rebuild icon picker to unlock premium section
+          if (typeof window._buildIconPicker === 'function') window._buildIconPicker();
         }
       } else {
         if (msg.action === 'resume') {
@@ -153,6 +159,8 @@ export function handleMessageInternal(msg) {
           clientState.authUser = null;
           clientState.isLoggedIn = false;
           updateAuthUI();
+          // Rebuild icon picker to lock premium section
+          if (typeof window._buildIconPicker === 'function') window._buildIconPicker();
         } else {
           showAuthError(msg.error || 'Authentication failed');
         }
@@ -170,7 +178,7 @@ export function handleMessageInternal(msg) {
       if (msg.icon) {
         clientState.selectedIcon = msg.icon;
         dom.iconPicker.querySelectorAll('.icon-option').forEach(o => {
-          o.classList.toggle('selected', o.textContent === msg.icon);
+          o.classList.toggle('selected', o.dataset.icon === msg.icon);
         });
       }
 

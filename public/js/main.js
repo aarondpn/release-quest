@@ -1,4 +1,5 @@
-import { PLAYER_ICONS, CURSOR_THROTTLE_MS } from './config.js';
+import { CURSOR_THROTTLE_MS } from './config.js';
+import { STANDARD_ICONS, PREMIUM_AVATARS, PREMIUM_IDS, isPremium, renderIcon } from './avatars.js';
 import { clientState, dom, initDom } from './state.js';
 import { pixelToLogical } from './coordinates.js';
 import { updateHUD } from './hud.js';
@@ -51,18 +52,73 @@ fetch('/api/difficulty-presets')
   });
 
 // Icon picker setup
-PLAYER_ICONS.forEach((icon, i) => {
-  const el = document.createElement('div');
-  el.className = 'icon-option' + (i === 0 ? ' selected' : '');
-  el.textContent = icon;
-  el.addEventListener('click', () => {
-    dom.iconPicker.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
-    el.classList.add('selected');
-    clientState.selectedIcon = icon;
+export function buildIconPicker() {
+  dom.iconPicker.innerHTML = '';
+  const current = clientState.selectedIcon;
+  const isAuth = clientState.isLoggedIn;
+
+  // Standard section
+  const stdLabel = document.createElement('div');
+  stdLabel.className = 'icon-picker-label';
+  stdLabel.textContent = 'PICK YOUR HUNTER';
+  dom.iconPicker.appendChild(stdLabel);
+
+  STANDARD_ICONS.forEach(icon => {
+    const el = document.createElement('div');
+    el.className = 'icon-option' + (current === icon ? ' selected' : '');
+    el.dataset.icon = icon;
+    el.textContent = icon;
+    el.addEventListener('click', () => {
+      dom.iconPicker.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+      clientState.selectedIcon = icon;
+    });
+    dom.iconPicker.appendChild(el);
   });
-  dom.iconPicker.appendChild(el);
-});
-clientState.selectedIcon = PLAYER_ICONS[0];
+
+  // Premium section
+  const premLabel = document.createElement('div');
+  premLabel.className = 'icon-picker-label icon-picker-premium-label';
+  premLabel.textContent = 'MEMBERS ONLY';
+  dom.iconPicker.appendChild(premLabel);
+
+  PREMIUM_IDS.forEach(id => {
+    const av = PREMIUM_AVATARS[id];
+    const el = document.createElement('div');
+    const locked = !isAuth;
+    el.className = 'icon-option icon-option-premium' + (current === id ? ' selected' : '') + (locked ? ' locked' : '');
+    el.dataset.icon = id;
+    el.innerHTML = '<img src="' + av.svg + '" width="28" height="28" alt="' + av.name + '" style="image-rendering:pixelated">';
+    if (locked) {
+      const lock = document.createElement('div');
+      lock.className = 'icon-lock-overlay';
+      lock.textContent = '\u{1F512}';
+      el.appendChild(lock);
+    }
+    el.addEventListener('click', () => {
+      if (locked) {
+        el.classList.add('locked-shake');
+        el.addEventListener('animationend', () => el.classList.remove('locked-shake'), { once: true });
+        return;
+      }
+      dom.iconPicker.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+      clientState.selectedIcon = id;
+    });
+    dom.iconPicker.appendChild(el);
+  });
+
+  // If selected icon isn't valid for current auth state, reset
+  if (isPremium(current) && !isAuth) {
+    clientState.selectedIcon = STANDARD_ICONS[0];
+    const first = dom.iconPicker.querySelector('.icon-option[data-icon="' + STANDARD_ICONS[0] + '"]');
+    if (first) first.classList.add('selected');
+  }
+}
+buildIconPicker();
+if (!clientState.selectedIcon) clientState.selectedIcon = STANDARD_ICONS[0];
+// Expose for cross-module calls (network.js auth state changes)
+window._buildIconPicker = buildIconPicker;
 
 // Initialize difficulty preset placeholders
 function updateDifficultyPlaceholders(difficulty) {
