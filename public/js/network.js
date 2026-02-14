@@ -9,7 +9,7 @@ import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, show
 import { showLobbyBrowser, hideLobbyBrowser, renderLobbyList, showLobbyError } from './lobby-ui.js';
 import { updateAuthUI, hideAuthOverlay, showAuthError } from './auth-ui.js';
 import { renderLeaderboard } from './leaderboard-ui.js';
-import { renderRecordingsList } from './replays-ui.js';
+import { renderRecordingsList, handleRecordingShared, handleRecordingUnshared } from './replays-ui.js';
 import { startPlayback } from './playback.js';
 import { showError, ERROR_LEVELS } from './error-handler.js';
 
@@ -195,6 +195,9 @@ export function handleMessageInternal(msg) {
       } else {
         updateAuthUI();
       }
+
+      // Check for shared replay URL
+      checkReplayUrl();
       break;
     }
 
@@ -901,6 +904,16 @@ export function handleMessageInternal(msg) {
       showLobbyError(msg.message);
       break;
     }
+
+    case 'recording-shared': {
+      handleRecordingShared(msg);
+      break;
+    }
+
+    case 'recording-unshared': {
+      handleRecordingUnshared(msg);
+      break;
+    }
   }
 }
 
@@ -991,4 +1004,31 @@ function showHammerShockwave(playerColor) {
   
   // Screen shake
   shakeArena('medium');
+}
+
+function checkReplayUrl() {
+  const params = new URLSearchParams(location.search);
+  const token = params.get('replay');
+  if (!token || !/^[a-f0-9]{32}$/.test(token)) return;
+
+  // Hide the name entry screen immediately so it doesn't cover the arena
+  if (dom.nameEntry) dom.nameEntry.classList.add('hidden');
+
+  fetch('/api/replay/' + token)
+    .then(res => {
+      if (!res.ok) return null;
+      return res.json();
+    })
+    .then(recording => {
+      if (recording) {
+        startPlayback(recording);
+      } else {
+        // Token was invalid — restore normal UI
+        if (!clientState.hasJoined && dom.nameEntry) dom.nameEntry.classList.remove('hidden');
+      }
+    })
+    .catch(() => {
+      showError('Failed to load shared replay', ERROR_LEVELS.ERROR);
+      if (!clientState.hasJoined && dom.nameEntry) dom.nameEntry.classList.remove('hidden');
+    });
 }

@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import pg from 'pg';
 import { DATABASE_CONFIG } from './config.ts';
 import type { DbLobbyRow, DbUserRow, DbSessionRow, LeaderboardEntry, RecordingMetadata, RecordingEvent, RecordingRow, RecordingPlayerRow, RecordingEventRow, RecordingMouseMoveRow, MouseMoveEvent } from './types.ts';
@@ -111,6 +112,14 @@ export async function initialize(): Promise<void> {
       x REAL NOT NULL,
       y REAL NOT NULL
     )
+  `);
+
+  // Add share columns for public replay sharing
+  await pool.query(`
+    ALTER TABLE game_recordings ADD COLUMN IF NOT EXISTS share_token VARCHAR(64) UNIQUE
+  `);
+  await pool.query(`
+    ALTER TABLE game_recordings ADD COLUMN IF NOT EXISTS shared_at TIMESTAMPTZ
   `);
 
   // Clean expired sessions
@@ -328,10 +337,11 @@ export async function saveRecording(
     }
   }
 
-  // 5. Retention: keep only 3 most recent per user (CASCADE deletes child rows)
+  // 5. Retention: keep only 3 most recent non-shared per user (CASCADE deletes child rows)
+  //    Shared replays are protected from retention purge (they expire via expireOldShares instead)
   await pool.query(
     `DELETE FROM game_recordings WHERE id IN (
-       SELECT id FROM game_recordings WHERE user_id = $1
+       SELECT id FROM game_recordings WHERE user_id = $1 AND share_token IS NULL
        ORDER BY recorded_at DESC OFFSET 3
      )`,
     [userId]
@@ -340,7 +350,7 @@ export async function saveRecording(
 
 export async function getRecordingsList(userId: number): Promise<RecordingRow[]> {
   const recResult = await pool.query(
-    `SELECT id, user_id, recorded_at, duration_ms, outcome, score, difficulty, player_count
+    `SELECT id, user_id, recorded_at, duration_ms, outcome, score, difficulty, player_count, share_token
      FROM game_recordings WHERE user_id = $1
      ORDER BY recorded_at DESC`,
     [userId]
@@ -384,6 +394,73 @@ export async function getRecording(id: number, userId: number): Promise<Recordin
       `SELECT id, recording_id, player_id, t, x, y
        FROM recording_mouse_moves WHERE recording_id = $1 ORDER BY t`,
       [id]
+    ),
+  ]);
+
+  rec.players = playersResult.rows as RecordingPlayerRow[];
+  rec.events = eventsResult.rows as RecordingEventRow[];
+  rec.mouseMovements = mouseResult.rows as RecordingMouseMoveRow[];
+
+  return rec;
+}
+
+export async function shareRecording(id: number, userId: number): Promise<string | null> {
+  // Check ownership and return existing token if already shared
+  const existing = await pool.query(
+    `SELECT share_token FROM game_recordings WHERE id = $1 AND user_id = $2`,
+    [id, userId]
+  );
+  if (existing.rows.length === 0) return null;
+  if (existing.rows[0].share_token) return existing.rows[0].share_token as string;
+
+  const token = crypto.randomBytes(16).toString('hex');
+  await pool.query(
+    `UPDATE game_recordings SET share_token = $1, shared_at = NOW() WHERE id = $2 AND user_id = $3`,
+    [token, id, userId]
+  );
+  return token;
+}
+
+export async function unshareRecording(id: number, userId: number): Promise<boolean> {
+  const result = await pool.query(
+    `UPDATE game_recordings SET share_token = NULL, shared_at = NULL WHERE id = $1 AND user_id = $2 AND share_token IS NOT NULL`,
+    [id, userId]
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
+export async function expireOldShares(): Promise<number> {
+  const result = await pool.query(
+    `UPDATE game_recordings SET share_token = NULL, shared_at = NULL
+     WHERE share_token IS NOT NULL AND shared_at < NOW() - INTERVAL '30 days'`
+  );
+  return result.rowCount ?? 0;
+}
+
+export async function getRecordingByToken(token: string): Promise<RecordingRow | null> {
+  const recResult = await pool.query(
+    `SELECT id, user_id, recorded_at, duration_ms, outcome, score, difficulty, player_count, share_token
+     FROM game_recordings WHERE share_token = $1`,
+    [token]
+  );
+  if (recResult.rows.length === 0) return null;
+  const rec = recResult.rows[0] as RecordingRow;
+
+  const [playersResult, eventsResult, mouseResult] = await Promise.all([
+    pool.query(
+      `SELECT id, recording_id, player_id, name, icon, color, score
+       FROM recording_players WHERE recording_id = $1`,
+      [rec.id]
+    ),
+    pool.query(
+      `SELECT id, recording_id, t, type, data
+       FROM recording_events WHERE recording_id = $1 ORDER BY t`,
+      [rec.id]
+    ),
+    pool.query(
+      `SELECT id, recording_id, player_id, t, x, y
+       FROM recording_mouse_moves WHERE recording_id = $1 ORDER BY t`,
+      [rec.id]
     ),
   ]);
 

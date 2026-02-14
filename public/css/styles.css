@@ -2371,7 +2371,7 @@ header p {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-width: 500px;
+  max-width: 640px;
   width: 100%;
   align-items: center;
 }
@@ -2467,6 +2467,41 @@ header p {
   color: var(--muted);
   flex-shrink: 0;
   opacity: 0.6;
+}
+
+.replay-shared-badge {
+  font-size: 6px;
+  font-weight: bold;
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: var(--purple);
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  flex-shrink: 0;
+}
+
+.replay-share-btn {
+  background: transparent;
+  border-color: var(--teal);
+  color: var(--teal);
+}
+.replay-share-btn:hover {
+  background: rgba(100, 255, 218, 0.1);
+}
+.replay-share-btn.btn-copied {
+  border-color: #22c55e;
+  color: #22c55e;
+}
+
+.replay-unshare-btn {
+  background: transparent;
+  border-color: var(--muted);
+  color: var(--muted);
+}
+.replay-unshare-btn:hover {
+  border-color: var(--red);
+  color: var(--red);
+  background: rgba(255, 107, 107, 0.1);
 }
 
 /* ── Playback Controls ── */

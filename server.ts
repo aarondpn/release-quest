@@ -101,6 +101,46 @@ const httpServer = http.createServer((req, res) => {
       res.end(JSON.stringify(DIFFICULTY_PRESETS));
       return;
     }
+
+    // Public replay endpoint
+    const replayMatch = urlPath.match(/^\/api\/replay\/([a-f0-9]{32})$/);
+    if (replayMatch) {
+      const token = replayMatch[1];
+      db.getRecordingByToken(token).then(recording => {
+        if (!recording) {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Recording not found' }));
+          return;
+        }
+        const events = (recording.events || []).map(ev => ({
+          t: ev.t,
+          msg: ev.data,
+        }));
+        const mouseMovements = (recording.mouseMovements || []).map(mm => ({
+          t: mm.t,
+          playerId: mm.player_id,
+          x: mm.x,
+          y: mm.y,
+        }));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          id: recording.id,
+          recorded_at: recording.recorded_at,
+          duration_ms: recording.duration_ms,
+          outcome: recording.outcome,
+          score: recording.score,
+          difficulty: recording.difficulty,
+          player_count: recording.player_count,
+          players: recording.players,
+          events,
+          mouseMovements,
+        }));
+      }).catch(() => {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Internal server error' }));
+      });
+      return;
+    }
     
     // Static file serving
     let filePath = urlPath === '/' ? '/index.html' : urlPath;
@@ -631,6 +671,52 @@ async function handleMessage(ws: WebSocket, msg: any, pid: string): Promise<void
         break;
       }
 
+      case 'share-recording': {
+        const info = playerInfo.get(pid);
+        if (!info?.userId) {
+          network.send(ws, { type: 'recording-error', message: 'Not logged in' });
+          break;
+        }
+        const recordingId = parseInt(msg.id, 10);
+        if (!recordingId) {
+          network.send(ws, { type: 'recording-error', message: 'Invalid recording ID' });
+          break;
+        }
+        db.shareRecording(recordingId, info.userId).then(shareToken => {
+          if (!shareToken) {
+            network.send(ws, { type: 'recording-error', message: 'Recording not found' });
+            return;
+          }
+          network.send(ws, { type: 'recording-shared', id: recordingId, shareToken });
+        }).catch(() => {
+          network.send(ws, { type: 'recording-error', message: 'Failed to share recording' });
+        });
+        break;
+      }
+
+      case 'unshare-recording': {
+        const info = playerInfo.get(pid);
+        if (!info?.userId) {
+          network.send(ws, { type: 'recording-error', message: 'Not logged in' });
+          break;
+        }
+        const recordingId = parseInt(msg.id, 10);
+        if (!recordingId) {
+          network.send(ws, { type: 'recording-error', message: 'Invalid recording ID' });
+          break;
+        }
+        db.unshareRecording(recordingId, info.userId).then(success => {
+          if (!success) {
+            network.send(ws, { type: 'recording-error', message: 'Recording not found or not shared' });
+            return;
+          }
+          network.send(ws, { type: 'recording-unshared', id: recordingId });
+        }).catch(() => {
+          network.send(ws, { type: 'recording-error', message: 'Failed to unshare recording' });
+        });
+        break;
+      }
+
       case 'cursor-move': {
         const ctx = getCtxForPlayer(pid);
         if (!ctx) break;
@@ -718,6 +804,12 @@ async function start(): Promise<void> {
   setInterval(() => {
     lobby.sweepEmptyLobbies().then(() => broadcastLobbyList()).catch(() => {});
   }, 30_000);
+
+  // Expire shared replay links older than 30 days (check hourly)
+  db.expireOldShares().then(n => { if (n > 0) console.log(`Expired ${n} old shared replay(s)`); }).catch(() => {});
+  setInterval(() => {
+    db.expireOldShares().then(n => { if (n > 0) console.log(`Expired ${n} old shared replay(s)`); }).catch(() => {});
+  }, 3_600_000);
 
   httpServer.listen(SERVER_CONFIG.port, () => {
     console.log(`Release Quest running on http://localhost:${SERVER_CONFIG.port}`);

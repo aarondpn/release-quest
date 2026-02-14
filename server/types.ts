@@ -388,6 +388,8 @@ export interface RecordingRow {
   score: number;
   difficulty: string;
   player_count: number;
+  share_token?: string | null;
+  shared_at?: Date | null;
   players?: RecordingPlayerRow[];
   events?: RecordingEventRow[];
   mouseMovements?: RecordingMouseMoveRow[];

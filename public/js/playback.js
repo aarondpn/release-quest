@@ -263,6 +263,11 @@ export function stopPlayback() {
   if (dom.playbackControls) dom.playbackControls.classList.add('hidden');
   document.getElementById('hud-leave-btn').classList.add('hidden');
 
+  // Clear ?replay= param from URL
+  if (new URLSearchParams(location.search).has('replay')) {
+    history.replaceState(null, '', location.pathname);
+  }
+
   showLobbyBrowser();
 }
 
