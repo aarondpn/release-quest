@@ -2,7 +2,7 @@ import { dom, clientState } from './state.js';
 import { updateHUD, updatePlayerCount, hideAllScreens, hideLiveDashboard } from './hud.js';
 import { clearAllBugs } from './bugs.js';
 import { removeBossElement } from './boss.js';
-import { addRemoteCursor, clearRemoteCursors, addCursorTrailDot, clearCursorTrails } from './players.js';
+import { addRemoteCursor, clearRemoteCursors } from './players.js';
 import { removeDuckBuffOverlay } from './vfx.js';
 import { showLobbyBrowser } from './lobby-ui.js';
 import { handleMessageInternal } from './network.js';
@@ -86,7 +86,6 @@ function seekTo(targetTime) {
   clearAllBugs();
   removeBossElement();
   clearRemoteCursors();
-  clearCursorTrails();
   removeDuckBuffOverlay();
   hideAllScreens();
   updateHUD(0, 1, 100);
@@ -131,6 +130,8 @@ export function startPlayback(recording) {
   clientState.playbackPaused = false;
   clientState.playbackTimers = [];
   clientState.playbackMouseTimers = [];
+  // Clear myId so all player cursors are shown during replay
+  clientState.myId = null;
 
   // Build a color lookup from recording players
   const playerColorMap = {};
@@ -140,6 +141,15 @@ export function startPlayback(recording) {
       playerColorMap[id] = p.color;
     });
   }
+
+  // Reset UI first
+  clearAllBugs();
+  removeBossElement();
+  clearRemoteCursors();
+  removeDuckBuffOverlay();
+  hideAllScreens();
+  hideLiveDashboard();
+  updateHUD(0, 1, 100);
 
   // Discover real player IDs from the game-start event in the recording
   clientState.players = {};
@@ -155,19 +165,11 @@ export function startPlayback(recording) {
       const id = p.player_id || ('replay_player_' + i);
       clientState.players[id] = { id, name: p.name, icon: p.icon, color: p.color, score: 0 };
       playerColorMap[id] = p.color;
+      addRemoteCursor(id, p.name, p.color, p.icon);
     });
   }
   clientState.playbackPlayerColors = playerColorMap;
 
-  // Reset UI
-  clearAllBugs();
-  removeBossElement();
-  clearRemoteCursors();
-  clearCursorTrails();
-  removeDuckBuffOverlay();
-  hideAllScreens();
-  hideLiveDashboard();
-  updateHUD(0, 1, 100);
   updatePlayerCount();
 
   // Hide lobby browser, show arena with playback controls
@@ -224,9 +226,6 @@ function scheduleMouseMoves(mouseMovements) {
       if (!clientState.isPlayback) return;
       // Dispatch as a player-cursor message for cursor position updates
       handleMessageInternal({ type: 'player-cursor', playerId: mm.playerId, x: mm.x, y: mm.y });
-      // Add trail dot
-      const color = (clientState.playbackPlayerColors && clientState.playbackPlayerColors[mm.playerId]) || '#4ecdc4';
-      addCursorTrailDot(mm.playerId, mm.x, mm.y, color);
     }, delay);
     clientState.playbackMouseTimers.push(timerId);
   }
@@ -248,7 +247,6 @@ export function stopPlayback() {
   clearAllBugs();
   removeBossElement();
   clearRemoteCursors();
-  clearCursorTrails();
   removeDuckBuffOverlay();
   hideAllScreens();
   hideLiveDashboard();
@@ -305,8 +303,6 @@ function rescheduleFrom(gameTime) {
     const timerId = setTimeout(() => {
       if (!clientState.isPlayback || clientState.playbackPaused) return;
       handleMessageInternal({ type: 'player-cursor', playerId: mm.playerId, x: mm.x, y: mm.y });
-      const color = (clientState.playbackPlayerColors && clientState.playbackPlayerColors[mm.playerId]) || '#4ecdc4';
-      addCursorTrailDot(mm.playerId, mm.x, mm.y, color);
     }, delay);
     clientState.playbackMouseTimers.push(timerId);
   }

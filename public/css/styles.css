@@ -418,7 +418,6 @@ header p {
   font-size: 22px;
   line-height: 1;
   translate: -50% -50%;
-  animation: trail-fade 500ms ease-out forwards;
 }
 @keyframes trail-fade {
   from { opacity: 0.6; transform: scale(1); }

@@ -61,8 +61,8 @@ export function addCursorTrailDot(playerId, lx, ly, color) {
   const player = clientState.players[playerId];
   dot.textContent = (player && player.icon) || '\u{1F431}';
   dom.arena.appendChild(dot);
-  // Remove after animation completes
-  dot.addEventListener('animationend', () => dot.remove());
+  // Remove after a short delay
+  setTimeout(() => dot.remove(), 100);
 }
 
 export function clearCursorTrails() {
