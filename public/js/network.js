@@ -419,7 +419,9 @@ export function handleMessageInternal(msg) {
       if (el) {
         const pos = logicalToPixel(msg.x, msg.y);
         let dur;
-        if (el.classList.contains('pipeline-bug')) {
+        if (el.classList.contains('infinite-loop')) {
+          dur = 140; // fast tick for smooth orbital motion
+        } else if (el.classList.contains('pipeline-bug')) {
           dur = 330; // fast tick for snake slither
         } else if (dom.levelEl.textContent === 'BOSS') {
           dur = 3500 * 0.4;
@@ -834,6 +836,55 @@ export function handleMessageInternal(msg) {
       rebuildPipelineTether(msg.chainId);
       showPipelineChainResetEffect();
       shakeArena('light');
+      break;
+    }
+
+    // ── Infinite Loop ──
+    case 'infinite-loop-squashed': {
+      const bugEl = clientState.bugs[msg.bugId];
+      // Show effect at the breakpoint position
+      const overlay = clientState.infiniteLoopOverlays && clientState.infiniteLoopOverlays[msg.bugId];
+      if (overlay) {
+        const bpRect = overlay.breakpoint.getBoundingClientRect();
+        const arenaRect = dom.arena.getBoundingClientRect();
+        const lx = ((bpRect.left - arenaRect.left + bpRect.width / 2) / arenaRect.width) * LOGICAL_W;
+        const ly = ((bpRect.top - arenaRect.top + bpRect.height / 2) / arenaRect.height) * LOGICAL_H;
+        showSquashEffect(lx, ly, msg.playerColor);
+        showParticleBurst(lx, ly, '#06b6d4');
+        showImpactRing(lx, ly, '#06b6d4');
+      } else if (bugEl) {
+        const rect = bugEl.getBoundingClientRect();
+        const arenaRect = dom.arena.getBoundingClientRect();
+        const lx = ((rect.left - arenaRect.left + rect.width / 2) / arenaRect.width) * LOGICAL_W;
+        const ly = ((rect.top - arenaRect.top) / arenaRect.height) * LOGICAL_H;
+        showSquashEffect(lx, ly, msg.playerColor);
+        showParticleBurst(lx, ly, '#06b6d4');
+        showImpactRing(lx, ly, '#06b6d4');
+      }
+      removeBugElement(msg.bugId, true);
+      updateHUD(msg.score);
+      if (clientState.players[msg.playerId]) {
+        clientState.players[msg.playerId].score = msg.playerScore;
+      }
+      updateLiveDashboard();
+      break;
+    }
+
+    case 'infinite-loop-miss': {
+      const overlay = clientState.infiniteLoopOverlays && clientState.infiniteLoopOverlays[msg.bugId];
+      if (overlay) {
+        const bpRect = overlay.breakpoint.getBoundingClientRect();
+        const arenaRect = dom.arena.getBoundingClientRect();
+        const x = bpRect.left - arenaRect.left + bpRect.width / 2;
+        const y = bpRect.top - arenaRect.top;
+        const missText = document.createElement('div');
+        missText.className = 'infinite-loop-miss-text';
+        missText.textContent = 'MISS!';
+        missText.style.left = x + 'px';
+        missText.style.top = y + 'px';
+        dom.arena.appendChild(missText);
+        setTimeout(() => missText.remove(), 800);
+      }
       break;
     }
 

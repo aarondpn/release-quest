@@ -77,6 +77,15 @@ export interface BugEntity {
   chainId?: string;
   chainIndex?: number;
   chainLength?: number;
+  // Infinite Loop
+  isInfiniteLoop?: boolean;
+  loopCenterX?: number;
+  loopCenterY?: number;
+  loopRadiusX?: number;
+  loopRadiusY?: number;
+  loopAngle?: number;
+  loopSpeed?: number;
+  breakpointAngle?: number;
 }
 
 export interface PipelineChain {
@@ -235,6 +244,8 @@ export interface DifficultyConfig {
     pipelineBugChance: number;
     pipelineBugStartLevel: number;
     memoryLeakChance: number;
+    infiniteLoopChance: number;
+    infiniteLoopStartLevel: number;
   };
   powerups: {
     rubberDuckIntervalMin: number;

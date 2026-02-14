@@ -44,6 +44,9 @@ export function createBugElement(bugId, lx, ly, variant) {
       el.dataset.chainIndex = variant.chainIndex;
       el.dataset.chainLength = variant.chainLength;
     }
+    if (variant.isInfiniteLoop) {
+      el.classList.add('infinite-loop');
+    }
   }
 
   const pos = logicalToPixel(lx, ly);
@@ -52,8 +55,12 @@ export function createBugElement(bugId, lx, ly, variant) {
 
   clientState.bugPositions[bugId] = { x: lx, y: ly };
 
+  // Infinite loop: no click handler on bug, create breakpoint + loop path
+  if (variant && variant.isInfiniteLoop) {
+    createInfiniteLoopOverlay(bugId, variant);
+  }
   // Memory leak requires hold mechanic
-  if (variant && variant.isMemoryLeak) {
+  else if (variant && variant.isMemoryLeak) {
     let holdTimer = null;
     let holdStartTime = null;
 
@@ -296,6 +303,106 @@ export function rebuildPipelineTether(chainId) {
   tryCreatePipelineTether(chainId);
 }
 
+// ── Infinite Loop overlay (breakpoint marker + orbit path) ──
+
+function createInfiniteLoopOverlay(bugId, variant) {
+  const { loopCenterX, loopCenterY, loopRadiusX, loopRadiusY, breakpointAngle } = variant;
+
+  // Draw SVG ellipse orbit path
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.classList.add('infinite-loop-path');
+  svg.setAttribute('data-bug-id', bugId);
+  svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:8;';
+  const center = logicalToPixel(loopCenterX, loopCenterY);
+  const arenaRect = getArenaRect();
+  const scaleX = arenaRect.width / 800;
+  const scaleY = arenaRect.height / 500;
+  const ellipse = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+  ellipse.setAttribute('cx', center.x);
+  ellipse.setAttribute('cy', center.y);
+  ellipse.setAttribute('rx', loopRadiusX * scaleX);
+  ellipse.setAttribute('ry', loopRadiusY * scaleY);
+  ellipse.setAttribute('fill', 'none');
+  ellipse.setAttribute('stroke', '#06b6d4');
+  ellipse.setAttribute('stroke-width', '1.5');
+  ellipse.setAttribute('stroke-dasharray', '6 4');
+  ellipse.setAttribute('opacity', '0.3');
+  svg.appendChild(ellipse);
+  dom.arena.appendChild(svg);
+
+  // Create breakpoint marker at the breakpoint angle on the ellipse
+  const bpX = loopCenterX + Math.cos(breakpointAngle) * loopRadiusX;
+  const bpY = loopCenterY + Math.sin(breakpointAngle) * loopRadiusY;
+  const bpPos = logicalToPixel(bpX, bpY);
+  const bp = document.createElement('div');
+  bp.className = 'infinite-loop-breakpoint';
+  bp.setAttribute('data-bug-id', bugId);
+  bp.style.left = bpPos.x + 'px';
+  bp.style.top = bpPos.y + 'px';
+
+  bp.addEventListener('click', (e) => {
+    try {
+      e.stopPropagation();
+      if (clientState.ws && clientState.ws.readyState === 1) {
+        clientState.ws.send(JSON.stringify({ type: 'click-breakpoint', bugId }));
+      }
+    } catch (err) {
+      console.error('Error handling breakpoint click:', err);
+      showError('Error clicking breakpoint', ERROR_LEVELS.ERROR);
+    }
+  });
+
+  dom.arena.appendChild(bp);
+
+  // Store references for cleanup
+  clientState.infiniteLoopOverlays = clientState.infiniteLoopOverlays || {};
+  clientState.infiniteLoopOverlays[bugId] = { svg, breakpoint: bp, variant };
+
+  // Start proximity glow check
+  startInfiniteLoopProximityCheck(bugId);
+}
+
+function startInfiniteLoopProximityCheck(bugId) {
+  const overlay = clientState.infiniteLoopOverlays && clientState.infiniteLoopOverlays[bugId];
+  if (!overlay) return;
+  const { variant, breakpoint } = overlay;
+  const hitWindow = 0.5; // same as server hitWindowRadians
+
+  function checkProximity() {
+    if (!clientState.infiniteLoopOverlays || !clientState.infiniteLoopOverlays[bugId]) return;
+    const bugEl = clientState.bugs[bugId];
+    if (!bugEl) return;
+
+    // Estimate current angle from bug position
+    const pos = clientState.bugPositions[bugId];
+    if (!pos) { overlay.rafId = requestAnimationFrame(checkProximity); return; }
+    const dx = pos.x - variant.loopCenterX;
+    const dy = pos.y - variant.loopCenterY;
+    const currentAngle = Math.atan2(dy, dx);
+    let diff = Math.abs(currentAngle - variant.breakpointAngle);
+    if (diff > Math.PI) diff = 2 * Math.PI - diff;
+
+    if (diff <= hitWindow * 1.5) {
+      breakpoint.classList.add('hot');
+    } else {
+      breakpoint.classList.remove('hot');
+    }
+
+    overlay.rafId = requestAnimationFrame(checkProximity);
+  }
+
+  overlay.rafId = requestAnimationFrame(checkProximity);
+}
+
+function removeInfiniteLoopOverlay(bugId) {
+  if (!clientState.infiniteLoopOverlays || !clientState.infiniteLoopOverlays[bugId]) return;
+  const overlay = clientState.infiniteLoopOverlays[bugId];
+  if (overlay.rafId) cancelAnimationFrame(overlay.rafId);
+  overlay.svg.remove();
+  overlay.breakpoint.remove();
+  delete clientState.infiniteLoopOverlays[bugId];
+}
+
 export function removeBugElement(bugId, animate) {
   const el = clientState.bugs[bugId];
   if (!el) return;
@@ -314,6 +421,7 @@ export function removeBugElement(bugId, animate) {
   
   delete clientState.bugs[bugId];
   delete clientState.bugPositions[bugId];
+  removeInfiniteLoopOverlay(bugId);
   if (animate) {
     el.classList.add('popping');
     setTimeout(() => el.remove(), 200);
@@ -340,6 +448,16 @@ export function clearAllBugs() {
   }
   clientState.bugs = {};
   clientState.bugPositions = {};
+  // Clear infinite loop overlays
+  if (clientState.infiniteLoopOverlays) {
+    for (const bid of Object.keys(clientState.infiniteLoopOverlays)) {
+      const overlay = clientState.infiniteLoopOverlays[bid];
+      if (overlay.rafId) cancelAnimationFrame(overlay.rafId);
+      overlay.svg.remove();
+      overlay.breakpoint.remove();
+    }
+    clientState.infiniteLoopOverlays = {};
+  }
   // Clear merge tethers
   stopTetherTracking();
   if (clientState.mergeTethers) {

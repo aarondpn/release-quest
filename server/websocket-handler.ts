@@ -380,6 +380,17 @@ export async function handleMessage(
       break;
     }
 
+    case 'click-breakpoint': {
+      const ctx = getCtxForPlayer(pid, playerInfo);
+      if (!ctx) break;
+      const { state: st } = ctx;
+      if (st.phase !== 'playing' && st.phase !== 'boss') break;
+      const bug = st.bugs[msg.bugId];
+      if (!bug || !bug.isInfiniteLoop) break;
+      entityTypes.handleBreakpointClick(bug, ctx, pid);
+      break;
+    }
+
     case 'click-memory-leak-start': {
       const ctx = getCtxForPlayer(pid, playerInfo);
       if (!ctx) break;

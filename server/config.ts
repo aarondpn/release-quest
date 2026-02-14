@@ -83,6 +83,8 @@ export const DIFFICULTY_PRESETS: Record<string, DifficultyConfig> = {
       pipelineBugChance: 0.08,
       pipelineBugStartLevel: 2,
       memoryLeakChance: 0.08,
+      infiniteLoopChance: 0.06,
+      infiniteLoopStartLevel: 2,
     },
     powerups: {
       rubberDuckIntervalMin: 18000,
@@ -138,6 +140,8 @@ export const DIFFICULTY_PRESETS: Record<string, DifficultyConfig> = {
       pipelineBugChance: 0.10,
       pipelineBugStartLevel: 2,
       memoryLeakChance: 0.12,
+      infiniteLoopChance: 0.10,
+      infiniteLoopStartLevel: 2,
     },
     powerups: {
       rubberDuckIntervalMin: 20000,
@@ -193,6 +197,8 @@ export const DIFFICULTY_PRESETS: Record<string, DifficultyConfig> = {
       pipelineBugChance: 0.15,
       pipelineBugStartLevel: 1,
       memoryLeakChance: 0.15,
+      infiniteLoopChance: 0.12,
+      infiniteLoopStartLevel: 2,
     },
     powerups: {
       rubberDuckIntervalMin: 25000,
@@ -265,6 +271,16 @@ export const PIPELINE_BUG_MECHANICS = {
   escapeTimeMultiplier: 2.0,
   pointsPerBug: 15,
   chainBonus: 40,
+};
+
+export const INFINITE_LOOP_MECHANICS = {
+  loopTickMs: 150,
+  loopPeriodMs: 2500,
+  radiusMin: 60,
+  radiusMax: 120,
+  hitWindowRadians: 0.5,
+  points: 30,
+  escapeTimeMultiplier: 1.8,
 };
 
 export const MEMORY_LEAK_MECHANICS = {

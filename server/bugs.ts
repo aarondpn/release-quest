@@ -1,4 +1,4 @@
-import { getDifficultyConfig, HEISENBUG_MECHANICS, CODE_REVIEW_MECHANICS, MERGE_CONFLICT_MECHANICS, PIPELINE_BUG_MECHANICS, MEMORY_LEAK_MECHANICS, LOGICAL_W, LOGICAL_H } from './config.ts';
+import { getDifficultyConfig, HEISENBUG_MECHANICS, CODE_REVIEW_MECHANICS, MERGE_CONFLICT_MECHANICS, PIPELINE_BUG_MECHANICS, MEMORY_LEAK_MECHANICS, INFINITE_LOOP_MECHANICS, LOGICAL_W, LOGICAL_H } from './config.ts';
 import { randomPosition, currentLevelConfig } from './state.ts';
 import * as network from './network.ts';
 import { createTimerBag } from './timer-bag.ts';
@@ -109,6 +109,11 @@ function spawnBug(ctx: GameContext): void {
     && Object.values(state.bugs).filter(b => b.isMemoryLeak).length < Math.max(1, playerCount - 1)) {
     variant = { isMemoryLeak: true, growthStage: 0 };
   }
+  // Infinite loop: level 2+
+  else if (state.level >= diffConfig.specialBugs.infiniteLoopStartLevel
+    && Math.random() < diffConfig.specialBugs.infiniteLoopChance) {
+    variant = { isInfiniteLoop: true, loopAngle: 0 };
+  }
   // Feature-not-a-bug: level 2+
   else if (state.level >= diffConfig.specialBugs.codeReviewStartLevel && Math.random() < diffConfig.specialBugs.codeReviewChance) {
     variant = { isFeature: true };
@@ -118,7 +123,9 @@ function spawnBug(ctx: GameContext): void {
     ? cfg.escapeTime * HEISENBUG_MECHANICS.escapeTimeMultiplier
     : (variant && variant.isMemoryLeak
       ? cfg.escapeTime * MEMORY_LEAK_MECHANICS.escapeTimeMultiplier
-      : cfg.escapeTime);
+      : (variant && variant.isInfiniteLoop
+        ? cfg.escapeTime * INFINITE_LOOP_MECHANICS.escapeTimeMultiplier
+        : cfg.escapeTime));
 
   const spawned = spawnEntity(ctx, {
     phaseCheck: 'playing',
