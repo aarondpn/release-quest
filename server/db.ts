@@ -35,7 +35,7 @@ export async function initialize(): Promise<void> {
       username VARCHAR(16) NOT NULL UNIQUE,
       password_hash VARCHAR(72) NOT NULL,
       display_name VARCHAR(16) NOT NULL,
-      icon VARCHAR(8) NOT NULL DEFAULT '\u{1F431}',
+      icon VARCHAR(8) NOT NULL DEFAULT '\u{1F47E}',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
@@ -177,6 +177,17 @@ export async function listLobbies(): Promise<DbLobbyRow[]> {
 
 export async function getLobby(lobbyId: number): Promise<DbLobbyRow | null> {
   const result = await pool.query(`SELECT * FROM lobbies WHERE id = $1`, [lobbyId]);
+  return (result.rows[0] as DbLobbyRow) || null;
+}
+
+export async function getLobbyByCode(code: string): Promise<DbLobbyRow | null> {
+  const result = await pool.query(`
+    SELECT l.*, COUNT(lp.player_id)::int AS player_count
+    FROM lobbies l
+    LEFT JOIN lobby_players lp ON l.id = lp.lobby_id
+    WHERE l.code = $1 AND l.status = 'active'
+    GROUP BY l.id
+  `, [code]);
   return (result.rows[0] as DbLobbyRow) || null;
 }
 

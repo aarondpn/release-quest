@@ -196,8 +196,15 @@ export function handleMessageInternal(msg) {
         updateAuthUI();
       }
 
-      // Check for shared replay URL
+      // Check for shared replay URL, then invite URL
       checkReplayUrl();
+      checkJoinUrl();
+
+      // If reconnecting and we have a pending invite code, join immediately
+      if (clientState.hasJoined && clientState.pendingJoinCode) {
+        sendMessage({ type: 'join-lobby-by-code', code: clientState.pendingJoinCode });
+        clientState.pendingJoinCode = null;
+      }
       break;
     }
 
@@ -216,6 +223,7 @@ export function handleMessageInternal(msg) {
 
     case 'lobby-joined': {
       clientState.currentLobbyId = msg.lobbyId;
+      clientState.currentLobbyCode = msg.lobbyCode || null;
       hideLobbyBrowser();
       document.getElementById('hud-leave-btn').classList.remove('hidden');
 
@@ -263,6 +271,7 @@ export function handleMessageInternal(msg) {
 
     case 'lobby-left': {
       clientState.currentLobbyId = null;
+      clientState.currentLobbyCode = null;
       clientState.players = {};
       clearAllBugs();
       removeBossElement();
@@ -280,6 +289,11 @@ export function handleMessageInternal(msg) {
     }
 
     case 'lobby-error': {
+      // If not in a lobby, show the lobby browser so the error is visible
+      // (e.g. invite link to a full/missing lobby)
+      if (!clientState.currentLobbyId) {
+        showLobbyBrowser();
+      }
       showLobbyError(msg.message);
       break;
     }
@@ -1026,4 +1040,17 @@ function checkReplayUrl() {
       showError('Failed to load shared replay', ERROR_LEVELS.ERROR);
       if (!clientState.hasJoined && dom.nameEntry) dom.nameEntry.classList.remove('hidden');
     });
+}
+
+function checkJoinUrl() {
+  const params = new URLSearchParams(location.search);
+  const code = params.get('join');
+  if (!code || !/^[A-Za-z0-9]{6}$/.test(code)) return;
+
+  clientState.pendingJoinCode = code.toUpperCase();
+
+  // Clean the URL to prevent re-triggering on refresh
+  const url = new URL(location.href);
+  url.searchParams.delete('join');
+  history.replaceState(null, '', url.pathname + url.search);
 }

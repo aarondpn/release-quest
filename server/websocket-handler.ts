@@ -268,6 +268,78 @@ export async function handleMessage(
       break;
     }
 
+    case 'join-lobby-by-code': {
+      const code = String(msg.code || '').trim().toUpperCase();
+      if (!code) {
+        network.send(ws, { type: 'lobby-error', message: 'Invalid invite code' });
+        break;
+      }
+
+      try {
+        const targetLobby = await db.getLobbyByCode(code);
+        if (!targetLobby) {
+          network.send(ws, { type: 'lobby-error', message: 'Lobby not found' });
+          break;
+        }
+
+        const lobbyId = targetLobby.id;
+
+        // Leave current lobby if in one
+        const currentLobbyId = lobby.getLobbyForPlayer(pid);
+        if (currentLobbyId) {
+          await handleLeaveLobby(ws, pid, currentLobbyId, playerInfo);
+        }
+
+        const info = playerInfo.get(pid);
+        if (!info) break;
+
+        const playerData = {
+          id: pid,
+          name: info.name,
+          color: info.color,
+          icon: info.icon,
+          x: LOGICAL_W / 2,
+          y: LOGICAL_H / 2,
+          score: 0,
+          bugsSquashed: 0,
+        };
+
+        const result = await lobby.joinLobby(lobbyId, pid, playerData);
+        if (result.error) {
+          console.log(`[lobby] ${pid} join-by-code failed (code ${code}): ${result.error}`);
+          network.send(ws, { type: 'lobby-error', message: result.error });
+          break;
+        }
+
+        network.wsToLobby.set(ws, lobbyId);
+        network.addClientToLobby(lobbyId, ws);
+
+        const ctx = getCtxForPlayer(pid, playerInfo);
+        if (!ctx) break;
+
+        console.log(`[lobby] ${pid} joined lobby ${lobbyId} via invite code ${code} (${Object.keys(ctx.state.players).length} players)`);
+
+        network.send(ws, {
+          type: 'lobby-joined',
+          lobbyId,
+          lobbyName: result.lobby!.name,
+          lobbyCode: result.lobby!.code,
+          ...getStateSnapshot(ctx.state),
+        });
+
+        network.broadcastToLobby(lobbyId, {
+          type: 'player-joined',
+          player: { id: pid, name: info.name, color: info.color, icon: info.icon, score: 0 },
+          playerCount: Object.keys(ctx.state.players).length,
+        }, ws);
+
+        broadcastLobbyList(wss);
+      } catch {
+        network.send(ws, { type: 'lobby-error', message: 'Failed to join lobby' });
+      }
+      break;
+    }
+
     case 'leave-lobby': {
       const currentLobbyId = lobby.getLobbyForPlayer(pid);
       if (currentLobbyId) {

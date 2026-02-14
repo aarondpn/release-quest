@@ -106,6 +106,13 @@ function submitJoin() {
     clientState.hasJoined = true;
     dom.nameEntry.classList.add('hidden');
 
+    // If we have a pending invite code, join directly via code
+    if (clientState.pendingJoinCode) {
+      sendMessage({ type: 'join-lobby-by-code', code: clientState.pendingJoinCode });
+      clientState.pendingJoinCode = null;
+      return;
+    }
+
     // Show lobby browser instead of going directly to game
     showLobbyBrowser();
   } catch (err) {
@@ -357,6 +364,27 @@ document.getElementById('leave-btn-start').addEventListener('click', leaveLobby)
 document.getElementById('leave-btn-gameover').addEventListener('click', leaveLobby);
 document.getElementById('leave-btn-win').addEventListener('click', leaveLobby);
 document.getElementById('hud-leave-btn').addEventListener('click', leaveLobby);
+
+// ── Invite button handler ──
+document.getElementById('invite-btn').addEventListener('click', () => {
+  try {
+    if (!clientState.currentLobbyCode) return;
+    const url = location.origin + '/?join=' + clientState.currentLobbyCode;
+    navigator.clipboard.writeText(url).then(() => {
+      const btn = document.getElementById('invite-btn');
+      btn.textContent = 'COPIED!';
+      btn.classList.add('btn-copied');
+      setTimeout(() => {
+        btn.textContent = 'INVITE';
+        btn.classList.remove('btn-copied');
+      }, 2000);
+    }).catch(() => {
+      showError('Failed to copy invite link', ERROR_LEVELS.WARNING);
+    });
+  } catch (err) {
+    console.error('Error copying invite link:', err);
+  }
+});
 
 // Initialize lobby send function (avoids circular dependency)
 initLobbySend(sendMessage);

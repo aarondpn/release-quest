@@ -16,6 +16,8 @@ export const clientState = {
   bossHpBarContainer: null,
   bossEnraged: false,
   currentLobbyId: null,
+  currentLobbyCode: null,
+  pendingJoinCode: null,
   lobbies: [],
   authToken: null,
   authUser: null,
