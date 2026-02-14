@@ -8,6 +8,7 @@ import { showLobbyBrowser, initLobbySend } from './lobby-ui.js';
 import { initAuthSend, showAuthOverlay, hideAuthOverlay, switchTab, submitLogin, submitRegister, submitLogout } from './auth-ui.js';
 import { initLeaderboardSend, showLeaderboardTab, showLobbiesTab } from './leaderboard-ui.js';
 import { initReplaysSend, showReplaysTab } from './replays-ui.js';
+import { initStatsCardSend, showStatsCardTab, hideStatsCardTab, initThemePicker, downloadStatsCardPng } from './stats-card-ui.js';
 import { stopPlayback, togglePause, cycleSpeed } from './playback.js';
 import { showError, ERROR_LEVELS } from './error-handler.js';
 
@@ -454,6 +455,10 @@ initLeaderboardSend(sendMessage);
 // Initialize replays send function
 initReplaysSend(sendMessage);
 
+// Initialize stats card send function
+initStatsCardSend(sendMessage);
+initThemePicker();
+
 
 // ── Auth handlers ──
 dom.authShowLoginBtn.addEventListener('click', showAuthOverlay);
@@ -481,7 +486,11 @@ dom.lobbiesTab.addEventListener('click', showLobbiesTab);
 dom.leaderboardTab.addEventListener('click', showLeaderboardTab);
 
 // ── Replays tab handler ──
-if (dom.replaysTab) dom.replaysTab.addEventListener('click', showReplaysTab);
+if (dom.replaysTab) dom.replaysTab.addEventListener('click', () => { hideStatsCardTab(); showReplaysTab(); });
+
+// ── Stats card tab handler ──
+if (dom.statsCardTab) dom.statsCardTab.addEventListener('click', showStatsCardTab);
+if (dom.statsCardDownloadBtn) dom.statsCardDownloadBtn.addEventListener('click', downloadStatsCardPng);
 
 // ── Playback controls ──
 if (dom.playbackControls) {

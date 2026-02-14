@@ -273,6 +273,17 @@ export async function recordGameStats(userId: number, score: number, won: boolea
   `, [userId, won ? 1 : 0, won ? 0 : 1, score, score, bugsSquashed]);
 }
 
+export async function getUserStats(userId: number): Promise<LeaderboardEntry | null> {
+  const result = await pool.query(`
+    SELECT u.display_name, u.icon, s.games_played, s.games_won, s.games_lost,
+           s.total_score, s.highest_score, s.bugs_squashed
+    FROM user_stats s
+    JOIN users u ON s.user_id = u.id
+    WHERE s.user_id = $1
+  `, [userId]);
+  return (result.rows[0] as LeaderboardEntry) || null;
+}
+
 export async function getLeaderboard(limit: number = 10): Promise<LeaderboardEntry[]> {
   const result = await pool.query(`
     SELECT u.display_name, u.icon, s.games_played, s.games_won, s.games_lost,

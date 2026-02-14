@@ -108,6 +108,11 @@ export const dom = {
   configMemoryLeak: null,
   configDuckDuration: null,
   configHammerDuration: null,
+  statsCardPanel: null,
+  statsCardTab: null,
+  statsCardPreview: null,
+  statsCardThemes: null,
+  statsCardDownloadBtn: null,
 };
 
 export function initDom() {
@@ -183,4 +188,9 @@ export function initDom() {
   dom.playbackProgressBar = document.querySelector('.playback-progress-bar');
   dom.playbackTimeCurrent = document.querySelector('.playback-time-current');
   dom.playbackTimeTotal = document.querySelector('.playback-time-total');
+  dom.statsCardPanel = document.getElementById('stats-card-panel');
+  dom.statsCardTab = document.getElementById('stats-card-tab');
+  dom.statsCardPreview = document.getElementById('stats-card-preview');
+  dom.statsCardThemes = document.getElementById('stats-card-themes');
+  dom.statsCardDownloadBtn = document.getElementById('stats-card-download-btn');
 }

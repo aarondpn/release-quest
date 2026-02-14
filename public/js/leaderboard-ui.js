@@ -40,9 +40,11 @@ export function showLeaderboardTab() {
   dom.lobbyListPanel.classList.add('hidden');
   dom.leaderboardPanel.classList.remove('hidden');
   if (dom.replaysPanel) dom.replaysPanel.classList.add('hidden');
+  if (dom.statsCardPanel) dom.statsCardPanel.classList.add('hidden');
   dom.lobbiesTab.classList.remove('active');
   dom.leaderboardTab.classList.add('active');
   if (dom.replaysTab) dom.replaysTab.classList.remove('active');
+  if (dom.statsCardTab) dom.statsCardTab.classList.remove('active');
   requestLeaderboard();
 }
 
@@ -50,7 +52,9 @@ export function showLobbiesTab() {
   dom.leaderboardPanel.classList.add('hidden');
   dom.lobbyListPanel.classList.remove('hidden');
   if (dom.replaysPanel) dom.replaysPanel.classList.add('hidden');
+  if (dom.statsCardPanel) dom.statsCardPanel.classList.add('hidden');
   dom.leaderboardTab.classList.remove('active');
   dom.lobbiesTab.classList.add('active');
   if (dom.replaysTab) dom.replaysTab.classList.remove('active');
+  if (dom.statsCardTab) dom.statsCardTab.classList.remove('active');
 }

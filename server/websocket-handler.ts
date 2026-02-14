@@ -432,6 +432,20 @@ export async function handleMessage(
       break;
     }
 
+    case 'get-my-stats': {
+      const info = playerInfo.get(pid);
+      if (!info?.userId) {
+        network.send(ws, { type: 'my-stats', stats: null });
+        break;
+      }
+      db.getUserStats(info.userId).then(stats => {
+        network.send(ws, { type: 'my-stats', stats });
+      }).catch(() => {
+        network.send(ws, { type: 'my-stats', stats: null });
+      });
+      break;
+    }
+
     case 'get-recordings': {
       const info = playerInfo.get(pid);
       if (!info?.userId) {

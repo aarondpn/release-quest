@@ -80,6 +80,7 @@
     <button class="lobby-tab active" id="lobbies-tab">LOBBIES</button>
     <button class="lobby-tab" id="leaderboard-tab">LEADERBOARD</button>
     <button class="lobby-tab" id="replays-tab">REPLAYS</button>
+    <button class="lobby-tab" id="stats-card-tab">STATS CARD</button>
     <a href="/overview.html" class="lobby-tab lobby-tab-link" target="_blank">📚 WIKI</a>
   </div>
 
@@ -241,6 +242,15 @@
     <div class="replays-list" id="replays-list">
       <div class="replays-empty">No recordings yet. Play a game!</div>
     </div>
+  </div>
+
+  <div class="stats-card-panel hidden" id="stats-card-panel">
+    <div class="stats-card-panel-header">YOUR STATS CARD</div>
+    <div class="stats-card-themes" id="stats-card-themes"></div>
+    <div class="stats-card-preview" id="stats-card-preview">
+      <div class="stats-card-empty">Loading stats...</div>
+    </div>
+    <button class="btn btn-small stats-card-download-btn hidden" id="stats-card-download-btn">DOWNLOAD PNG</button>
   </div>
 
   <div class="lobby-error hidden" id="lobby-error"></div>

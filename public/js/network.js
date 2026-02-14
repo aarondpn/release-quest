@@ -11,6 +11,7 @@ import { updateAuthUI, hideAuthOverlay, showAuthError } from './auth-ui.js';
 import { isPremium, STANDARD_ICONS } from './avatars.js';
 import { renderLeaderboard } from './leaderboard-ui.js';
 import { renderRecordingsList, handleRecordingShared, handleRecordingUnshared } from './replays-ui.js';
+import { handleMyStats } from './stats-card-ui.js';
 import { startPlayback } from './playback.js';
 import { showError, ERROR_LEVELS } from './error-handler.js';
 
@@ -929,6 +930,11 @@ export function handleMessageInternal(msg) {
 
     case 'recording-unshared': {
       handleRecordingUnshared(msg);
+      break;
+    }
+
+    case 'my-stats': {
+      handleMyStats(msg.stats);
       break;
     }
   }
