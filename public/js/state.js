@@ -83,6 +83,10 @@ export const dom = {
   replaysList: null,
   replaysTab: null,
   playbackControls: null,
+  playbackProgressFill: null,
+  playbackProgressBar: null,
+  playbackTimeCurrent: null,
+  playbackTimeTotal: null,
   lobbyDifficulty: null,
   advancedToggleBtn: null,
   lobbyAdvancedConfig: null,
@@ -173,4 +177,8 @@ export function initDom() {
   dom.replaysList = document.getElementById('replays-list');
   dom.replaysTab = document.getElementById('replays-tab');
   dom.playbackControls = document.getElementById('playback-controls');
+  dom.playbackProgressFill = document.querySelector('.playback-progress-fill');
+  dom.playbackProgressBar = document.querySelector('.playback-progress-bar');
+  dom.playbackTimeCurrent = document.querySelector('.playback-time-current');
+  dom.playbackTimeTotal = document.querySelector('.playback-time-total');
 }

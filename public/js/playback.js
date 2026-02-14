@@ -7,6 +7,123 @@ import { removeDuckBuffOverlay } from './vfx.js';
 import { showLobbyBrowser } from './lobby-ui.js';
 import { handleMessageInternal } from './network.js';
 
+let progressRafId = null;
+let progressBarClickBound = false;
+
+function formatPlaybackTime(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return minutes + ':' + String(seconds).padStart(2, '0');
+}
+
+function getPlaybackDuration() {
+  const recording = clientState.playbackRecording;
+  if (!recording) return 0;
+  let maxT = 0;
+  if (recording.events) {
+    for (const e of recording.events) {
+      if (e.t > maxT) maxT = e.t;
+    }
+  }
+  if (recording.mouseMovements) {
+    for (const m of recording.mouseMovements) {
+      if (m.t > maxT) maxT = m.t;
+    }
+  }
+  return maxT;
+}
+
+function updateProgressBar() {
+  const duration = getPlaybackDuration();
+  const gameTime = getCurrentGameTime();
+  const progress = duration > 0 ? Math.min(gameTime / duration, 1) : 0;
+
+  if (dom.playbackProgressFill) {
+    dom.playbackProgressFill.style.width = (progress * 100) + '%';
+  }
+  if (dom.playbackTimeCurrent) {
+    dom.playbackTimeCurrent.textContent = formatPlaybackTime(gameTime);
+  }
+  if (dom.playbackTimeTotal) {
+    dom.playbackTimeTotal.textContent = formatPlaybackTime(duration);
+  }
+}
+
+function startProgressLoop() {
+  stopProgressLoop();
+  function tick() {
+    if (!clientState.isPlayback) return;
+    updateProgressBar();
+    progressRafId = requestAnimationFrame(tick);
+  }
+  progressRafId = requestAnimationFrame(tick);
+}
+
+function stopProgressLoop() {
+  if (progressRafId !== null) {
+    cancelAnimationFrame(progressRafId);
+    progressRafId = null;
+  }
+}
+
+function initProgressBarClick() {
+  if (!dom.playbackProgressBar || progressBarClickBound) return;
+  progressBarClickBound = true;
+  dom.playbackProgressBar.addEventListener('click', (e) => {
+    if (!clientState.isPlayback) return;
+    const rect = dom.playbackProgressBar.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const ratio = Math.max(0, Math.min(1, clickX / rect.width));
+    const duration = getPlaybackDuration();
+    const targetTime = ratio * duration;
+    seekTo(targetTime);
+  });
+}
+
+function seekTo(targetTime) {
+  // Reset game state for replay
+  clearAllBugs();
+  removeBossElement();
+  clearRemoteCursors();
+  clearCursorTrails();
+  removeDuckBuffOverlay();
+  hideAllScreens();
+  updateHUD(0, 1, 100);
+
+  // Re-add cursors for replay players
+  const recording = clientState.playbackRecording;
+  if (recording) {
+    const gameStartEvent = recording.events.find(e => e.msg.type === 'game-start');
+    if (gameStartEvent && gameStartEvent.msg.players) {
+      gameStartEvent.msg.players.forEach(p => {
+        addRemoteCursor(p.id, p.name, p.color, p.icon);
+      });
+    }
+  }
+
+  // Fast-forward: replay all events up to targetTime synchronously
+  if (recording && recording.events) {
+    for (const event of recording.events) {
+      if (event.t <= targetTime) {
+        handleMessageInternal(event.msg);
+      }
+    }
+  }
+
+  // Update playback time references
+  clientState.playbackGameTimeOffset = targetTime;
+  clientState.playbackWallTimeRef = Date.now();
+
+  // Reschedule future events
+  if (!clientState.playbackPaused) {
+    rescheduleFrom(targetTime);
+  }
+
+  // Update progress bar immediately
+  updateProgressBar();
+}
+
 export function startPlayback(recording) {
   clientState.isPlayback = true;
   clientState.playbackRecording = recording;
@@ -70,6 +187,19 @@ export function startPlayback(recording) {
   clientState.playbackGameTimeOffset = 0;
   clientState.playbackWallTimeRef = Date.now();
 
+  // Set total time label and start progress loop
+  if (dom.playbackTimeTotal) {
+    dom.playbackTimeTotal.textContent = formatPlaybackTime(getPlaybackDuration());
+  }
+  if (dom.playbackTimeCurrent) {
+    dom.playbackTimeCurrent.textContent = '0:00';
+  }
+  if (dom.playbackProgressFill) {
+    dom.playbackProgressFill.style.width = '0%';
+  }
+  initProgressBarClick();
+  startProgressLoop();
+
   // Schedule game events
   scheduleEvents(recording.events);
   // Schedule mouse movements separately
@@ -125,6 +255,11 @@ export function stopPlayback() {
   updateHUD(0, 1, 100);
   clientState.players = {};
 
+  stopProgressLoop();
+  if (dom.playbackProgressFill) dom.playbackProgressFill.style.width = '0%';
+  if (dom.playbackTimeCurrent) dom.playbackTimeCurrent.textContent = '0:00';
+  if (dom.playbackTimeTotal) dom.playbackTimeTotal.textContent = '0:00';
+
   if (dom.playbackControls) dom.playbackControls.classList.add('hidden');
   document.getElementById('hud-leave-btn').classList.add('hidden');
 
@@ -179,6 +314,7 @@ export function togglePause() {
     clientState.playbackPaused = false;
     clientState.playbackWallTimeRef = Date.now();
     rescheduleFrom(clientState.playbackGameTimeOffset);
+    startProgressLoop();
 
     const pauseBtn = dom.playbackControls?.querySelector('.playback-pause-btn');
     if (pauseBtn) pauseBtn.textContent = '\u275A\u275A';
@@ -189,6 +325,8 @@ export function togglePause() {
     clientState.playbackTimers = [];
     clientState.playbackMouseTimers = [];
     clientState.playbackPaused = true;
+    stopProgressLoop();
+    updateProgressBar();
 
     const pauseBtn = dom.playbackControls?.querySelector('.playback-pause-btn');
     if (pauseBtn) pauseBtn.textContent = '\u25B6';

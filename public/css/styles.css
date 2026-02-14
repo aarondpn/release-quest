@@ -2517,6 +2517,37 @@ header p {
   border-color: var(--purple);
   background: var(--dark-purple);
 }
+.playback-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+}
+.playback-time-current,
+.playback-time-total {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: var(--muted);
+  min-width: 28px;
+  text-align: center;
+}
+.playback-progress-bar {
+  width: 120px;
+  height: 6px;
+  background: var(--surface);
+  border: 1px solid #2a2a4a;
+  border-radius: 3px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.playback-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--purple);
+  border-radius: 3px;
+  transition: width 100ms linear;
+}
 
 /* ══════════════════════════════════════════════════
    LOBBY WAITING SCREEN
