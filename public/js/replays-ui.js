@@ -1,4 +1,6 @@
 import { dom, clientState } from './state.js';
+import { startPlayback } from './playback.js';
+import { showError, ERROR_LEVELS } from './error-handler.js';
 
 let _sendMessage = null;
 export function initReplaysSend(fn) { _sendMessage = fn; }
@@ -11,6 +13,35 @@ function escapeHtml(s) {
 
 export function requestRecordings() {
   if (_sendMessage) _sendMessage({ type: 'get-recordings' });
+}
+
+function fetchRecording(id) {
+  const token = clientState.authToken || localStorage.getItem('rq_session_token');
+  
+  if (!token) {
+    showError('Not logged in', ERROR_LEVELS.ERROR);
+    return;
+  }
+
+  fetch('/api/recording/' + id, {
+    headers: {
+      'Authorization': 'Bearer ' + token
+    }
+  })
+    .then(res => {
+      if (!res.ok) {
+        if (res.status === 401) throw new Error('Not authorized');
+        if (res.status === 404) throw new Error('Recording not found');
+        throw new Error('Failed to load recording');
+      }
+      return res.json();
+    })
+    .then(recording => {
+      startPlayback(recording);
+    })
+    .catch(err => {
+      showError(err.message || 'Failed to load replay', ERROR_LEVELS.ERROR);
+    });
 }
 
 export function renderRecordingsList(recordings) {
@@ -62,7 +93,7 @@ export function renderRecordingsList(recordings) {
   dom.replaysList.querySelectorAll('.replay-watch-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = parseInt(btn.dataset.recordingId, 10);
-      if (_sendMessage) _sendMessage({ type: 'get-recording', id });
+      fetchRecording(id);
     });
   });
 

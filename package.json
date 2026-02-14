@@ -15,11 +15,13 @@
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
+    "express": "^5.2.1",
     "pg": "^8.13.0",
     "ws": "^8.16.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.0",
+    "@types/express": "^5.0.6",
     "@types/node": "^22.0.0",
     "@types/pg": "^8.11.0",
     "@types/ws": "^8.5.0",

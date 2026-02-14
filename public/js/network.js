@@ -37,7 +37,7 @@ export function sendMessage(msg) {
   try {
     // During playback, only allow replay-related messages
     if (clientState.isPlayback) {
-      if (msg.type !== 'get-recordings' && msg.type !== 'get-recording') return;
+      if (msg.type !== 'get-recordings') return;
     }
     if (clientState.ws && clientState.ws.readyState === 1) {
       clientState.ws.send(JSON.stringify(msg));
@@ -892,11 +892,6 @@ export function handleMessageInternal(msg) {
 
     case 'recordings-list': {
       renderRecordingsList(msg.recordings);
-      break;
-    }
-
-    case 'recording-data': {
-      startPlayback(msg.recording);
       break;
     }
 
