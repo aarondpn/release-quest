@@ -328,6 +328,13 @@ export interface RecordingEvent {
   msg: Record<string, unknown>;
 }
 
+export interface MouseMoveEvent {
+  t: number;
+  playerId: string;
+  x: number;
+  y: number;
+}
+
 export interface RecordingBuffer {
   startTime: number;
   events: RecordingEvent[];
@@ -340,7 +347,36 @@ export interface RecordingMetadata {
   score: number;
   difficulty: string;
   player_count: number;
-  players: { name: string; icon: string; color: string; score: number }[];
+  players: { id: string; name: string; icon: string; color: string; score: number }[];
+}
+
+// Relational row types for normalized recording tables
+
+export interface RecordingPlayerRow {
+  id: number;
+  recording_id: number;
+  player_id: string;
+  name: string;
+  icon: string;
+  color: string;
+  score: number;
+}
+
+export interface RecordingEventRow {
+  id: number;
+  recording_id: number;
+  t: number;
+  type: string;
+  data: Record<string, unknown>;
+}
+
+export interface RecordingMouseMoveRow {
+  id: number;
+  recording_id: number;
+  player_id: string;
+  t: number;
+  x: number;
+  y: number;
 }
 
 export interface RecordingRow {
@@ -352,6 +388,7 @@ export interface RecordingRow {
   score: number;
   difficulty: string;
   player_count: number;
-  players: { name: string; icon: string; color: string; score: number }[];
-  events?: RecordingEvent[];
+  players?: RecordingPlayerRow[];
+  events?: RecordingEventRow[];
+  mouseMovements?: RecordingMouseMoveRow[];
 }

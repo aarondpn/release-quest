@@ -598,7 +598,33 @@ async function handleMessage(ws: WebSocket, msg: any, pid: string): Promise<void
             network.send(ws, { type: 'recording-error', message: 'Recording not found' });
             return;
           }
-          network.send(ws, { type: 'recording-data', recording });
+          // Transform relational events back to { t, msg } format for client
+          const events = (recording.events || []).map(ev => ({
+            t: ev.t,
+            msg: ev.data,
+          }));
+          const mouseMovements = (recording.mouseMovements || []).map(mm => ({
+            t: mm.t,
+            playerId: mm.player_id,
+            x: mm.x,
+            y: mm.y,
+          }));
+          network.send(ws, {
+            type: 'recording-data',
+            recording: {
+              id: recording.id,
+              user_id: recording.user_id,
+              recorded_at: recording.recorded_at,
+              duration_ms: recording.duration_ms,
+              outcome: recording.outcome,
+              score: recording.score,
+              difficulty: recording.difficulty,
+              player_count: recording.player_count,
+              players: recording.players,
+              events,
+              mouseMovements,
+            },
+          });
         }).catch(() => {
           network.send(ws, { type: 'recording-error', message: 'Failed to load recording' });
         });

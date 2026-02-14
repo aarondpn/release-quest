@@ -410,6 +410,21 @@ header p {
   opacity: 0.8;
 }
 
+/* ── Replay cursor trail dots ── */
+.replay-cursor-trail-dot {
+  position: absolute;
+  pointer-events: none;
+  z-index: 49;
+  font-size: 22px;
+  line-height: 1;
+  translate: -50% -50%;
+  animation: trail-fade 500ms ease-out forwards;
+}
+@keyframes trail-fade {
+  from { opacity: 0.6; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.4); }
+}
+
 /* ── Scoreboard on end screens ── */
 .scoreboard {
   display: flex;

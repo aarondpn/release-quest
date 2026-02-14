@@ -69,7 +69,7 @@ export function endGame(ctx: GameContext, outcome: string, win: boolean): void {
   if (recording && ctx.playerInfo) {
     const players = Object.values(state.players).map(p => {
       const info = ctx.playerInfo.get(p.id);
-      return { name: p.name, icon: info?.icon || p.icon, color: p.color, score: p.score };
+      return { id: p.id, name: p.name, icon: info?.icon || p.icon, color: p.color, score: p.score };
     });
     const meta = {
       duration_ms: recording.duration_ms,
@@ -82,7 +82,7 @@ export function endGame(ctx: GameContext, outcome: string, win: boolean): void {
     for (const pid of Object.keys(state.players)) {
       const info = ctx.playerInfo.get(pid);
       if (info?.userId) {
-        db.saveRecording(info.userId, meta, recording.events).catch(err => {
+        db.saveRecording(info.userId, meta, recording.events, recording.mouseMovements).catch(err => {
           console.error('[recording] Failed to save recording:', err);
         });
       }

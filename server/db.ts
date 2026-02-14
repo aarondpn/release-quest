@@ -1,6 +1,6 @@
 import pg from 'pg';
 import { DATABASE_CONFIG } from './config.ts';
-import type { DbLobbyRow, DbUserRow, DbSessionRow, LeaderboardEntry, RecordingMetadata, RecordingEvent, RecordingRow } from './types.ts';
+import type { DbLobbyRow, DbUserRow, DbSessionRow, LeaderboardEntry, RecordingMetadata, RecordingEvent, RecordingRow, RecordingPlayerRow, RecordingEventRow, RecordingMouseMoveRow, MouseMoveEvent } from './types.ts';
 
 const { Pool } = pg;
 const pool = new Pool(DATABASE_CONFIG);
@@ -70,9 +70,46 @@ export async function initialize(): Promise<void> {
       outcome VARCHAR(16) NOT NULL,
       score INTEGER NOT NULL,
       difficulty VARCHAR(16) NOT NULL,
-      player_count INTEGER NOT NULL,
-      players JSONB NOT NULL,
-      events JSONB NOT NULL
+      player_count INTEGER NOT NULL
+    )
+  `);
+
+  // Drop legacy JSONB columns if they exist
+  await pool.query(`
+    ALTER TABLE game_recordings DROP COLUMN IF EXISTS players,
+                                DROP COLUMN IF EXISTS events
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS recording_players (
+      id SERIAL PRIMARY KEY,
+      recording_id INTEGER NOT NULL REFERENCES game_recordings(id) ON DELETE CASCADE,
+      player_id VARCHAR(64) NOT NULL,
+      name VARCHAR(64) NOT NULL,
+      icon VARCHAR(8) NOT NULL DEFAULT '',
+      color VARCHAR(16) NOT NULL,
+      score INTEGER NOT NULL DEFAULT 0
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS recording_events (
+      id SERIAL PRIMARY KEY,
+      recording_id INTEGER NOT NULL REFERENCES game_recordings(id) ON DELETE CASCADE,
+      t INTEGER NOT NULL,
+      type VARCHAR(64) NOT NULL,
+      data JSONB NOT NULL
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS recording_mouse_moves (
+      id SERIAL PRIMARY KEY,
+      recording_id INTEGER NOT NULL REFERENCES game_recordings(id) ON DELETE CASCADE,
+      player_id VARCHAR(64) NOT NULL,
+      t INTEGER NOT NULL,
+      x REAL NOT NULL,
+      y REAL NOT NULL
     )
   `);
 
@@ -220,13 +257,78 @@ export async function getLeaderboard(limit: number = 10): Promise<LeaderboardEnt
 
 // Recording queries
 
-export async function saveRecording(userId: number, meta: Omit<RecordingMetadata, 'userId'>, events: RecordingEvent[]): Promise<void> {
-  await pool.query(
-    `INSERT INTO game_recordings (user_id, duration_ms, outcome, score, difficulty, player_count, players, events)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-    [userId, meta.duration_ms, meta.outcome, meta.score, meta.difficulty, meta.player_count, JSON.stringify(meta.players), JSON.stringify(events)]
+export async function saveRecording(
+  userId: number,
+  meta: Omit<RecordingMetadata, 'userId'>,
+  events: RecordingEvent[],
+  mouseMovements: MouseMoveEvent[]
+): Promise<void> {
+  // 1. Insert metadata row
+  const recResult = await pool.query(
+    `INSERT INTO game_recordings (user_id, duration_ms, outcome, score, difficulty, player_count)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+    [userId, meta.duration_ms, meta.outcome, meta.score, meta.difficulty, meta.player_count]
   );
-  // Keep only the 3 most recent recordings per user
+  const recordingId = recResult.rows[0].id as number;
+
+  // 2. Batch insert players
+  if (meta.players.length > 0) {
+    const playerValues: unknown[] = [];
+    const playerPlaceholders: string[] = [];
+    let idx = 1;
+    for (const p of meta.players) {
+      playerPlaceholders.push(`($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3}, $${idx + 4}, $${idx + 5})`);
+      playerValues.push(recordingId, p.id, p.name, p.icon, p.color, p.score);
+      idx += 6;
+    }
+    await pool.query(
+      `INSERT INTO recording_players (recording_id, player_id, name, icon, color, score) VALUES ${playerPlaceholders.join(', ')}`,
+      playerValues
+    );
+  }
+
+  // 3. Batch insert non-cursor events
+  if (events.length > 0) {
+    const BATCH = 500;
+    for (let i = 0; i < events.length; i += BATCH) {
+      const batch = events.slice(i, i + BATCH);
+      const evValues: unknown[] = [];
+      const evPlaceholders: string[] = [];
+      let idx = 1;
+      for (const ev of batch) {
+        evPlaceholders.push(`($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3})`);
+        const eventType = (ev.msg.type as string) || 'unknown';
+        evValues.push(recordingId, ev.t, eventType, JSON.stringify(ev.msg));
+        idx += 4;
+      }
+      await pool.query(
+        `INSERT INTO recording_events (recording_id, t, type, data) VALUES ${evPlaceholders.join(', ')}`,
+        evValues
+      );
+    }
+  }
+
+  // 4. Batch insert mouse movements
+  if (mouseMovements.length > 0) {
+    const BATCH = 500;
+    for (let i = 0; i < mouseMovements.length; i += BATCH) {
+      const batch = mouseMovements.slice(i, i + BATCH);
+      const mmValues: unknown[] = [];
+      const mmPlaceholders: string[] = [];
+      let idx = 1;
+      for (const mm of batch) {
+        mmPlaceholders.push(`($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3}, $${idx + 4})`);
+        mmValues.push(recordingId, mm.playerId, mm.t, mm.x, mm.y);
+        idx += 5;
+      }
+      await pool.query(
+        `INSERT INTO recording_mouse_moves (recording_id, player_id, t, x, y) VALUES ${mmPlaceholders.join(', ')}`,
+        mmValues
+      );
+    }
+  }
+
+  // 5. Retention: keep only 3 most recent per user (CASCADE deletes child rows)
   await pool.query(
     `DELETE FROM game_recordings WHERE id IN (
        SELECT id FROM game_recordings WHERE user_id = $1
@@ -237,21 +339,59 @@ export async function saveRecording(userId: number, meta: Omit<RecordingMetadata
 }
 
 export async function getRecordingsList(userId: number): Promise<RecordingRow[]> {
-  const result = await pool.query(
-    `SELECT id, user_id, recorded_at, duration_ms, outcome, score, difficulty, player_count, players
+  const recResult = await pool.query(
+    `SELECT id, user_id, recorded_at, duration_ms, outcome, score, difficulty, player_count
      FROM game_recordings WHERE user_id = $1
      ORDER BY recorded_at DESC`,
     [userId]
   );
-  return result.rows as RecordingRow[];
+  const recordings = recResult.rows as RecordingRow[];
+
+  // Attach players for each recording
+  for (const rec of recordings) {
+    const playersResult = await pool.query(
+      `SELECT id, recording_id, player_id, name, icon, color, score
+       FROM recording_players WHERE recording_id = $1`,
+      [rec.id]
+    );
+    rec.players = playersResult.rows as RecordingPlayerRow[];
+  }
+
+  return recordings;
 }
 
 export async function getRecording(id: number, userId: number): Promise<RecordingRow | null> {
-  const result = await pool.query(
-    `SELECT * FROM game_recordings WHERE id = $1 AND user_id = $2`,
+  const recResult = await pool.query(
+    `SELECT id, user_id, recorded_at, duration_ms, outcome, score, difficulty, player_count
+     FROM game_recordings WHERE id = $1 AND user_id = $2`,
     [id, userId]
   );
-  return (result.rows[0] as RecordingRow) || null;
+  if (recResult.rows.length === 0) return null;
+  const rec = recResult.rows[0] as RecordingRow;
+
+  const [playersResult, eventsResult, mouseResult] = await Promise.all([
+    pool.query(
+      `SELECT id, recording_id, player_id, name, icon, color, score
+       FROM recording_players WHERE recording_id = $1`,
+      [id]
+    ),
+    pool.query(
+      `SELECT id, recording_id, t, type, data
+       FROM recording_events WHERE recording_id = $1 ORDER BY t`,
+      [id]
+    ),
+    pool.query(
+      `SELECT id, recording_id, player_id, t, x, y
+       FROM recording_mouse_moves WHERE recording_id = $1 ORDER BY t`,
+      [id]
+    ),
+  ]);
+
+  rec.players = playersResult.rows as RecordingPlayerRow[];
+  rec.events = eventsResult.rows as RecordingEventRow[];
+  rec.mouseMovements = mouseResult.rows as RecordingMouseMoveRow[];
+
+  return rec;
 }
 
 export async function close(): Promise<void> {

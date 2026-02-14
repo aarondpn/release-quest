@@ -2,7 +2,7 @@ import { dom, clientState } from './state.js';
 import { updateHUD, updatePlayerCount, hideAllScreens, hideLiveDashboard } from './hud.js';
 import { clearAllBugs } from './bugs.js';
 import { removeBossElement } from './boss.js';
-import { addRemoteCursor, clearRemoteCursors } from './players.js';
+import { addRemoteCursor, clearRemoteCursors, addCursorTrailDot, clearCursorTrails } from './players.js';
 import { removeDuckBuffOverlay } from './vfx.js';
 import { showLobbyBrowser } from './lobby-ui.js';
 import { handleMessageInternal } from './network.js';
@@ -13,6 +13,16 @@ export function startPlayback(recording) {
   clientState.playbackSpeed = 1;
   clientState.playbackPaused = false;
   clientState.playbackTimers = [];
+  clientState.playbackMouseTimers = [];
+
+  // Build a color lookup from recording players
+  const playerColorMap = {};
+  if (recording.players) {
+    recording.players.forEach(p => {
+      const id = p.player_id || p.id || ('replay_player_' + p.name);
+      playerColorMap[id] = p.color;
+    });
+  }
 
   // Discover real player IDs from the game-start event in the recording
   clientState.players = {};
@@ -20,19 +30,23 @@ export function startPlayback(recording) {
   if (gameStartEvent && gameStartEvent.msg.players) {
     gameStartEvent.msg.players.forEach(p => {
       clientState.players[p.id] = { id: p.id, name: p.name || 'Player', icon: p.icon || '', color: p.color || '#4ecdc4', score: 0 };
+      playerColorMap[p.id] = p.color;
       addRemoteCursor(p.id, p.name, p.color, p.icon);
     });
   } else if (recording.players) {
     recording.players.forEach((p, i) => {
-      const id = 'replay_player_' + i;
+      const id = p.player_id || ('replay_player_' + i);
       clientState.players[id] = { id, name: p.name, icon: p.icon, color: p.color, score: 0 };
+      playerColorMap[id] = p.color;
     });
   }
+  clientState.playbackPlayerColors = playerColorMap;
 
   // Reset UI
   clearAllBugs();
   removeBossElement();
   clearRemoteCursors();
+  clearCursorTrails();
   removeDuckBuffOverlay();
   hideAllScreens();
   hideLiveDashboard();
@@ -56,8 +70,10 @@ export function startPlayback(recording) {
   clientState.playbackGameTimeOffset = 0;
   clientState.playbackWallTimeRef = Date.now();
 
-  // Schedule all events
+  // Schedule game events
   scheduleEvents(recording.events);
+  // Schedule mouse movements separately
+  scheduleMouseMoves(recording.mouseMovements || []);
 }
 
 function scheduleEvents(events) {
@@ -71,19 +87,38 @@ function scheduleEvents(events) {
   }
 }
 
+function scheduleMouseMoves(mouseMovements) {
+  for (const mm of mouseMovements) {
+    const delay = mm.t / clientState.playbackSpeed;
+    const timerId = setTimeout(() => {
+      if (!clientState.isPlayback) return;
+      // Dispatch as a player-cursor message for cursor position updates
+      handleMessageInternal({ type: 'player-cursor', playerId: mm.playerId, x: mm.x, y: mm.y });
+      // Add trail dot
+      const color = (clientState.playbackPlayerColors && clientState.playbackPlayerColors[mm.playerId]) || '#4ecdc4';
+      addCursorTrailDot(mm.playerId, mm.x, mm.y, color);
+    }, delay);
+    clientState.playbackMouseTimers.push(timerId);
+  }
+}
+
 export function stopPlayback() {
   for (const t of clientState.playbackTimers) clearTimeout(t);
+  for (const t of (clientState.playbackMouseTimers || [])) clearTimeout(t);
   clientState.playbackTimers = [];
+  clientState.playbackMouseTimers = [];
 
   clientState.isPlayback = false;
   clientState.playbackRecording = null;
   clientState.playbackPaused = false;
   clientState.playbackSpeed = 1;
+  clientState.playbackPlayerColors = null;
 
   // Reset UI
   clearAllBugs();
   removeBossElement();
   clearRemoteCursors();
+  clearCursorTrails();
   removeDuckBuffOverlay();
   hideAllScreens();
   hideLiveDashboard();
@@ -102,10 +137,16 @@ function getCurrentGameTime() {
 }
 
 function rescheduleFrom(gameTime) {
+  // Clear both event and mouse timers
+  for (const t of clientState.playbackTimers) clearTimeout(t);
+  for (const t of (clientState.playbackMouseTimers || [])) clearTimeout(t);
   clientState.playbackTimers = [];
+  clientState.playbackMouseTimers = [];
+
   const recording = clientState.playbackRecording;
   if (!recording) return;
 
+  // Reschedule game events
   for (const event of recording.events) {
     if (event.t <= gameTime) continue;
     const delay = (event.t - gameTime) / clientState.playbackSpeed;
@@ -114,6 +155,20 @@ function rescheduleFrom(gameTime) {
       handleMessageInternal(event.msg);
     }, delay);
     clientState.playbackTimers.push(timerId);
+  }
+
+  // Reschedule mouse movements
+  const mouseMovements = recording.mouseMovements || [];
+  for (const mm of mouseMovements) {
+    if (mm.t <= gameTime) continue;
+    const delay = (mm.t - gameTime) / clientState.playbackSpeed;
+    const timerId = setTimeout(() => {
+      if (!clientState.isPlayback || clientState.playbackPaused) return;
+      handleMessageInternal({ type: 'player-cursor', playerId: mm.playerId, x: mm.x, y: mm.y });
+      const color = (clientState.playbackPlayerColors && clientState.playbackPlayerColors[mm.playerId]) || '#4ecdc4';
+      addCursorTrailDot(mm.playerId, mm.x, mm.y, color);
+    }, delay);
+    clientState.playbackMouseTimers.push(timerId);
   }
 }
 
@@ -130,7 +185,9 @@ export function togglePause() {
   } else {
     clientState.playbackGameTimeOffset = getCurrentGameTime();
     for (const t of clientState.playbackTimers) clearTimeout(t);
+    for (const t of (clientState.playbackMouseTimers || [])) clearTimeout(t);
     clientState.playbackTimers = [];
+    clientState.playbackMouseTimers = [];
     clientState.playbackPaused = true;
 
     const pauseBtn = dom.playbackControls?.querySelector('.playback-pause-btn');
@@ -155,6 +212,7 @@ export function cycleSpeed() {
 
   if (!clientState.playbackPaused) {
     for (const t of clientState.playbackTimers) clearTimeout(t);
+    for (const t of (clientState.playbackMouseTimers || [])) clearTimeout(t);
     rescheduleFrom(clientState.playbackGameTimeOffset);
   }
 }

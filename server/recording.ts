@@ -1,9 +1,9 @@
-import type { RecordingBuffer, RecordingEvent } from './types.ts';
+import type { RecordingBuffer, RecordingEvent, MouseMoveEvent } from './types.ts';
 
 const buffers = new Map<number, RecordingBuffer>();
 // Throttle cursor recording to ~100ms per player
 const lastCursorRecord = new Map<string, number>();
-const CURSOR_RECORD_INTERVAL = 100;
+const CURSOR_RECORD_INTERVAL = 33;
 
 export function startRecording(lobbyId: number): void {
   buffers.set(lobbyId, { startTime: Date.now(), events: [] });
@@ -23,7 +23,13 @@ export function recordEvent(lobbyId: number, msg: Record<string, unknown>): void
   buf.events.push({ t: Date.now() - buf.startTime, msg });
 }
 
-export function stopRecording(lobbyId: number): { duration_ms: number; events: RecordingEvent[] } | null {
+export interface StopRecordingResult {
+  duration_ms: number;
+  events: RecordingEvent[];
+  mouseMovements: MouseMoveEvent[];
+}
+
+export function stopRecording(lobbyId: number): StopRecordingResult | null {
   const buf = buffers.get(lobbyId);
   if (!buf) return null;
   buffers.delete(lobbyId);
@@ -31,5 +37,22 @@ export function stopRecording(lobbyId: number): { duration_ms: number; events: R
   for (const key of lastCursorRecord.keys()) {
     if (key.startsWith(`${lobbyId}:`)) lastCursorRecord.delete(key);
   }
-  return { duration_ms: Date.now() - buf.startTime, events: buf.events };
+
+  const events: RecordingEvent[] = [];
+  const mouseMovements: MouseMoveEvent[] = [];
+
+  for (const ev of buf.events) {
+    if (ev.msg.type === 'player-cursor') {
+      mouseMovements.push({
+        t: ev.t,
+        playerId: ev.msg.playerId as string,
+        x: ev.msg.x as number,
+        y: ev.msg.y as number,
+      });
+    } else {
+      events.push(ev);
+    }
+  }
+
+  return { duration_ms: Date.now() - buf.startTime, events, mouseMovements };
 }

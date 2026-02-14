@@ -48,3 +48,24 @@ export function clearRemoteCursors() {
   }
   clientState.remoteCursors = {};
 }
+
+// ── Cursor trail dots for replay playback ──
+
+export function addCursorTrailDot(playerId, lx, ly, color) {
+  const pos = logicalToPixel(lx, ly);
+  const dot = document.createElement('div');
+  dot.className = 'replay-cursor-trail-dot';
+  dot.style.left = pos.x + 'px';
+  dot.style.top = pos.y + 'px';
+  // Use the player's avatar icon
+  const player = clientState.players[playerId];
+  dot.textContent = (player && player.icon) || '\u{1F431}';
+  dom.arena.appendChild(dot);
+  // Remove after animation completes
+  dot.addEventListener('animationend', () => dot.remove());
+}
+
+export function clearCursorTrails() {
+  const dots = dom.arena.querySelectorAll('.replay-cursor-trail-dot');
+  dots.forEach(d => d.remove());
+}
