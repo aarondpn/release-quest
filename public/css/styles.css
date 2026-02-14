@@ -565,36 +565,102 @@ header p {
   justify-content: center;
   background: var(--bg);
   z-index: 500;
-  gap: 20px;
+  gap: 28px;
   text-align: center;
-  padding: 20px;
+  padding: 40px 20px;
+  overflow-y: auto;
 }
 .name-entry.hidden { display: none; }
 
+/* Warm golden atmosphere */
+.name-entry::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 700px 500px at 50% 35%, rgba(255,230,109,0.05) 0%, transparent 100%),
+    radial-gradient(ellipse 500px 400px at 50% 65%, rgba(78,205,196,0.03) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+.name-entry::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255,230,109,0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+  z-index: 0;
+  mask-image: radial-gradient(ellipse 500px 400px at center, black 15%, transparent 65%);
+  -webkit-mask-image: radial-gradient(ellipse 500px 400px at center, black 15%, transparent 65%);
+}
+.name-entry > * {
+  position: relative;
+  z-index: 1;
+}
+
 .name-entry-title {
-  font-size: 20px;
+  font-size: 42px;
   color: var(--yellow);
-  text-shadow: 0 0 24px rgba(255,230,109,0.5);
+  text-shadow:
+    0 0 30px rgba(255,230,109,0.5),
+    0 0 80px rgba(255,230,109,0.15);
+  letter-spacing: 6px;
+  position: relative;
+  will-change: opacity;
+}
+.name-entry-title::before,
+.name-entry-title::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  will-change: transform;
+}
+.name-entry-title::before {
+  color: var(--red);
+  animation: lobby-glitch-1 4s infinite linear alternate-reverse;
+  clip-path: inset(0 0 55% 0);
+  opacity: 0.4;
+}
+.name-entry-title::after {
+  color: var(--teal);
+  animation: lobby-glitch-2 3s infinite linear alternate;
+  clip-path: inset(55% 0 0 0);
+  opacity: 0.4;
+}
+
+.name-entry-tagline {
+  font-size: 7px;
+  color: var(--teal);
+  letter-spacing: 5px;
+  opacity: 0.5;
+  margin-top: -16px;
 }
 
 .name-entry-sub {
-  font-size: 7px;
+  font-size: 8px;
   color: var(--muted);
-  line-height: 2;
+  letter-spacing: 2px;
+  opacity: 0.4;
 }
 
 .name-input {
   font-family: 'Press Start 2P', monospace;
   font-size: 12px;
-  padding: 12px 20px;
+  padding: 14px 24px;
   background: var(--surface);
-  border: 2px solid var(--purple);
-  border-radius: 6px;
+  border: 2px solid rgba(168, 85, 247, 0.4);
+  border-radius: 8px;
   color: var(--yellow);
   text-align: center;
   outline: none;
-  width: 280px;
+  width: 340px;
   max-width: 90vw;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 .name-input::placeholder {
   color: #3d3d5c;
@@ -602,44 +668,61 @@ header p {
 }
 .name-input:focus {
   border-color: var(--yellow);
-  box-shadow: 0 0 16px rgba(255,230,109,0.2);
+  box-shadow: 0 0 24px rgba(255,230,109,0.15);
 }
 
 .icon-picker {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
   justify-content: center;
-  max-width: 320px;
+  max-width: 400px;
 }
 .icon-picker-label {
   font-size: 7px;
   color: var(--muted);
   width: 100%;
   margin-bottom: 4px;
+  letter-spacing: 1px;
+  opacity: 0.4;
 }
 .icon-option {
-  width: 48px;
-  height: 48px;
+  width: 54px;
+  height: 54px;
   font-size: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--surface);
   border: 2px solid #2a2a4a;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s;
 }
 .icon-option:hover {
-  border-color: var(--muted);
-  transform: scale(1.1);
+  border-color: var(--purple);
+  transform: scale(1.12);
+  background: var(--dark-purple);
 }
 .icon-option.selected {
   border-color: var(--yellow);
-  background: var(--dark-purple);
-  box-shadow: 0 0 12px rgba(255,230,109,0.3);
+  background: rgba(255,230,109,0.06);
+  box-shadow: 0 0 18px rgba(255,230,109,0.2);
   transform: scale(1.15);
+}
+
+/* Staggered entrance */
+.name-entry-title { animation: ne-entrance 0.5s ease-out both; }
+.name-entry-tagline { animation: ne-entrance 0.5s ease-out 0.08s both; }
+.name-entry .name-entry-sub { animation: ne-entrance 0.5s ease-out 0.14s both; }
+.name-entry .name-input { animation: ne-entrance 0.5s ease-out 0.2s both; }
+.name-entry .icon-picker { animation: ne-entrance 0.5s ease-out 0.26s both; }
+.name-entry .btn-play { animation: ne-entrance 0.5s ease-out 0.32s both; }
+.name-entry .auth-status { animation: ne-entrance 0.5s ease-out 0.38s both; }
+
+@keyframes ne-entrance {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ── Connection status ── */
@@ -2046,16 +2129,39 @@ header p {
 
 /* ── Play button ── */
 .btn-play {
-  font-size: 14px;
-  padding: 16px 48px;
+  font-size: 16px;
+  padding: 18px 56px;
   border-color: var(--teal);
   background: var(--dark-teal);
   color: var(--teal);
+  letter-spacing: 3px;
+  position: relative;
+  overflow: hidden;
 }
 .btn-play:hover {
   background: var(--teal);
   color: var(--bg);
-  box-shadow: 0 0 24px rgba(78,205,196,0.5);
+  box-shadow: 0 0 30px rgba(78,205,196,0.5), 0 0 80px rgba(78,205,196,0.15);
+}
+.btn-play::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 40%,
+    rgba(78,205,196,0.1) 50%,
+    transparent 60%
+  );
+  animation: btn-play-shine 3s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes btn-play-shine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 /* ── Auth UI ── */
@@ -3001,6 +3107,10 @@ header p {
   .lobby-title { font-size: 16px; }
   .lobby-roster { max-width: 260px; }
   .lobby-start-btn { font-size: 10px; padding: 12px 24px; }
+  .name-entry-title { font-size: 26px; letter-spacing: 3px; }
+  .name-entry-tagline { font-size: 6px; letter-spacing: 3px; }
+  .name-input { width: 260px; }
+  .btn-play { font-size: 12px; padding: 14px 40px; }
   .lobby-browser-title { font-size: 22px; letter-spacing: 3px; }
   .lobby-tab { padding: 10px 14px; font-size: 7px; }
   .lobby-create-form { padding: 16px; gap: 8px; }
