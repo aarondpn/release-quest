@@ -113,6 +113,20 @@ export const dom = {
   statsCardPreview: null,
   statsCardThemes: null,
   statsCardDownloadBtn: null,
+  lobbyProfileBar: null,
+  lobbyProfileIcon: null,
+  lobbyProfileName: null,
+  lobbyProfileEditBtn: null,
+  lobbyProfileAuth: null,
+  lobbyProfileEditor: null,
+  lobbyEditorIconPicker: null,
+  lobbyEditorNameInput: null,
+  lobbyEditorSaveBtn: null,
+  lobbyProfileLoginBtn: null,
+  lobbyProfileLogoutBtn: null,
+  lobbyProfileGuestView: null,
+  lobbyProfileLoggedInView: null,
+  lobbyProfileAuthName: null,
 };
 
 export function initDom() {
@@ -193,4 +207,18 @@ export function initDom() {
   dom.statsCardPreview = document.getElementById('stats-card-preview');
   dom.statsCardThemes = document.getElementById('stats-card-themes');
   dom.statsCardDownloadBtn = document.getElementById('stats-card-download-btn');
+  dom.lobbyProfileBar = document.getElementById('lobby-profile-bar');
+  dom.lobbyProfileIcon = document.getElementById('lobby-profile-icon');
+  dom.lobbyProfileName = document.getElementById('lobby-profile-name');
+  dom.lobbyProfileEditBtn = document.getElementById('lobby-profile-edit-btn');
+  dom.lobbyProfileAuth = document.getElementById('lobby-profile-auth');
+  dom.lobbyProfileEditor = document.getElementById('lobby-profile-editor');
+  dom.lobbyEditorIconPicker = document.getElementById('lobby-editor-icon-picker');
+  dom.lobbyEditorNameInput = document.getElementById('lobby-editor-name-input');
+  dom.lobbyEditorSaveBtn = document.getElementById('lobby-editor-save-btn');
+  dom.lobbyProfileLoginBtn = document.getElementById('lobby-profile-login-btn');
+  dom.lobbyProfileLogoutBtn = document.getElementById('lobby-profile-logout-btn');
+  dom.lobbyProfileGuestView = document.querySelector('.lobby-profile-guest-view');
+  dom.lobbyProfileLoggedInView = document.querySelector('.lobby-profile-logged-in-view');
+  dom.lobbyProfileAuthName = document.getElementById('lobby-profile-auth-name');
 }

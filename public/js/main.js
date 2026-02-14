@@ -4,7 +4,7 @@ import { clientState, dom, initDom } from './state.js';
 import { pixelToLogical } from './coordinates.js';
 import { updateHUD } from './hud.js';
 import { connect, sendMessage } from './network.js';
-import { showLobbyBrowser, initLobbySend } from './lobby-ui.js';
+import { showLobbyBrowser, initLobbySend, updateLobbyProfileBar, toggleLobbyEditor, saveLobbyProfile } from './lobby-ui.js';
 import { initAuthSend, showAuthOverlay, hideAuthOverlay, switchTab, submitLogin, submitRegister, submitLogout } from './auth-ui.js';
 import { initLeaderboardSend, showLeaderboardTab, showLobbiesTab } from './leaderboard-ui.js';
 import { initReplaysSend, showReplaysTab } from './replays-ui.js';
@@ -177,6 +177,9 @@ function submitJoin() {
     showError('Failed to join. Please try again.', ERROR_LEVELS.ERROR);
   }
 }
+
+// Expose for cross-module calls (network.js auto-join on session resume)
+window._submitJoin = submitJoin;
 
 dom.joinBtn.addEventListener('click', submitJoin);
 dom.nameInput.addEventListener('keydown', (e) => {
@@ -464,6 +467,12 @@ initThemePicker();
 dom.authShowLoginBtn.addEventListener('click', showAuthOverlay);
 
 dom.authLogoutBtn.addEventListener('click', submitLogout);
+
+// ── Lobby profile bar handlers ──
+dom.lobbyProfileEditBtn.addEventListener('click', toggleLobbyEditor);
+dom.lobbyEditorSaveBtn.addEventListener('click', saveLobbyProfile);
+dom.lobbyProfileLoginBtn.addEventListener('click', showAuthOverlay);
+dom.lobbyProfileLogoutBtn.addEventListener('click', submitLogout);
 
 dom.authBackBtn.addEventListener('click', hideAuthOverlay);
 

@@ -6,12 +6,12 @@ import { createBugElement, removeBugElement, clearAllBugs, showSquashEffect, rem
 import { createBossElement, updateBossHp, removeBossElement, showBossHitEffect, formatTime } from './boss.js';
 import { addRemoteCursor, removeRemoteCursor, updateRemoteCursor, clearRemoteCursors } from './players.js';
 import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, showEnrageFlash, showLevelFlash, showEscalationWarning, showBossRegenNumber, showHeisenbugFleeEffect, showFeaturePenaltyEffect, showDuckBuffOverlay, removeDuckBuffOverlay, showMergeResolvedEffect, showPipelineChainResolvedEffect, showPipelineChainResetEffect } from './vfx.js';
-import { showLobbyBrowser, hideLobbyBrowser, renderLobbyList, showLobbyError } from './lobby-ui.js';
+import { showLobbyBrowser, hideLobbyBrowser, renderLobbyList, showLobbyError, buildLobbyIconPicker } from './lobby-ui.js';
 import { updateAuthUI, hideAuthOverlay, showAuthError } from './auth-ui.js';
 import { isPremium, STANDARD_ICONS } from './avatars.js';
 import { renderLeaderboard } from './leaderboard-ui.js';
-import { renderRecordingsList, handleRecordingShared, handleRecordingUnshared } from './replays-ui.js';
-import { handleMyStats } from './stats-card-ui.js';
+import { renderRecordingsList, handleRecordingShared, handleRecordingUnshared, requestRecordings } from './replays-ui.js';
+import { handleMyStats, requestMyStats } from './stats-card-ui.js';
 import { startPlayback } from './playback.js';
 import { showError, ERROR_LEVELS } from './error-handler.js';
 
@@ -126,9 +126,21 @@ export function handleMessageInternal(msg) {
           if (isPremium(clientState.selectedIcon)) {
             clientState.selectedIcon = STANDARD_ICONS[0];
             clientState.myIcon = STANDARD_ICONS[0];
+            // Re-send name with updated icon if we're in the lobby
+            if (clientState.hasJoined) {
+              sendMessage({ type: 'set-name', name: clientState.myName, icon: clientState.myIcon });
+            }
           }
           updateAuthUI();
           if (typeof window._buildIconPicker === 'function') window._buildIconPicker();
+          buildLobbyIconPicker();
+          // Re-render stats/replays if visible so they show "Log in" message
+          if (dom.statsCardPanel && !dom.statsCardPanel.classList.contains('hidden')) {
+            handleMyStats(null);
+          }
+          if (dom.replaysPanel && !dom.replaysPanel.classList.contains('hidden')) {
+            renderRecordingsList(null);
+          }
         } else {
           // login, register, or resume
           if (msg.token) {
@@ -137,7 +149,6 @@ export function handleMessageInternal(msg) {
           }
           clientState.authUser = msg.user;
           clientState.isLoggedIn = true;
-          updateAuthUI();
           hideAuthOverlay();
 
           // Update client name/icon from account
@@ -149,8 +160,28 @@ export function handleMessageInternal(msg) {
             clientState.myIcon = msg.user.icon;
             clientState.selectedIcon = msg.user.icon;
           }
+          // Update UI after name/icon are set so profile bar shows correct values
+          updateAuthUI();
           // Rebuild icon picker to unlock premium section
           if (typeof window._buildIconPicker === 'function') window._buildIconPicker();
+
+          // Auto-join for logged-in users who haven't entered yet
+          if (msg.action === 'resume' && !clientState.hasJoined) {
+            if (typeof window._submitJoin === 'function') window._submitJoin();
+          }
+
+          // If already in lobby, tell server about updated name/icon from account
+          if (msg.action !== 'resume' && clientState.hasJoined) {
+            sendMessage({ type: 'set-name', name: clientState.myName, icon: clientState.myIcon });
+          }
+
+          // Refresh stats/replays if currently visible
+          if (dom.statsCardPanel && !dom.statsCardPanel.classList.contains('hidden')) {
+            requestMyStats();
+          }
+          if (dom.replaysPanel && !dom.replaysPanel.classList.contains('hidden')) {
+            requestRecordings();
+          }
         }
       } else {
         if (msg.action === 'resume') {
@@ -162,6 +193,11 @@ export function handleMessageInternal(msg) {
           updateAuthUI();
           // Rebuild icon picker to lock premium section
           if (typeof window._buildIconPicker === 'function') window._buildIconPicker();
+          // Show name-entry for guest flow if they haven't joined yet
+          if (!clientState.hasJoined) {
+            dom.nameEntry.classList.remove('hidden');
+            dom.nameInput.focus();
+          }
         } else {
           showAuthError(msg.error || 'Authentication failed');
         }
@@ -187,9 +223,14 @@ export function handleMessageInternal(msg) {
       updatePlayerCount();
 
       if (!clientState.hasJoined) {
-        dom.nameEntry.classList.remove('hidden');
+        // If we have a saved token, keep name-entry hidden while we wait
+        // for resume-session result; otherwise show it immediately
+        const savedToken = localStorage.getItem('rq_session_token');
+        if (!savedToken) {
+          dom.nameEntry.classList.remove('hidden');
+          dom.nameInput.focus();
+        }
         hideLobbyBrowser();
-        dom.nameInput.focus();
       } else {
         dom.nameEntry.classList.add('hidden');
         // Re-send name and show lobby browser

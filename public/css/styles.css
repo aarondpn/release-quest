@@ -2412,6 +2412,158 @@ header p {
 
 #lobby-list-panel.hidden { display: none; }
 
+/* ── Lobby Profile Bar ── */
+.lobby-profile-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0;
+  animation: lb-entrance 0.45s ease-out 0.08s both;
+}
+
+.lobby-profile-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lobby-profile-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lobby-profile-name {
+  font-size: 9px;
+  color: var(--fg);
+  letter-spacing: 1px;
+}
+
+.lobby-profile-edit-btn {
+  font-size: 6px !important;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+  padding: 2px 6px !important;
+}
+.lobby-profile-edit-btn:hover {
+  opacity: 1;
+}
+
+.lobby-profile-divider {
+  width: 1px;
+  height: 12px;
+  background: rgba(168, 85, 247, 0.25);
+}
+
+.lobby-profile-auth {
+  font-size: 7px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.6;
+}
+.lobby-profile-auth:hover {
+  opacity: 1;
+}
+
+.lobby-profile-auth-label {
+  opacity: 0.7;
+}
+
+.lobby-profile-auth-name {
+  color: var(--yellow);
+}
+
+.lobby-profile-guest-view,
+.lobby-profile-logged-in-view {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.lobby-profile-guest-view.hidden,
+.lobby-profile-logged-in-view.hidden { display: none; }
+
+/* ── Lobby Profile Editor ── */
+.lobby-profile-editor {
+  max-width: 560px;
+  width: 100%;
+  background: rgba(26, 26, 46, 0.5);
+  border: 1px solid rgba(168, 85, 247, 0.15);
+  border-radius: 10px;
+  overflow: hidden;
+  max-height: 400px;
+  padding: 16px 20px;
+  opacity: 1;
+  transition: max-height 0.3s ease, opacity 0.25s ease, padding 0.3s ease;
+}
+.lobby-profile-editor.collapsed {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  opacity: 0;
+  border-color: transparent;
+}
+
+.lobby-editor-icon-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.lobby-editor-icon-picker .icon-picker-label {
+  width: 100%;
+  text-align: center;
+  font-size: 7px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  margin: 4px 0;
+}
+
+.lobby-editor-icon-picker .icon-option {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  border: 2px solid rgba(168,85,247,0.15);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.1s;
+}
+.lobby-editor-icon-picker .icon-option:hover {
+  border-color: var(--purple);
+  transform: scale(1.1);
+}
+.lobby-editor-icon-picker .icon-option.selected {
+  border-color: var(--yellow);
+  box-shadow: 0 0 10px rgba(255,230,109,0.3);
+}
+.lobby-editor-icon-picker .icon-option.locked {
+  opacity: 0.35;
+  cursor: not-allowed;
+  position: relative;
+}
+.lobby-editor-icon-picker .icon-option-premium {
+  background: rgba(168,85,247,0.08);
+}
+
+.lobby-editor-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+}
+
+.lobby-editor-name-input {
+  flex: 1;
+  max-width: 260px;
+}
+
 /* ── Leaderboard ── */
 .leaderboard-panel {
   display: flex;
@@ -3424,6 +3576,9 @@ header p {
   .lobby-browser-title { font-size: 22px; letter-spacing: 3px; }
   .lobby-tab { padding: 10px 14px; font-size: 7px; }
   .lobby-create-form { padding: 16px; gap: 8px; }
+  .lobby-profile-bar { gap: 8px; }
+  .lobby-profile-divider { display: none; }
+  .lobby-profile-name { font-size: 8px; }
 }
 
 /* ── Error Notifications ── */

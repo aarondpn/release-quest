@@ -24,7 +24,7 @@
 <div class="conn-status disconnected" id="conn-status">CONNECTING...</div>
 
 <!-- Name entry overlay -->
-<div class="name-entry" id="name-entry">
+<div class="name-entry hidden" id="name-entry">
   <div class="name-entry-title" data-text="BUG HUNTER">BUG HUNTER</div>
   <div class="name-entry-tagline">MULTIPLAYER BUG HUNT</div>
   <div class="name-entry-sub">Choose your name &amp; icon</div>
@@ -75,6 +75,33 @@
 <div class="lobby-browser hidden" id="lobby-browser">
   <div class="lobby-browser-title" data-text="GAME LOBBIES">GAME LOBBIES</div>
   <div class="lobby-browser-sub">Join or create a lobby</div>
+
+  <div class="lobby-profile-bar" id="lobby-profile-bar">
+    <div class="lobby-profile-info">
+      <span class="lobby-profile-icon" id="lobby-profile-icon"></span>
+      <span class="lobby-profile-name" id="lobby-profile-name"></span>
+      <button class="btn-link lobby-profile-edit-btn" id="lobby-profile-edit-btn">EDIT</button>
+    </div>
+    <div class="lobby-profile-divider"></div>
+    <div class="lobby-profile-auth" id="lobby-profile-auth">
+      <span class="lobby-profile-guest-view">
+        <span class="lobby-profile-auth-label">Guest</span>
+        <button class="btn btn-link" id="lobby-profile-login-btn">LOG IN</button>
+      </span>
+      <span class="lobby-profile-logged-in-view hidden">
+        <span class="lobby-profile-auth-name" id="lobby-profile-auth-name"></span>
+        <button class="btn btn-link" id="lobby-profile-logout-btn">SIGN OUT</button>
+      </span>
+    </div>
+  </div>
+
+  <div class="lobby-profile-editor collapsed" id="lobby-profile-editor">
+    <div class="lobby-editor-icon-picker" id="lobby-editor-icon-picker"></div>
+    <div class="lobby-editor-row">
+      <input class="name-input lobby-editor-name-input" id="lobby-editor-name-input" type="text" placeholder="Your name..." maxlength="16" autocomplete="off" spellcheck="false">
+      <button class="btn btn-small lobby-editor-save-btn" id="lobby-editor-save-btn">SAVE</button>
+    </div>
+  </div>
 
   <div class="lobby-tabs">
     <button class="lobby-tab active" id="lobbies-tab">LOBBIES</button>

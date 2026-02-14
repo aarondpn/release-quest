@@ -1,4 +1,5 @@
 import { dom, clientState } from './state.js';
+import { STANDARD_ICONS, PREMIUM_AVATARS, PREMIUM_IDS, isPremium, renderIcon } from './avatars.js';
 
 function escapeHtml(s) {
   const d = document.createElement('div');
@@ -13,6 +14,8 @@ export function initLobbySend(fn) { _sendMessage = fn; }
 export function showLobbyBrowser() {
   dom.lobbyBrowser.classList.remove('hidden');
   dom.lobbyError.classList.add('hidden');
+  // Collapse editor on re-show
+  if (dom.lobbyProfileEditor) dom.lobbyProfileEditor.classList.add('collapsed');
   // Reset to lobbies tab
   if (dom.lobbyListPanel) dom.lobbyListPanel.classList.remove('hidden');
   if (dom.leaderboardPanel) dom.leaderboardPanel.classList.add('hidden');
@@ -20,6 +23,7 @@ export function showLobbyBrowser() {
   if (dom.lobbiesTab) dom.lobbiesTab.classList.add('active');
   if (dom.leaderboardTab) dom.leaderboardTab.classList.remove('active');
   if (dom.replaysTab) dom.replaysTab.classList.remove('active');
+  updateLobbyProfileBar();
   if (_sendMessage) _sendMessage({ type: 'list-lobbies' });
 }
 
@@ -67,4 +71,127 @@ export function showLobbyError(message) {
   dom.lobbyError.textContent = message;
   dom.lobbyError.classList.remove('hidden');
   setTimeout(() => dom.lobbyError.classList.add('hidden'), 4000);
+}
+
+// ── Lobby Profile Bar ──
+
+export function updateLobbyProfileBar() {
+  if (!dom.lobbyProfileIcon) return;
+
+  // Update icon + name
+  dom.lobbyProfileIcon.innerHTML = renderIcon(clientState.myIcon || STANDARD_ICONS[0], 24);
+  dom.lobbyProfileName.textContent = clientState.myName || 'Anon';
+
+  // Update auth state
+  if (clientState.isLoggedIn && clientState.authUser) {
+    dom.lobbyProfileGuestView.classList.add('hidden');
+    dom.lobbyProfileLoggedInView.classList.remove('hidden');
+    dom.lobbyProfileAuthName.textContent = clientState.authUser.username;
+  } else {
+    dom.lobbyProfileGuestView.classList.remove('hidden');
+    dom.lobbyProfileLoggedInView.classList.add('hidden');
+    dom.lobbyProfileAuthName.textContent = '';
+  }
+}
+
+let _lobbyEditorSelectedIcon = null;
+
+export function buildLobbyIconPicker() {
+  if (!dom.lobbyEditorIconPicker) return;
+  dom.lobbyEditorIconPicker.innerHTML = '';
+  const current = clientState.selectedIcon;
+  _lobbyEditorSelectedIcon = current;
+  const isAuth = clientState.isLoggedIn;
+
+  // Standard section
+  const stdLabel = document.createElement('div');
+  stdLabel.className = 'icon-picker-label';
+  stdLabel.textContent = 'PICK YOUR HUNTER';
+  dom.lobbyEditorIconPicker.appendChild(stdLabel);
+
+  STANDARD_ICONS.forEach(icon => {
+    const el = document.createElement('div');
+    el.className = 'icon-option' + (current === icon ? ' selected' : '');
+    el.dataset.icon = icon;
+    el.textContent = icon;
+    el.addEventListener('click', () => {
+      dom.lobbyEditorIconPicker.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+      _lobbyEditorSelectedIcon = icon;
+    });
+    dom.lobbyEditorIconPicker.appendChild(el);
+  });
+
+  // Premium section
+  const premLabel = document.createElement('div');
+  premLabel.className = 'icon-picker-label icon-picker-premium-label';
+  premLabel.textContent = 'MEMBERS ONLY';
+  dom.lobbyEditorIconPicker.appendChild(premLabel);
+
+  PREMIUM_IDS.forEach(id => {
+    const av = PREMIUM_AVATARS[id];
+    const el = document.createElement('div');
+    const locked = !isAuth;
+    el.className = 'icon-option icon-option-premium' + (current === id ? ' selected' : '') + (locked ? ' locked' : '');
+    el.dataset.icon = id;
+    el.innerHTML = '<img src="' + av.svg + '" width="28" height="28" alt="' + av.name + '" style="image-rendering:pixelated">';
+    if (locked) {
+      const lock = document.createElement('div');
+      lock.className = 'icon-lock-overlay';
+      lock.textContent = '\u{1F512}';
+      el.appendChild(lock);
+    }
+    el.addEventListener('click', () => {
+      if (locked) {
+        el.classList.add('locked-shake');
+        el.addEventListener('animationend', () => el.classList.remove('locked-shake'), { once: true });
+        return;
+      }
+      dom.lobbyEditorIconPicker.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+      _lobbyEditorSelectedIcon = id;
+    });
+    dom.lobbyEditorIconPicker.appendChild(el);
+  });
+
+  // If selected icon isn't valid for current auth state, reset
+  if (isPremium(current) && !isAuth) {
+    _lobbyEditorSelectedIcon = STANDARD_ICONS[0];
+    const first = dom.lobbyEditorIconPicker.querySelector('.icon-option[data-icon="' + STANDARD_ICONS[0] + '"]');
+    if (first) first.classList.add('selected');
+  }
+}
+
+export function toggleLobbyEditor() {
+  const editor = dom.lobbyProfileEditor;
+  if (!editor) return;
+  const isCollapsed = editor.classList.contains('collapsed');
+  if (isCollapsed) {
+    // Populate editor with current values
+    dom.lobbyEditorNameInput.value = clientState.myName || '';
+    buildLobbyIconPicker();
+    editor.classList.remove('collapsed');
+  } else {
+    editor.classList.add('collapsed');
+  }
+}
+
+export function saveLobbyProfile() {
+  const name = dom.lobbyEditorNameInput.value.trim().slice(0, 16) || clientState.myName || 'Anon';
+  const icon = _lobbyEditorSelectedIcon || clientState.selectedIcon;
+
+  clientState.myName = name;
+  clientState.myIcon = icon;
+  clientState.selectedIcon = icon;
+
+  // Also update the name-entry input to stay in sync
+  dom.nameInput.value = name;
+
+  // Update name-entry icon picker selection too
+  if (typeof window._buildIconPicker === 'function') window._buildIconPicker();
+
+  if (_sendMessage) _sendMessage({ type: 'set-name', name, icon });
+
+  dom.lobbyProfileEditor.classList.add('collapsed');
+  updateLobbyProfileBar();
 }

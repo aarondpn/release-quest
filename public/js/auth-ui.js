@@ -1,4 +1,5 @@
 import { dom, clientState } from './state.js';
+import { updateLobbyProfileBar } from './lobby-ui.js';
 
 let _sendMessage = null;
 export function initAuthSend(fn) { _sendMessage = fn; }
@@ -16,6 +17,9 @@ export function updateAuthUI() {
     loggedInView.classList.add('hidden');
     dom.authUsername.textContent = '';
   }
+
+  // Also update lobby profile bar if visible
+  updateLobbyProfileBar();
 }
 
 export function showAuthOverlay() {
