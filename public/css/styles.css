@@ -422,7 +422,7 @@ header p {
 }
 @keyframes trail-fade {
   from { opacity: 0.6; transform: scale(1); }
-  to { opacity: 0; transform: scale(0.4); }
+  to { opacity: 0; transform: scale(1); }
 }
 
 /* ── Scoreboard on end screens ── */
