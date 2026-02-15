@@ -65,6 +65,7 @@ export function renderScoreboard(container, playerList) {
       '<span class="scoreboard-name">' +
         '<span style="margin-right:4px">' + renderIcon(p.icon || '', 14) + '</span>' +
         escapeHtml(p.name) + (p.id === clientState.myId ? ' (you)' : '') +
+        (p.isGuest ? ' <span class="guest-badge">GUEST</span>' : '') +
       '</span>' +
       '<span class="scoreboard-points">' + p.score + '</span>' +
     '</div>'
@@ -140,6 +141,17 @@ function renderLiveDashboard() {
     // Update name & icon
     row.querySelector('.live-dash-icon').innerHTML = renderIcon(p.icon || '', 10);
     row.querySelector('.live-dash-name-text').textContent = escapeHtml(p.name);
+
+    // Guest badge
+    let guestBadge = row.querySelector('.guest-badge');
+    if (p.isGuest && !guestBadge) {
+      guestBadge = document.createElement('span');
+      guestBadge.className = 'guest-badge';
+      guestBadge.textContent = 'GUEST';
+      row.querySelector('.live-dash-name').appendChild(guestBadge);
+    } else if (!p.isGuest && guestBadge) {
+      guestBadge.remove();
+    }
 
     // Score change detection
     const prevScore = parseInt(row.dataset.prevScore) || 0;
@@ -262,6 +274,7 @@ export function updateLobbyRoster() {
     return '<div class="lobby-player-card' + (isMe ? ' is-me' : '') + '" style="animation-delay:' + (i * 0.08) + 's">' +
       '<span class="lobby-player-icon">' + renderIcon(p.icon || '', 16) + '</span>' +
       '<span class="lobby-player-name">' + escapeHtml(p.name) + '</span>' +
+      (p.isGuest ? '<span class="guest-badge">GUEST</span>' : '') +
       '<span class="lobby-player-dot" style="color:' + (p.color || 'var(--teal)') + ';background:' + (p.color || 'var(--teal)') + '"></span>' +
       (isMe ? '<span class="lobby-player-you">YOU</span>' : '') +
     '</div>';

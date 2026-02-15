@@ -42,9 +42,10 @@ export const handleRegister: MessageHandler = ({ ws, msg, pid, playerInfo }) => 
       if (player) {
         player.name = result.user.displayName;
         player.icon = result.user.icon;
+        player.isGuest = false;
         network.broadcastToLobby(ctx.lobbyId, {
           type: 'player-joined',
-          player: { id: pid, name: player.name, color: player.color, icon: player.icon, score: player.score },
+          player: { id: pid, name: player.name, color: player.color, icon: player.icon, score: player.score, isGuest: false },
           playerCount: Object.keys(ctx.state.players).length,
         });
       }
@@ -87,9 +88,10 @@ export const handleLogin: MessageHandler = ({ ws, msg, pid, playerInfo }) => {
       if (player) {
         player.name = result.user.displayName;
         player.icon = result.user.icon;
+        player.isGuest = false;
         network.broadcastToLobby(ctx.lobbyId, {
           type: 'player-joined',
-          player: { id: pid, name: player.name, color: player.color, icon: player.icon, score: player.score },
+          player: { id: pid, name: player.name, color: player.color, icon: player.icon, score: player.score, isGuest: false },
           playerCount: Object.keys(ctx.state.players).length,
         });
       }

@@ -67,6 +67,7 @@ export const handleJoinLobby: MessageHandler = async ({ ws, msg, pid, playerInfo
     y: LOGICAL_H / 2,
     score: 0,
     bugsSquashed: 0,
+    isGuest: !info.userId,
   };
 
   lobby.joinLobby(lobbyId, pid, playerData).then(result => {
@@ -97,7 +98,7 @@ export const handleJoinLobby: MessageHandler = async ({ ws, msg, pid, playerInfo
     // Notify others in the lobby
     network.broadcastToLobby(lobbyId, {
       type: 'player-joined',
-      player: { id: pid, name: info.name, color: info.color, icon: info.icon, score: 0 },
+      player: { id: pid, name: info.name, color: info.color, icon: info.icon, score: 0, isGuest: !info.userId },
       playerCount: Object.keys(ctx.state.players).length,
     }, ws);
 
@@ -141,6 +142,7 @@ export const handleJoinLobbyByCode: MessageHandler = async ({ ws, msg, pid, play
       y: LOGICAL_H / 2,
       score: 0,
       bugsSquashed: 0,
+      isGuest: !info.userId,
     };
 
     const playerLogger = createPlayerLogger(pid);
@@ -171,7 +173,7 @@ export const handleJoinLobbyByCode: MessageHandler = async ({ ws, msg, pid, play
 
     network.broadcastToLobby(lobbyId, {
       type: 'player-joined',
-      player: { id: pid, name: info.name, color: info.color, icon: info.icon, score: 0 },
+      player: { id: pid, name: info.name, color: info.color, icon: info.icon, score: 0, isGuest: !info.userId },
       playerCount: Object.keys(ctx.state.players).length,
     }, ws);
 

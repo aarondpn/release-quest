@@ -36,6 +36,7 @@ export interface PlayerData {
   y: number;
   score: number;
   bugsSquashed: number;
+  isGuest: boolean;
 }
 
 export interface PlayerInfo {
@@ -52,6 +53,7 @@ export interface PlayerScoreEntry {
   color: string;
   icon: string;
   score: number;
+  isGuest: boolean;
 }
 
 export interface BugEntity {

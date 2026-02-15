@@ -64,6 +64,7 @@ export function getPlayerScores(state: GameState): PlayerScoreEntry[] {
     color: p.color,
     icon: p.icon,
     score: p.score,
+    isGuest: p.isGuest,
   }));
 }
 

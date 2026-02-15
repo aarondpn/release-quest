@@ -34,7 +34,7 @@ export const handleSetName: MessageHandler = ({ msg, pid, playerInfo }) => {
       if (msg.icon && PREMIUM_ICON_IDS.includes(msg.icon) && info.userId) player.icon = msg.icon;
       network.broadcastToLobby(ctx.lobbyId, {
         type: 'player-joined',
-        player: { id: pid, name: player.name, color: player.color, icon: player.icon, score: player.score },
+        player: { id: pid, name: player.name, color: player.color, icon: player.icon, score: player.score, isGuest: player.isGuest },
         playerCount: Object.keys(ctx.state.players).length,
       });
     }
