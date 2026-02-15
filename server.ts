@@ -77,6 +77,7 @@ const playerInfo = new Map<string, PlayerInfo>();
 
 // ── Express app setup ──
 const app = express();
+app.disable('x-powered-by');
 const httpServer = http.createServer(app);
 
 // Static file serving
