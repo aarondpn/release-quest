@@ -3661,7 +3661,15 @@ header p {
   .name-input { width: 260px; }
   .btn-play { font-size: 12px; padding: 14px 40px; }
   .lobby-browser-title { font-size: 22px; letter-spacing: 3px; }
-  .lobby-tab { padding: 10px 14px; font-size: 7px; }
+  .lobby-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .lobby-tabs::-webkit-scrollbar { display: none; }
+  .lobby-tab { padding: 10px 12px; font-size: 6px; white-space: nowrap; }
   .lobby-create-form { padding: 16px; gap: 8px; }
   .lobby-profile-bar { gap: 8px; }
   .lobby-profile-divider { display: none; }
