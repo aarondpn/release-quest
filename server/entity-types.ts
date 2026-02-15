@@ -3,6 +3,7 @@ import { randomPosition } from './state.ts';
 import * as network from './network.ts';
 import * as game from './game.ts';
 import * as powerups from './powerups.ts';
+import { gameBugsSquashed } from './metrics.ts';
 import type { BugEntity, GameContext, EntityDescriptor } from './types.ts';
 
 // ── Base descriptor — shared defaults for all entity types ──
@@ -72,6 +73,7 @@ const baseDescriptor: EntityDescriptor = {
     delete state.bugs[bug.id];
 
     player.bugsSquashed = (player.bugsSquashed || 0) + 1;
+    gameBugsSquashed.inc();
     let points = diffConfig.bugPoints;
     if (powerups.isDuckBuffActive(ctx)) points *= 2;
     state.score += points;
@@ -128,6 +130,7 @@ types.heisenbug = {
     delete state.bugs[bug.id];
 
     player.bugsSquashed = (player.bugsSquashed || 0) + 1;
+    gameBugsSquashed.inc();
     let points = diffConfig.bugPoints * HEISENBUG_MECHANICS.pointsMultiplier;
     if (powerups.isDuckBuffActive(ctx)) points *= 2;
     state.score += points;
@@ -388,6 +391,7 @@ types.memoryLeak = {
     for (const holderId of allHolders) {
       if (state.players[holderId]) {
         state.players[holderId].bugsSquashed = (state.players[holderId].bugsSquashed || 0) + 1;
+        gameBugsSquashed.inc();
         state.players[holderId].score += points;
         state.score += points;
       }
@@ -478,6 +482,7 @@ types.mergeConflict = {
           state.players[clickerId].score += MERGE_CONFLICT_MECHANICS.bonusPoints;
           state.score += MERGE_CONFLICT_MECHANICS.bonusPoints;
           state.players[clickerId].bugsSquashed = (state.players[clickerId].bugsSquashed || 0) + 1;
+          gameBugsSquashed.inc();
         }
       }
 
@@ -595,6 +600,7 @@ types.pipeline = {
       chain.nextIndex++;
 
       player.bugsSquashed = (player.bugsSquashed || 0) + 1;
+      gameBugsSquashed.inc();
       let points = PIPELINE_BUG_MECHANICS.pointsPerBug;
       if (powerups.isDuckBuffActive(ctx)) points *= 2;
       state.score += points;
@@ -778,6 +784,7 @@ export function handleBreakpointClick(bug: BugEntity, ctx: GameContext, pid: str
     delete state.bugs[bug.id];
 
     player.bugsSquashed = (player.bugsSquashed || 0) + 1;
+    gameBugsSquashed.inc();
     let points = INFINITE_LOOP_MECHANICS.points;
     if (powerups.isDuckBuffActive(ctx)) points *= 2;
     state.score += points;

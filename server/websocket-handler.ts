@@ -11,6 +11,7 @@ import * as powerups from './powerups.ts';
 import * as auth from './auth.ts';
 import * as entityTypes from './entity-types.ts';
 import { getCtxForPlayer, handleLeaveLobby, broadcastLobbyList, augmentLobbies } from './helpers.ts';
+import { wsMessagesReceived, gamePlayersOnline } from './metrics.ts';
 
 /**
  * Handle incoming WebSocket messages
@@ -574,6 +575,7 @@ export function setupWebSocketConnection(
 
   // Broadcast updated online count to all clients
   network.broadcast({ type: 'online-count', count: wss.clients.size });
+  gamePlayersOnline.inc();
 
   // WebSocket error handler
   ws.on('error', (err: Error) => {
@@ -596,6 +598,8 @@ export function setupWebSocketConnection(
 
     const pid = network.wsToPlayer.get(ws);
     if (!pid) return;
+
+    wsMessagesReceived.inc({ type: msg.type || 'unknown' });
 
     try {
       await handleMessage(ws, msg, pid, playerInfo, wss);
@@ -629,6 +633,7 @@ export function setupWebSocketConnection(
 
       // Broadcast updated online count to all remaining clients
       network.broadcast({ type: 'online-count', count: wss.clients.size });
+      gamePlayersOnline.dec();
     } catch (err) {
       console.error('Error handling WebSocket close:', err);
     }

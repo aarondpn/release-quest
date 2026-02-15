@@ -8,6 +8,7 @@ import * as stats from './stats.ts';
 import { createMatchLog } from './match-logger.ts';
 import { startRecording, stopRecording } from './recording.ts';
 import * as db from './db.ts';
+import { gameGamesStarted, gameGamesCompleted } from './metrics.ts';
 import type { GameContext } from './types.ts';
 
 function teardownGame(ctx: GameContext): void {
@@ -37,6 +38,7 @@ export function endGame(ctx: GameContext, outcome: string, win: boolean): void {
     });
   }
   state.phase = win ? 'win' : 'gameover';
+  gameGamesCompleted.inc({ outcome: win ? 'win' : 'loss', difficulty: state.difficulty });
   teardownGame(ctx);
   state.boss = null;
   network.broadcastToLobby(lobbyId, {
@@ -97,6 +99,8 @@ export function startGame(ctx: GameContext): void {
     lobby: lobbyId,
     players: Object.keys(state.players).length,
   });
+
+  gameGamesStarted.inc({ difficulty: state.difficulty });
 
   network.broadcastToLobby(lobbyId, {
     type: 'game-start',

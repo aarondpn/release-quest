@@ -2,6 +2,7 @@ import { LOBBY_CONFIG } from './config.ts';
 import { createGameState, createCounters } from './state.ts';
 import { createTimerBag } from './timer-bag.ts';
 import * as db from './db.ts';
+import { gameLobbiesActive } from './metrics.ts';
 import type { GameContext, LobbyMemory, PlayerData, DbLobbyRow, CustomDifficultyConfig, GameTimers } from './types.ts';
 
 function createGameTimers(): GameTimers {
@@ -32,6 +33,7 @@ export async function createLobby(name: string, maxPlayers: number | undefined, 
     timers: createGameTimers(),
     matchLog: null,
   });
+  gameLobbiesActive.inc();
 
   return { lobby: row };
 }
@@ -106,8 +108,9 @@ export async function destroyLobby(lobbyId: number): Promise<void> {
       mem.state.bugs[bugId]._timers.clearAll();
     }
     lobbies.delete(lobbyId);
+    gameLobbiesActive.dec();
   }
-  
+
   try {
     await db.deleteLobby(lobbyId);
   } catch (err) {

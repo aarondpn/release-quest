@@ -12,6 +12,7 @@ import apiRoutes from './server/routes.ts';
 import { errorHandler, notFoundHandler } from './server/middleware.ts';
 import { setupWebSocketConnection } from './server/websocket-handler.ts';
 import { broadcastLobbyList } from './server/helpers.ts';
+import { metricsMiddleware, startMetricsServer, wsConnectionOpened, wsConnectionClosed } from './server/metrics.ts';
 import type { PlayerInfo } from './server/types.ts';
 
 // ── Global error handlers ──
@@ -80,6 +81,9 @@ const app = express();
 app.disable('x-powered-by');
 const httpServer = http.createServer(app);
 
+// Metrics middleware (records HTTP request duration/count)
+app.use(metricsMiddleware);
+
 // Static file serving
 app.use(express.static(path.join(import.meta.dirname, 'public')));
 
@@ -104,6 +108,9 @@ wss.on('connection', (ws: WebSocket) => {
   colorIndex++;
   const name = GUEST_NAMES[Math.floor(Math.random() * GUEST_NAMES.length)];
 
+  wsConnectionOpened();
+  ws.on('close', () => wsConnectionClosed());
+
   setupWebSocketConnection(ws, playerId, color, icon, name, playerInfo, wss);
 });
 
@@ -127,6 +134,8 @@ async function start(): Promise<void> {
   setInterval(() => {
     db.expireOldShares().then(n => { if (n > 0) console.log(`Expired ${n} old shared replay(s)`); }).catch(() => {});
   }, 3_600_000);
+
+  startMetricsServer();
 
   httpServer.listen(SERVER_CONFIG.port, () => {
     console.log(`Release Quest running on http://localhost:${SERVER_CONFIG.port}`);
