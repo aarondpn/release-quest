@@ -1740,9 +1740,10 @@ header p {
   z-index: 450;
   gap: 24px;
   text-align: center;
-  padding: 40px 20px;
+  padding: 20px;
   overflow-y: auto;
 }
+.lobby-browser-spacer { flex: 1 1 0; }
 .lobby-browser.hidden { display: none; }
 
 /* Radial glow atmosphere */

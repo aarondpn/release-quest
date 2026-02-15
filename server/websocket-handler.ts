@@ -154,9 +154,10 @@ export async function handleMessage(
       if (msg.icon && ICONS.includes(msg.icon)) info.icon = msg.icon;
       if (msg.icon && PREMIUM_ICON_IDS.includes(msg.icon) && info.userId) info.icon = msg.icon;
 
-      // Persist icon change to database for logged-in users
-      if (info.userId && msg.icon && ALL_ICONS.includes(msg.icon)) {
-        db.updateUserIcon(info.userId, info.icon).catch(() => {});
+      // Persist changes to database for logged-in users
+      if (info.userId) {
+        if (newName) db.updateUserDisplayName(info.userId, newName).catch(() => {});
+        if (msg.icon && ALL_ICONS.includes(msg.icon)) db.updateUserIcon(info.userId, info.icon).catch(() => {});
       }
 
       // If already in a lobby, update there too

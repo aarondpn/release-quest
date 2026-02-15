@@ -230,6 +230,10 @@ export async function updateUserIcon(userId: number, icon: string): Promise<void
   await pool.query(`UPDATE users SET icon = $1 WHERE id = $2`, [icon, userId]);
 }
 
+export async function updateUserDisplayName(userId: number, displayName: string): Promise<void> {
+  await pool.query(`UPDATE users SET display_name = $1 WHERE id = $2`, [displayName, userId]);
+}
+
 export async function getUserByUsername(username: string): Promise<DbUserRow | null> {
   const result = await pool.query(`SELECT * FROM users WHERE username = $1`, [username]);
   return (result.rows[0] as DbUserRow) || null;
