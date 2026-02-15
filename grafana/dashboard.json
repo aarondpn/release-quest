@@ -11,7 +11,7 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
       "targets": [
         {
-          "expr": "sum(rate(http_requests_total[5m])) by (method)",
+          "expr": "sum(rate(http_requests_total{instance=~\"$instance\"}[5m])) by (method)",
           "legendFormat": "{{method}}",
           "refId": "A"
         }
@@ -29,17 +29,17 @@
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{instance=~\"$instance\"}[5m])) by (le))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{instance=~\"$instance\"}[5m])) by (le))",
           "legendFormat": "p95",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{instance=~\"$instance\"}[5m])) by (le))",
           "legendFormat": "p99",
           "refId": "C"
         }
@@ -57,7 +57,7 @@
       "gridPos": { "h": 4, "w": 6, "x": 0, "y": 8 },
       "targets": [
         {
-          "expr": "ws_connections_active",
+          "expr": "ws_connections_active{instance=~\"$instance\"}",
           "legendFormat": "Active",
           "refId": "A"
         }
@@ -73,12 +73,12 @@
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
       "targets": [
         {
-          "expr": "sum(rate(ws_messages_received_total[5m]))",
+          "expr": "sum(rate(ws_messages_received_total{instance=~\"$instance\"}[5m]))",
           "legendFormat": "Received",
           "refId": "A"
         },
         {
-          "expr": "rate(ws_messages_sent_total[5m])",
+          "expr": "rate(ws_messages_sent_total{instance=~\"$instance\"}[5m])",
           "legendFormat": "Sent",
           "refId": "B"
         }
@@ -96,7 +96,7 @@
       "gridPos": { "h": 4, "w": 6, "x": 6, "y": 8 },
       "targets": [
         {
-          "expr": "game_lobbies_active",
+          "expr": "game_lobbies_active{instance=~\"$instance\"}",
           "legendFormat": "Lobbies",
           "refId": "A"
         }
@@ -112,7 +112,7 @@
       "gridPos": { "h": 4, "w": 6, "x": 0, "y": 12 },
       "targets": [
         {
-          "expr": "game_players_online",
+          "expr": "game_players_online{instance=~\"$instance\"}",
           "legendFormat": "Players",
           "refId": "A"
         }
@@ -128,12 +128,12 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
       "targets": [
         {
-          "expr": "sum(rate(game_games_started_total[5m]))",
+          "expr": "sum(rate(game_games_started_total{instance=~\"$instance\"}[5m]))",
           "legendFormat": "Started",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(game_games_completed_total[5m]))",
+          "expr": "sum(rate(game_games_completed_total{instance=~\"$instance\"}[5m]))",
           "legendFormat": "Completed",
           "refId": "B"
         }
@@ -151,7 +151,7 @@
       "gridPos": { "h": 8, "w": 6, "x": 6, "y": 12 },
       "targets": [
         {
-          "expr": "sum(rate(game_games_completed_total{outcome=\"win\"}[5m])) / sum(rate(game_games_completed_total[5m]))",
+          "expr": "sum(rate(game_games_completed_total{outcome=\"win\", instance=~\"$instance\"}[5m])) / sum(rate(game_games_completed_total{instance=~\"$instance\"}[5m]))",
           "legendFormat": "Win Rate",
           "refId": "A"
         }
@@ -178,7 +178,7 @@
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
       "targets": [
         {
-          "expr": "rate(game_bugs_squashed_total[5m])",
+          "expr": "rate(game_bugs_squashed_total{instance=~\"$instance\"}[5m])",
           "legendFormat": "Bugs Squashed",
           "refId": "A"
         }
@@ -196,7 +196,7 @@
       "gridPos": { "h": 8, "w": 8, "x": 0, "y": 24 },
       "targets": [
         {
-          "expr": "process_resident_memory_bytes",
+          "expr": "process_resident_memory_bytes{instance=~\"$instance\"}",
           "legendFormat": "RSS",
           "refId": "A"
         }
@@ -214,7 +214,7 @@
       "gridPos": { "h": 8, "w": 8, "x": 8, "y": 24 },
       "targets": [
         {
-          "expr": "rate(process_cpu_seconds_total[5m])",
+          "expr": "rate(process_cpu_seconds_total{instance=~\"$instance\"}[5m])",
           "legendFormat": "CPU",
           "refId": "A"
         }
@@ -232,7 +232,7 @@
       "gridPos": { "h": 8, "w": 8, "x": 16, "y": 24 },
       "targets": [
         {
-          "expr": "nodejs_eventloop_lag_seconds",
+          "expr": "nodejs_eventloop_lag_seconds{instance=~\"$instance\"}",
           "legendFormat": "Lag",
           "refId": "A"
         }
@@ -247,7 +247,21 @@
   ],
   "schemaVersion": 39,
   "tags": ["release-quest"],
-  "templating": { "list": [] },
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "definition": "label_values(up, instance)",
+        "includeAll": true,
+        "multi": true,
+        "name": "instance",
+        "query": "label_values(up, instance)",
+        "refresh": 2,
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      }
+    ]
+  },
   "time": { "from": "now-1h", "to": "now" },
   "timepicker": {},
   "timezone": "browser",
