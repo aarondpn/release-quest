@@ -1,8 +1,9 @@
 import type { HandlerContext, MessageHandler } from './types.ts';
-import { ALL_ICONS } from '../config.ts';
+import { ALL_ICONS, ICONS, GUEST_NAMES } from '../config.ts';
 import { createPlayerLogger } from '../logger.ts';
 import * as network from '../network.ts';
 import * as auth from '../auth.ts';
+import * as db from '../db.ts';
 import { getCtxForPlayer } from '../helpers.ts';
 
 export const handleRegister: MessageHandler = ({ ws, msg, pid, playerInfo }) => {
@@ -22,6 +23,10 @@ export const handleRegister: MessageHandler = ({ ws, msg, pid, playerInfo }) => 
     playerLogger.info({ username: result.user.username, displayName: result.user.displayName }, 'User registered');
     const info = playerInfo.get(pid);
     if (info) {
+      if (info.guestToken) {
+        db.deleteGuestSession(info.guestToken).catch(() => {});
+        delete info.guestToken;
+      }
       info.name = result.user.displayName;
       info.icon = result.user.icon;
       info.userId = result.user.id;
@@ -64,6 +69,10 @@ export const handleLogin: MessageHandler = ({ ws, msg, pid, playerInfo }) => {
     playerLogger.info({ username: result.user.username, displayName: result.user.displayName }, 'User logged in');
     const info = playerInfo.get(pid);
     if (info) {
+      if (info.guestToken) {
+        db.deleteGuestSession(info.guestToken).catch(() => {});
+        delete info.guestToken;
+      }
       info.name = result.user.displayName;
       info.icon = result.user.icon;
       info.userId = result.user.id;
@@ -93,16 +102,66 @@ export const handleLogin: MessageHandler = ({ ws, msg, pid, playerInfo }) => {
 export const handleLogout: MessageHandler = ({ ws, msg, pid, playerInfo }) => {
   const token = String(msg.token || '');
   const playerLogger = createPlayerLogger(pid);
-  
+
   auth.logout(token).then(() => {
     const info = playerInfo.get(pid);
     playerLogger.info('User logged out');
     if (info) {
+      // Clean up guest session if one exists
+      if (info.guestToken) {
+        db.deleteGuestSession(info.guestToken).catch(() => {});
+        delete info.guestToken;
+      }
       delete info.userId;
+      // Reset to fresh random guest identity
+      info.name = GUEST_NAMES[Math.floor(Math.random() * GUEST_NAMES.length)];
+      info.icon = ICONS[Math.floor(Math.random() * ICONS.length)];
     }
-    network.send(ws, { type: 'auth-result', action: 'logout', success: true });
+    network.send(ws, {
+      type: 'auth-result', action: 'logout', success: true,
+      name: info?.name, icon: info?.icon,
+    });
   }).catch(() => {
     network.send(ws, { type: 'auth-result', action: 'logout', success: true });
+  });
+};
+
+export const handleResumeGuest: MessageHandler = ({ ws, msg, pid, playerInfo }) => {
+  const token = msg.token ? String(msg.token) : '';
+  const playerLogger = createPlayerLogger(pid);
+
+  const resume = async () => {
+    const info = playerInfo.get(pid);
+    if (!info) return;
+
+    // If token provided, try to restore existing guest session
+    if (token) {
+      const session = await auth.validateGuestSession(token);
+      if (session) {
+        info.name = session.name;
+        info.icon = session.icon;
+        info.guestToken = session.token;
+        playerLogger.info('Guest session resumed');
+        network.send(ws, {
+          type: 'guest-session', success: true, resumed: true,
+          name: session.name, icon: session.icon, token: session.token,
+        });
+        return;
+      }
+    }
+
+    // No token or invalid/expired — create a new guest session with current name/icon
+    const session = await auth.createGuestSession(info.name, info.icon);
+    info.guestToken = session.token;
+    playerLogger.info('Guest session created');
+    network.send(ws, {
+      type: 'guest-session', success: true, resumed: false,
+      name: session.name, icon: session.icon, token: session.token,
+    });
+  };
+
+  resume().catch(() => {
+    network.send(ws, { type: 'guest-session', success: false });
   });
 };
 

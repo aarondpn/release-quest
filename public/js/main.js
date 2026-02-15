@@ -162,6 +162,7 @@ function submitJoin() {
     clientState.myIcon = icon;
     sendMessage({ type: 'set-name', name, icon });
     clientState.hasJoined = true;
+    if (!clientState.isLoggedIn) localStorage.setItem('rq_guest_joined', '1');
     dom.nameEntry.classList.add('hidden');
 
     // If we have a pending invite code, join directly via code

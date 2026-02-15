@@ -122,27 +122,47 @@ export function handleMessageInternal(msg) {
           clientState.authUser = null;
           clientState.isLoggedIn = false;
           localStorage.removeItem('rq_session_token');
-          // Reset premium icon to standard on logout
-          if (isPremium(clientState.selectedIcon)) {
+          localStorage.removeItem('rq_guest_token');
+          localStorage.removeItem('rq_guest_joined');
+          // Reset name/icon to the fresh random identity from server
+          if (msg.name) {
+            clientState.myName = msg.name;
+            dom.nameInput.value = msg.name;
+          }
+          if (msg.icon) {
+            clientState.myIcon = msg.icon;
+            clientState.selectedIcon = msg.icon;
+          } else if (isPremium(clientState.selectedIcon)) {
+            // Fallback: reset premium icon to standard
             clientState.selectedIcon = STANDARD_ICONS[0];
             clientState.myIcon = STANDARD_ICONS[0];
-            // Re-send name with updated icon if we're in the lobby
-            if (clientState.hasJoined) {
-              sendMessage({ type: 'set-name', name: clientState.myName, icon: clientState.myIcon });
-            }
           }
+          // Update icon picker selection
+          dom.iconPicker.querySelectorAll('.icon-option').forEach(o => {
+            o.classList.toggle('selected', o.dataset.icon === clientState.myIcon);
+          });
+          // Leave current lobby if in one
+          if (clientState.currentLobbyId) {
+            sendMessage({ type: 'leave-lobby' });
+          }
+          // Return to initial name-entry screen
+          clientState.hasJoined = false;
+          hideLobbyBrowser();
+          hideAllScreens();
+          hideLiveDashboard();
+          dom.nameEntry.classList.remove('hidden');
+          dom.nameInput.value = clientState.myName;
+          dom.nameInput.focus();
+          document.getElementById('hud-leave-btn').classList.add('hidden');
+          // Create a new guest session after logout
+          sendMessage({ type: 'resume-guest' });
           updateAuthUI();
           if (typeof window._buildIconPicker === 'function') window._buildIconPicker();
           buildLobbyIconPicker();
-          // Re-render stats/replays if visible so they show "Log in" message
-          if (dom.statsCardPanel && !dom.statsCardPanel.classList.contains('hidden')) {
-            handleMyStats(null);
-          }
-          if (dom.replaysPanel && !dom.replaysPanel.classList.contains('hidden')) {
-            renderRecordingsList(null);
-          }
         } else {
           // login, register, or resume
+          localStorage.removeItem('rq_guest_token');
+          localStorage.removeItem('rq_guest_joined');
           if (msg.token) {
             clientState.authToken = msg.token;
             localStorage.setItem('rq_session_token', msg.token);
@@ -168,12 +188,12 @@ export function handleMessageInternal(msg) {
           if (typeof window._buildIconPicker === 'function') window._buildIconPicker();
 
           // Auto-join for logged-in users who haven't entered yet
-          if (msg.action === 'resume' && !clientState.hasJoined) {
+          if (!clientState.hasJoined) {
             if (typeof window._submitJoin === 'function') window._submitJoin();
           }
 
           // If already in lobby, tell server about updated name/icon from account
-          if (msg.action !== 'resume' && clientState.hasJoined) {
+          if (clientState.hasJoined && (msg.action === 'login' || msg.action === 'register')) {
             sendMessage({ type: 'set-name', name: clientState.myName, icon: clientState.myIcon });
           }
 
@@ -200,8 +220,43 @@ export function handleMessageInternal(msg) {
             dom.nameEntry.classList.remove('hidden');
             dom.nameInput.focus();
           }
+          // Fall back to guest session resume
+          const guestToken = localStorage.getItem('rq_guest_token');
+          if (guestToken) {
+            sendMessage({ type: 'resume-guest', token: guestToken });
+          } else {
+            sendMessage({ type: 'resume-guest' });
+          }
         } else {
           showAuthError(msg.error || 'Authentication failed');
+        }
+      }
+      break;
+    }
+
+    case 'guest-session': {
+      if (msg.success && msg.token) {
+        localStorage.setItem('rq_guest_token', msg.token);
+        // Restore name/icon from guest session
+        if (msg.name) {
+          clientState.myName = msg.name;
+          dom.nameInput.value = msg.name;
+        }
+        if (msg.icon) {
+          clientState.myIcon = msg.icon;
+          clientState.selectedIcon = msg.icon;
+          dom.iconPicker.querySelectorAll('.icon-option').forEach(o => {
+            o.classList.toggle('selected', o.dataset.icon === msg.icon);
+          });
+        }
+        // Auto-join for returning guests who had previously clicked Play
+        if (msg.resumed && !clientState.hasJoined && localStorage.getItem('rq_guest_joined')) {
+          if (typeof window._submitJoin === 'function') window._submitJoin();
+        }
+        // Show name entry if guest hasn't joined yet
+        if (!clientState.hasJoined && !clientState.isLoggedIn && !localStorage.getItem('rq_guest_joined')) {
+          dom.nameEntry.classList.remove('hidden');
+          dom.nameInput.focus();
         }
       }
       break;
@@ -234,10 +289,11 @@ export function handleMessageInternal(msg) {
       updatePlayerCount();
 
       if (!clientState.hasJoined) {
-        // If we have a saved token, keep name-entry hidden while we wait
-        // for resume-session result; otherwise show it immediately
+        // If we have a saved token (user or guest), keep name-entry hidden
+        // while we wait for the resume result; otherwise show it immediately
         const savedToken = localStorage.getItem('rq_session_token');
-        if (!savedToken) {
+        const savedGuestToken = localStorage.getItem('rq_guest_token');
+        if (!savedToken && !savedGuestToken) {
           dom.nameEntry.classList.remove('hidden');
           dom.nameInput.focus();
         }
@@ -255,6 +311,13 @@ export function handleMessageInternal(msg) {
         sendMessage({ type: 'resume-session', token: savedToken });
       } else {
         updateAuthUI();
+        // No user session — attempt guest session resume
+        const guestToken = localStorage.getItem('rq_guest_token');
+        if (guestToken) {
+          sendMessage({ type: 'resume-guest', token: guestToken });
+        } else {
+          sendMessage({ type: 'resume-guest' });
+        }
       }
 
       // Check for shared replay URL, then invite URL

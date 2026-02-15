@@ -1,7 +1,7 @@
 import type { ZodType } from 'zod';
 import type { MessageHandler } from './types.ts';
 import { staticSchemas } from './schemas.ts';
-import { handleRegister, handleLogin, handleLogout, handleResumeSession } from './auth.ts';
+import { handleRegister, handleLogin, handleLogout, handleResumeSession, handleResumeGuest } from './auth.ts';
 import { handleSetName } from './profile.ts';
 import { handleListLobbies, handleCreateLobby, handleJoinLobby, handleJoinLobbyByCode, handleLeaveLobby } from './lobby.ts';
 import { handleStartGame } from './game.ts';
@@ -16,6 +16,7 @@ const staticHandlers: Record<string, MessageHandler> = {
   'login': handleLogin,
   'logout': handleLogout,
   'resume-session': handleResumeSession,
+  'resume-guest': handleResumeGuest,
   'set-name': handleSetName,
   'list-lobbies': handleListLobbies,
   'create-lobby': handleCreateLobby,

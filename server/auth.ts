@@ -93,3 +93,22 @@ export async function logout(token: string): Promise<void> {
     await db.deleteSession(token);
   }
 }
+
+// Guest session management
+
+export async function createGuestSession(name: string, icon: string): Promise<{ token: string; name: string; icon: string }> {
+  const token = generateToken();
+  await db.createGuestSession(token, name, icon);
+  return { token, name, icon };
+}
+
+export async function validateGuestSession(token: string): Promise<{ token: string; name: string; icon: string } | null> {
+  if (!token || typeof token !== 'string') return null;
+  const row = await db.getGuestSession(token);
+  if (!row) return null;
+  return { token: row.token, name: row.name, icon: row.icon };
+}
+
+export async function updateGuestProfile(token: string, name: string, icon: string): Promise<void> {
+  await db.updateGuestSession(token, name, icon);
+}

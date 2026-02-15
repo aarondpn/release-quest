@@ -43,6 +43,7 @@ export interface PlayerInfo {
   color: string;
   icon: string;
   userId?: number;
+  guestToken?: string;
 }
 
 export interface PlayerScoreEntry {
@@ -324,6 +325,14 @@ export interface DbUserRow {
   display_name: string;
   icon: string;
   created_at: Date;
+}
+
+export interface DbGuestSessionRow {
+  token: string;
+  name: string;
+  icon: string;
+  created_at: Date;
+  expires_at: Date;
 }
 
 export interface DbSessionRow {

@@ -2,6 +2,7 @@ import type { HandlerContext, MessageHandler } from './types.ts';
 import { ICONS, PREMIUM_ICON_IDS, ALL_ICONS } from '../config.ts';
 import * as network from '../network.ts';
 import * as db from '../db.ts';
+import * as auth from '../auth.ts';
 import { getCtxForPlayer } from '../helpers.ts';
 
 export const handleSetName: MessageHandler = ({ msg, pid, playerInfo }) => {
@@ -16,6 +17,11 @@ export const handleSetName: MessageHandler = ({ msg, pid, playerInfo }) => {
   if (info.userId) {
     if (newName) db.updateUserDisplayName(info.userId, newName).catch(() => {});
     if (msg.icon && ALL_ICONS.includes(msg.icon)) db.updateUserIcon(info.userId, info.icon).catch(() => {});
+  }
+
+  // Persist changes for guest sessions
+  if (!info.userId && info.guestToken) {
+    auth.updateGuestProfile(info.guestToken, info.name, info.icon).catch(() => {});
   }
 
   // If already in a lobby, update there too

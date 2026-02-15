@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import pg from 'pg';
 import { DATABASE_CONFIG } from './config.ts';
-import type { DbLobbyRow, DbUserRow, DbSessionRow, LeaderboardEntry, RecordingMetadata, RecordingEvent, RecordingRow, RecordingPlayerRow, RecordingEventRow, RecordingMouseMoveRow, MouseMoveEvent } from './types.ts';
+import type { DbLobbyRow, DbUserRow, DbSessionRow, DbGuestSessionRow, LeaderboardEntry, RecordingMetadata, RecordingEvent, RecordingRow, RecordingPlayerRow, RecordingEventRow, RecordingMouseMoveRow, MouseMoveEvent } from './types.ts';
 
 const { Pool } = pg;
 const pool = new Pool(DATABASE_CONFIG);
@@ -128,8 +128,19 @@ export async function initialize(): Promise<void> {
     ALTER TABLE game_recordings ADD COLUMN IF NOT EXISTS shared_at TIMESTAMPTZ
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS guest_sessions (
+      token VARCHAR(64) PRIMARY KEY,
+      name VARCHAR(16) NOT NULL,
+      icon VARCHAR(16) NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '30 days')
+    )
+  `);
+
   // Clean expired sessions
   await pool.query(`DELETE FROM sessions WHERE expires_at < NOW()`);
+  await pool.query(`DELETE FROM guest_sessions WHERE expires_at < NOW()`);
 
   // Clean up stale lobby data from previous runs
   await pool.query(`DELETE FROM lobby_players`);
@@ -258,6 +269,34 @@ export async function getSessionWithUser(token: string): Promise<DbSessionRow | 
 
 export async function deleteSession(token: string): Promise<void> {
   await pool.query(`DELETE FROM sessions WHERE token = $1`, [token]);
+}
+
+// Guest session queries
+
+export async function createGuestSession(token: string, name: string, icon: string): Promise<void> {
+  await pool.query(
+    `INSERT INTO guest_sessions (token, name, icon) VALUES ($1, $2, $3)`,
+    [token, name, icon]
+  );
+}
+
+export async function getGuestSession(token: string): Promise<DbGuestSessionRow | null> {
+  const result = await pool.query(
+    `SELECT * FROM guest_sessions WHERE token = $1 AND expires_at > NOW()`,
+    [token]
+  );
+  return (result.rows[0] as DbGuestSessionRow) || null;
+}
+
+export async function updateGuestSession(token: string, name: string, icon: string): Promise<void> {
+  await pool.query(
+    `UPDATE guest_sessions SET name = $1, icon = $2 WHERE token = $3`,
+    [name, icon, token]
+  );
+}
+
+export async function deleteGuestSession(token: string): Promise<void> {
+  await pool.query(`DELETE FROM guest_sessions WHERE token = $1`, [token]);
 }
 
 // Stats queries

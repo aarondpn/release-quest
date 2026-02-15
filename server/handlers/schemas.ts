@@ -39,6 +39,11 @@ const resumeSessionSchema = z.object({
   token: z.string(),
 });
 
+const resumeGuestSchema = z.object({
+  type: z.literal('resume-guest'),
+  token: z.string().optional(),
+});
+
 const setNameSchema = z.object({
   type: z.literal('set-name'),
   name: z.string().optional(),
@@ -108,6 +113,7 @@ export const staticSchemas: Record<string, ZodType> = {
   'login': loginSchema,
   'logout': logoutSchema,
   'resume-session': resumeSessionSchema,
+  'resume-guest': resumeGuestSchema,
   'set-name': setNameSchema,
   'list-lobbies': listLobbiesSchema,
   'create-lobby': createLobbySchema,
