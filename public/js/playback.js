@@ -342,7 +342,7 @@ export function cycleSpeed() {
     clientState.playbackWallTimeRef = Date.now();
   }
 
-  const speeds = [1, 2, 4];
+  const speeds = [0.5, 1, 2, 4];
   const currentIdx = speeds.indexOf(clientState.playbackSpeed);
   clientState.playbackSpeed = speeds[(currentIdx + 1) % speeds.length];
 
