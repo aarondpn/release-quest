@@ -1,6 +1,5 @@
 import { getDifficultyConfig, HEISENBUG_MECHANICS, CODE_REVIEW_MECHANICS, MERGE_CONFLICT_MECHANICS, PIPELINE_BUG_MECHANICS, MEMORY_LEAK_MECHANICS, INFINITE_LOOP_MECHANICS, LOGICAL_W, LOGICAL_H } from './config.ts';
 import { randomPosition, currentLevelConfig } from './state.ts';
-import * as network from './network.ts';
 import { createTimerBag } from './timer-bag.ts';
 import { getDescriptor, getType } from './entity-types/index.ts';
 import * as game from './game.ts';
@@ -8,7 +7,7 @@ import * as bossModule from './boss.ts';
 import type { GameContext, BugEntity, SpawnEntityOptions } from './types.ts';
 
 function spawnEntity(ctx: GameContext, opts: SpawnEntityOptions): boolean {
-  const { lobbyId, state, counters } = ctx;
+  const { state, counters } = ctx;
   if (state.phase !== opts.phaseCheck) return false;
   if (Object.keys(state.bugs).length >= opts.maxOnScreen) {
     if (ctx.matchLog) {
@@ -46,7 +45,7 @@ function spawnEntity(ctx: GameContext, opts: SpawnEntityOptions): boolean {
   if (opts.isMinion) broadcastPayload.isMinion = true;
   Object.assign(broadcastPayload, descriptor.broadcastFields(bug));
 
-  network.broadcastToLobby(lobbyId, { type: 'bug-spawned', bug: broadcastPayload });
+  ctx.events.emit({ type: 'bug-spawned', bug: broadcastPayload });
 
   descriptor.setupTimers(bug, ctx);
   descriptor.createWander(bug, ctx);
@@ -139,7 +138,7 @@ function spawnBug(ctx: GameContext): void {
 }
 
 function spawnMergeConflict(ctx: GameContext, cfg: { escapeTime: number; maxOnScreen: number; bugsTotal: number; spawnRate: number }): void {
-  const { lobbyId, state, counters } = ctx;
+  const { state, counters } = ctx;
   const conflictId = 'conflict_' + (counters.nextConflictId++);
   const escapeTime = cfg.escapeTime * MERGE_CONFLICT_MECHANICS.escapeTimeMultiplier;
   const id1 = 'bug_' + (counters.nextBugId++);
@@ -167,10 +166,10 @@ function spawnMergeConflict(ctx: GameContext, cfg: { escapeTime: number; maxOnSc
   state.bugs[id1] = bug1;
   state.bugs[id2] = bug2;
 
-  network.broadcastToLobby(lobbyId, { type: 'bug-spawned', bug: {
+  ctx.events.emit({ type: 'bug-spawned', bug: {
     id: id1, x: bug1.x, y: bug1.y, mergeConflict: conflictId, mergePartner: id2, mergeSide: 'left',
   }});
-  network.broadcastToLobby(lobbyId, { type: 'bug-spawned', bug: {
+  ctx.events.emit({ type: 'bug-spawned', bug: {
     id: id2, x: bug2.x, y: bug2.y, mergeConflict: conflictId, mergePartner: id1, mergeSide: 'right',
   }});
 
@@ -179,14 +178,14 @@ function spawnMergeConflict(ctx: GameContext, cfg: { escapeTime: number; maxOnSc
     if (state.phase !== 'playing' || !state.bugs[id1]) return;
     const np = randomPosition();
     bug1.x = np.x; bug1.y = np.y;
-    network.broadcastToLobby(lobbyId, { type: 'bug-wander', bugId: id1, x: np.x, y: np.y });
+    ctx.events.emit({ type: 'bug-wander', bugId: id1, x: np.x, y: np.y });
   }, escapeTime * 0.45);
 
   bug2._timers.setInterval('wander', () => {
     if (state.phase !== 'playing' || !state.bugs[id2]) return;
     const np = randomPosition();
     bug2.x = np.x; bug2.y = np.y;
-    network.broadcastToLobby(lobbyId, { type: 'bug-wander', bugId: id2, x: np.x, y: np.y });
+    ctx.events.emit({ type: 'bug-wander', bugId: id2, x: np.x, y: np.y });
   }, escapeTime * 0.45);
 
   // Shared escape handler — assigned to _onEscape so hammer stun/resume can restart it
@@ -201,7 +200,7 @@ function spawnMergeConflict(ctx: GameContext, cfg: { escapeTime: number; maxOnSc
     if (ctx.matchLog) {
       ctx.matchLog.log('escape', { bugId: id1, type: 'merge-conflict', activeBugs: Object.keys(state.bugs).length, hp: state.hp });
     }
-    network.broadcastToLobby(lobbyId, { type: 'merge-conflict-escaped', bugId: id1, partnerId: id2, hp: state.hp });
+    ctx.events.emit({ type: 'merge-conflict-escaped', bugId: id1, partnerId: id2, hp: state.hp });
     game.checkGameState(ctx);
   };
 
@@ -214,7 +213,7 @@ function spawnMergeConflict(ctx: GameContext, cfg: { escapeTime: number; maxOnSc
 }
 
 function spawnPipelineChain(ctx: GameContext, cfg: { escapeTime: number; maxOnScreen: number; bugsTotal: number; spawnRate: number }, chainLength: number): void {
-  const { lobbyId, state, counters } = ctx;
+  const { state, counters } = ctx;
   const chainId = 'chain_' + (counters.nextChainId++);
   const escapeTime = cfg.escapeTime * PIPELINE_BUG_MECHANICS.escapeTimeMultiplier;
   const pad = 40;
@@ -291,7 +290,7 @@ function spawnPipelineChain(ctx: GameContext, cfg: { escapeTime: number; maxOnSc
     // Broadcast all position updates
     for (const bid of alive) {
       const b = state.bugs[bid];
-      network.broadcastToLobby(lobbyId, { type: 'bug-wander', bugId: bid, x: b.x, y: b.y });
+      ctx.events.emit({ type: 'bug-wander', bugId: bid, x: b.x, y: b.y });
     }
   }, snakeTickMs);
 
@@ -303,7 +302,7 @@ function spawnPipelineChain(ctx: GameContext, cfg: { escapeTime: number; maxOnSc
 
   // Broadcast all spawns
   for (const bug of chainBugs) {
-    network.broadcastToLobby(lobbyId, { type: 'bug-spawned', bug: {
+    ctx.events.emit({ type: 'bug-spawned', bug: {
       id: bug.id, x: bug.x, y: bug.y,
       isPipeline: true, chainId, chainIndex: bug.chainIndex, chainLength,
     }});
@@ -332,7 +331,7 @@ function spawnPipelineChain(ctx: GameContext, cfg: { escapeTime: number; maxOnSc
     if (ctx.matchLog) {
       ctx.matchLog.log('escape', { chainId, type: 'pipeline-chain', bugsLost: remaining.length, hp: state.hp });
     }
-    network.broadcastToLobby(lobbyId, {
+    ctx.events.emit({
       type: 'pipeline-chain-escaped', chainId, bugIds: remaining, hp: state.hp,
     });
     if (state.phase === 'boss') game.checkBossGameState(ctx);

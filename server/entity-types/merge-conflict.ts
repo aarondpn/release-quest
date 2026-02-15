@@ -1,6 +1,5 @@
 import { baseDescriptor } from './base.ts';
 import { getDifficultyConfig, MERGE_CONFLICT_MECHANICS } from '../config.ts';
-import * as network from '../network.ts';
 import * as game from '../game.ts';
 import { gameBugsSquashed } from '../metrics.ts';
 import type { BugEntity, GameContext, EntityDescriptor } from '../types.ts';
@@ -31,7 +30,7 @@ export const mergeConflictDescriptor: EntityDescriptor = {
     if (ctx.matchLog) {
       ctx.matchLog.log('escape', { bugId: bug.id, type: 'merge-conflict', activeBugs: Object.keys(state.bugs).length, hp: state.hp });
     }
-    network.broadcastToLobby(ctx.lobbyId, { type: 'merge-conflict-escaped', bugId: bug.id, partnerId: bug.mergePartner, hp: state.hp });
+    ctx.events.emit({ type: 'merge-conflict-escaped', bugId: bug.id, partnerId: bug.mergePartner, hp: state.hp });
     onEscapeCheck();
   },
 
@@ -69,7 +68,7 @@ export const mergeConflictDescriptor: EntityDescriptor = {
         ctx.matchLog.log('squash', { bugId: bug.id, type: 'merge-conflict', by: [...clickers], activeBugs: Object.keys(state.bugs).length, score: state.score });
       }
 
-      network.broadcastToLobby(ctx.lobbyId, {
+      ctx.events.emit({
         type: 'merge-conflict-resolved',
         bugId: bug.id,
         partnerId: partner.id,
@@ -84,7 +83,7 @@ export const mergeConflictDescriptor: EntityDescriptor = {
       else game.checkGameState(ctx);
     } else {
       // Only one clicked — set timeout for reset
-      network.broadcastToLobby(ctx.lobbyId, { type: 'merge-conflict-halfclick', bugId: bug.id });
+      ctx.events.emit({ type: 'merge-conflict-halfclick', bugId: bug.id });
       bug._timers.setTimeout('mergeReset', () => {
         if (state.bugs[bug.id]) {
           bug.mergeClicked = false;

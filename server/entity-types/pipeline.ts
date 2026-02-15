@@ -1,7 +1,6 @@
 import { baseDescriptor } from './base.ts';
 import { PIPELINE_BUG_MECHANICS, LOGICAL_W, LOGICAL_H } from '../config.ts';
 import { randomPosition } from '../state.ts';
-import * as network from '../network.ts';
 import * as game from '../game.ts';
 import * as powerups from '../powerups.ts';
 import { gameBugsSquashed } from '../metrics.ts';
@@ -38,7 +37,7 @@ export const pipelineDescriptor: EntityDescriptor = {
         const margin = 100;
         const snakeSpeed = 30;
         const snakeTickMs = 350;
-        const { lobbyId, state } = ctx;
+        const { state } = ctx;
         const phaseCheck = state.phase;
         bug._timers.setInterval('chainWander', () => {
           if (state.phase !== phaseCheck || state.hammerStunActive) return;
@@ -70,7 +69,7 @@ export const pipelineDescriptor: EntityDescriptor = {
           }
           for (const bid of alive) {
             const b = state.bugs[bid];
-            network.broadcastToLobby(lobbyId, { type: 'bug-wander', bugId: bid, x: b.x, y: b.y });
+            ctx.events.emit({ type: 'bug-wander', bugId: bid, x: b.x, y: b.y });
           }
         }, snakeTickMs);
       }
@@ -100,7 +99,7 @@ export const pipelineDescriptor: EntityDescriptor = {
         ctx.matchLog.log('squash', { bugId: bug.id, type: 'pipeline', chainId: bug.chainId, chainIndex: bug.chainIndex, by: pid, score: state.score });
       }
 
-      network.broadcastToLobby(ctx.lobbyId, {
+      ctx.events.emit({
         type: 'pipeline-bug-squashed',
         bugId: bug.id, chainId: bug.chainId, chainIndex: bug.chainIndex,
         playerId: pid, playerColor: player.color,
@@ -123,7 +122,7 @@ export const pipelineDescriptor: EntityDescriptor = {
           ctx.matchLog.log('squash', { type: 'pipeline-chain-complete', chainId: bug.chainId, by: pid, score: state.score });
         }
 
-        network.broadcastToLobby(ctx.lobbyId, {
+        ctx.events.emit({
           type: 'pipeline-chain-resolved',
           chainId: bug.chainId,
           playerId: pid, playerColor: player.color,
@@ -154,7 +153,7 @@ export const pipelineDescriptor: EntityDescriptor = {
         ctx.matchLog.log('pipeline-reset', { chainId: bug.chainId, by: pid, remaining: remaining.length });
       }
 
-      network.broadcastToLobby(ctx.lobbyId, {
+      ctx.events.emit({
         type: 'pipeline-chain-reset',
         chainId: bug.chainId,
         positions: newPositions,

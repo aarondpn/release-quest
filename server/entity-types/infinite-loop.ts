@@ -1,6 +1,5 @@
 import { baseDescriptor } from './base.ts';
 import { INFINITE_LOOP_MECHANICS, LOGICAL_W, LOGICAL_H } from '../config.ts';
-import * as network from '../network.ts';
 import * as game from '../game.ts';
 import * as powerups from '../powerups.ts';
 import { gameBugsSquashed } from '../metrics.ts';
@@ -45,14 +44,14 @@ export const infiniteLoopDescriptor: EntityDescriptor = {
   },
 
   createWander(bug: BugEntity, ctx: GameContext) {
-    const { lobbyId, state } = ctx;
+    const { state } = ctx;
     const bugId = bug.id;
     bug._timers.setInterval('loopTick', () => {
       if (!state.bugs[bugId] || state.hammerStunActive) return;
       bug.loopAngle = (bug.loopAngle! + bug.loopSpeed!) % (2 * Math.PI);
       bug.x = bug.loopCenterX! + Math.cos(bug.loopAngle) * bug.loopRadiusX!;
       bug.y = bug.loopCenterY! + Math.sin(bug.loopAngle) * bug.loopRadiusY!;
-      network.broadcastToLobby(lobbyId, { type: 'bug-wander', bugId, x: bug.x, y: bug.y });
+      ctx.events.emit({ type: 'bug-wander', bugId, x: bug.x, y: bug.y });
     }, INFINITE_LOOP_MECHANICS.loopTickMs);
   },
 
@@ -112,7 +111,7 @@ export function handleBreakpointClick(bug: BugEntity, ctx: GameContext, pid: str
       });
     }
 
-    network.broadcastToLobby(ctx.lobbyId, {
+    ctx.events.emit({
       type: 'infinite-loop-squashed',
       bugId: bug.id,
       playerId: pid,
@@ -126,7 +125,7 @@ export function handleBreakpointClick(bug: BugEntity, ctx: GameContext, pid: str
     else game.checkGameState(ctx);
   } else {
     // Miss — visual feedback only, no penalty
-    network.broadcastToLobby(ctx.lobbyId, {
+    ctx.events.emit({
       type: 'infinite-loop-miss',
       bugId: bug.id,
       playerId: pid,

@@ -1,6 +1,5 @@
 import { MAX_LEVEL, getDifficultyConfig } from './config.ts';
 import { currentLevelConfig, getPlayerScores } from './state.ts';
-import * as network from './network.ts';
 import * as bugs from './bugs.ts';
 import * as boss from './boss.ts';
 import * as powerups from './powerups.ts';
@@ -41,7 +40,7 @@ export function endGame(ctx: GameContext, outcome: string, win: boolean): void {
   gameGamesCompleted.inc({ outcome: win ? 'win' : 'loss', difficulty: state.difficulty });
   teardownGame(ctx);
   state.boss = null;
-  network.broadcastToLobby(lobbyId, {
+  ctx.events.emit({
     type: win ? 'boss-defeated' : 'game-over',
     score: state.score,
     level: state.level,
@@ -102,7 +101,7 @@ export function startGame(ctx: GameContext): void {
 
   gameGamesStarted.inc({ difficulty: state.difficulty });
 
-  network.broadcastToLobby(lobbyId, {
+  ctx.events.emit({
     type: 'game-start',
     level: 1,
     hp: diffConfig.startingHp,
@@ -118,7 +117,7 @@ export function startGame(ctx: GameContext): void {
 }
 
 function startLevel(ctx: GameContext): void {
-  const { lobbyId, state } = ctx;
+  const { state } = ctx;
   const cfg = currentLevelConfig(state);
   state.bugsRemaining = cfg.bugsTotal;
   state.bugsSpawned = 0;
@@ -134,7 +133,7 @@ function startLevel(ctx: GameContext): void {
     });
   }
 
-  network.broadcastToLobby(lobbyId, {
+  ctx.events.emit({
     type: 'level-start',
     level: state.level,
     bugsTotal: cfg.bugsTotal,
@@ -147,7 +146,7 @@ function startLevel(ctx: GameContext): void {
 
 export function checkGameState(ctx: GameContext): void {
   try {
-    const { lobbyId, state } = ctx;
+    const { state } = ctx;
     if (state.phase !== 'playing') return;
 
     if (state.hp <= 0) {
@@ -165,7 +164,7 @@ export function checkGameState(ctx: GameContext): void {
         if (ctx.matchLog) {
           ctx.matchLog.log('level-complete', { level: state.level, next: 'boss' });
         }
-        network.broadcastToLobby(lobbyId, {
+        ctx.events.emit({
           type: 'level-complete',
           level: state.level,
           score: state.score,
@@ -181,7 +180,7 @@ export function checkGameState(ctx: GameContext): void {
         if (ctx.matchLog) {
           ctx.matchLog.log('level-complete', { level: state.level, nextLevel: state.level + 1 });
         }
-        network.broadcastToLobby(lobbyId, {
+        ctx.events.emit({
           type: 'level-complete',
           level: state.level,
           score: state.score,

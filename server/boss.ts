@@ -1,6 +1,5 @@
 import { getDifficultyConfig } from './config.ts';
 import { randomPosition } from './state.ts';
-import * as network from './network.ts';
 import * as bugs from './bugs.ts';
 import * as game from './game.ts';
 import * as powerups from './powerups.ts';
@@ -30,14 +29,14 @@ export function getEffectiveMaxOnScreen(ctx: GameContext): number {
 
 export function setupBossWander(ctx: GameContext, interval: number): void {
   try {
-    const { lobbyId, state } = ctx;
+    const { state } = ctx;
     ctx.timers.boss.setInterval('bossWander', () => {
       try {
         if (state.phase !== 'boss' || !state.boss || state.hammerStunActive) return;
         const newPos = randomPosition();
         state.boss.x = newPos.x;
         state.boss.y = newPos.y;
-        network.broadcastToLobby(lobbyId, { type: 'boss-wander', x: newPos.x, y: newPos.y });
+        ctx.events.emit({ type: 'boss-wander', x: newPos.x, y: newPos.y });
       } catch (err) {
         console.error('Error in bossWander:', err);
       }
@@ -63,7 +62,7 @@ export function setupMinionSpawning(ctx: GameContext, rate: number): void {
 }
 
 export function startBoss(ctx: GameContext): void {
-  const { lobbyId, state } = ctx;
+  const { state } = ctx;
   const bossConfig = getDifficultyConfig(state.difficulty, state.customConfig).boss;
   state.phase = 'boss';
   const pos = randomPosition();
@@ -92,7 +91,7 @@ export function startBoss(ctx: GameContext): void {
     });
   }
 
-  network.broadcastToLobby(lobbyId, {
+  ctx.events.emit({
     type: 'boss-spawn',
     boss: { hp: state.boss.hp, maxHp: state.boss.maxHp, x: pos.x, y: pos.y, enraged: false },
     hp: state.hp,
@@ -107,7 +106,7 @@ export function startBoss(ctx: GameContext): void {
 
 function bossTick(ctx: GameContext): void {
   try {
-    const { lobbyId, state } = ctx;
+    const { state } = ctx;
     if (state.phase !== 'boss' || !state.boss) return;
     const bossConfig = getDifficultyConfig(state.difficulty, state.customConfig).boss;
 
@@ -146,7 +145,7 @@ function bossTick(ctx: GameContext): void {
       }
     }
 
-    network.broadcastToLobby(lobbyId, {
+    ctx.events.emit({
       type: 'boss-tick',
       timeRemaining: state.boss.timeRemaining,
       bossHp: state.boss.hp,
@@ -166,7 +165,7 @@ function bossTick(ctx: GameContext): void {
 
 export function handleBossClick(ctx: GameContext, pid: string): void {
   try {
-    const { lobbyId, state } = ctx;
+    const { state } = ctx;
     if (state.phase !== 'boss' || !state.boss) return;
     const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
     const bossConfig = diffConfig.boss;
@@ -214,7 +213,7 @@ export function handleBossClick(ctx: GameContext, pid: string): void {
       }
     }
 
-    network.broadcastToLobby(lobbyId, {
+    ctx.events.emit({
       type: 'boss-hit',
       bossHp: state.boss.hp,
       bossMaxHp: state.boss.maxHp,

@@ -1,7 +1,6 @@
 import { baseDescriptor } from './base.ts';
 import { getDifficultyConfig, MEMORY_LEAK_MECHANICS } from '../config.ts';
 import { randomPosition } from '../state.ts';
-import * as network from '../network.ts';
 import * as game from '../game.ts';
 import * as powerups from '../powerups.ts';
 import { gameBugsSquashed } from '../metrics.ts';
@@ -14,7 +13,7 @@ export const memoryLeakDescriptor: EntityDescriptor = {
   },
 
   createWander(bug: BugEntity, ctx: GameContext) {
-    const { lobbyId, state } = ctx;
+    const { state } = ctx;
     const bugId = bug.id;
     bug._timers.setInterval('wander', () => {
       if (!state.bugs[bugId] || state.hammerStunActive) return;
@@ -23,18 +22,18 @@ export const memoryLeakDescriptor: EntityDescriptor = {
       const newPos = randomPosition();
       bug.x = newPos.x;
       bug.y = newPos.y;
-      network.broadcastToLobby(lobbyId, { type: 'bug-wander', bugId, x: newPos.x, y: newPos.y });
+      ctx.events.emit({ type: 'bug-wander', bugId, x: newPos.x, y: newPos.y });
     }, bug.escapeTime * 0.45);
   },
 
   setupTimers(bug: BugEntity, ctx: GameContext) {
     if (bug.growthStage! < MEMORY_LEAK_MECHANICS.maxGrowthStage) {
-      const { lobbyId, state } = ctx;
+      const { state } = ctx;
       bug._timers.setInterval('growth', () => {
         if (!state.bugs[bug.id]) return;
         if (bug.growthStage! < MEMORY_LEAK_MECHANICS.maxGrowthStage) {
           bug.growthStage!++;
-          network.broadcastToLobby(lobbyId, { type: 'memory-leak-grow', bugId: bug.id, growthStage: bug.growthStage });
+          ctx.events.emit({ type: 'memory-leak-grow', bugId: bug.id, growthStage: bug.growthStage });
         }
       }, MEMORY_LEAK_MECHANICS.growthInterval);
     }
@@ -50,7 +49,7 @@ export const memoryLeakDescriptor: EntityDescriptor = {
     if (ctx.matchLog) {
       ctx.matchLog.log('escape', { bugId: bug.id, type: 'memory-leak', growthStage: bug.growthStage, damage, activeBugs: Object.keys(ctx.state.bugs).length, hp: ctx.state.hp });
     }
-    network.broadcastToLobby(ctx.lobbyId, { type: 'memory-leak-escaped', bugId: bug.id, growthStage: bug.growthStage, damage, hp: ctx.state.hp });
+    ctx.events.emit({ type: 'memory-leak-escaped', bugId: bug.id, growthStage: bug.growthStage, damage, hp: ctx.state.hp });
     onEscapeCheck();
   },
 
@@ -77,7 +76,7 @@ export const memoryLeakDescriptor: EntityDescriptor = {
       const requiredTime = MEMORY_LEAK_MECHANICS.holdTimeByStage[bug.holdStartStage!];
       const effectiveRequiredTime = requiredTime / bug.holders.size;
 
-      network.broadcastToLobby(ctx.lobbyId, {
+      ctx.events.emit({
         type: 'memory-leak-hold-update',
         bugId: bug.id,
         playerId: pid,
@@ -112,7 +111,7 @@ export const memoryLeakDescriptor: EntityDescriptor = {
       delete bug.holdStartStage;
       delete bug.firstHolderStartTime;
 
-      network.broadcastToLobby(ctx.lobbyId, {
+      ctx.events.emit({
         type: 'memory-leak-hold-update',
         bugId: bug.id,
         playerId: pid,
@@ -132,7 +131,7 @@ export const memoryLeakDescriptor: EntityDescriptor = {
       this._completeHold!(bug, ctx);
     }, remainingTime);
 
-    network.broadcastToLobby(ctx.lobbyId, {
+    ctx.events.emit({
       type: 'memory-leak-hold-update',
       bugId: bug.id,
       playerId: pid,
@@ -178,7 +177,7 @@ export const memoryLeakDescriptor: EntityDescriptor = {
       });
     }
 
-    network.broadcastToLobby(ctx.lobbyId, {
+    ctx.events.emit({
       type: 'memory-leak-cleared',
       bugId: bug.id,
       holders: allHolders,

@@ -1,6 +1,5 @@
 import { getDifficultyConfig } from '../config.ts';
 import { randomPosition } from '../state.ts';
-import * as network from '../network.ts';
 import * as game from '../game.ts';
 import * as powerups from '../powerups.ts';
 import { gameBugsSquashed } from '../metrics.ts';
@@ -16,14 +15,14 @@ export const baseDescriptor: EntityDescriptor = {
   setupTimers(_bug: BugEntity, _ctx: GameContext) {},
 
   createWander(bug: BugEntity, ctx: GameContext) {
-    const { lobbyId, state } = ctx;
+    const { state } = ctx;
     const bugId = bug.id;
     bug._timers.setInterval('wander', () => {
       if (!state.bugs[bugId] || state.hammerStunActive) return;
       const newPos = randomPosition();
       bug.x = newPos.x;
       bug.y = newPos.y;
-      network.broadcastToLobby(lobbyId, { type: 'bug-wander', bugId, x: newPos.x, y: newPos.y });
+      ctx.events.emit({ type: 'bug-wander', bugId, x: newPos.x, y: newPos.y });
     }, bug.escapeTime * 0.45);
   },
 
@@ -59,7 +58,7 @@ export const baseDescriptor: EntityDescriptor = {
     if (ctx.matchLog) {
       ctx.matchLog.log('escape', { bugId: bug.id, activeBugs: Object.keys(ctx.state.bugs).length, hp: ctx.state.hp });
     }
-    network.broadcastToLobby(ctx.lobbyId, { type: 'bug-escaped', bugId: bug.id, hp: ctx.state.hp });
+    ctx.events.emit({ type: 'bug-escaped', bugId: bug.id, hp: ctx.state.hp });
     onEscapeCheck();
   },
 
@@ -89,7 +88,7 @@ export const baseDescriptor: EntityDescriptor = {
       });
     }
 
-    network.broadcastToLobby(ctx.lobbyId, {
+    ctx.events.emit({
       type: 'bug-squashed',
       bugId: bug.id,
       playerId: pid,

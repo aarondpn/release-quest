@@ -12,7 +12,7 @@ export function getCtxForPlayer(pid: string, playerInfo: Map<string, PlayerInfo>
   if (!lobbyId) return null;
   const mem = lobby.getLobbyState(lobbyId);
   if (!mem) return null;
-  const ctx: GameContext = { lobbyId, state: mem.state, counters: mem.counters, timers: mem.timers, matchLog: null, playerInfo };
+  const ctx: GameContext = { lobbyId, state: mem.state, counters: mem.counters, timers: mem.timers, matchLog: null, playerInfo, events: mem.events };
   // matchLog must persist across ctx instances so logging survives level transitions
   Object.defineProperty(ctx, 'matchLog', {
     get() { return mem.matchLog; },
@@ -47,7 +47,7 @@ export async function handleLeaveLobby(ws: WebSocket, pid: string, lobbyId: numb
 
     // Reset game if lobby is now empty (destroyLobby already called by leaveLobby)
     if (remaining === 0) {
-      game.resetToLobby({ lobbyId, state: mem.state, counters: mem.counters, timers: mem.timers, matchLog: null, playerInfo });
+      game.resetToLobby({ lobbyId, state: mem.state, counters: mem.counters, timers: mem.timers, matchLog: null, playerInfo, events: mem.events });
     }
   }
 }

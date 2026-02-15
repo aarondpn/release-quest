@@ -1,6 +1,5 @@
 import { baseDescriptor } from './base.ts';
 import { CODE_REVIEW_MECHANICS } from '../config.ts';
-import * as network from '../network.ts';
 import * as game from '../game.ts';
 import type { BugEntity, GameContext, EntityDescriptor } from '../types.ts';
 
@@ -16,7 +15,7 @@ export const featureDescriptor: EntityDescriptor = {
     if (ctx.matchLog) {
       ctx.matchLog.log('escape', { bugId: bug.id, type: 'feature', activeBugs: Object.keys(ctx.state.bugs).length });
     }
-    network.broadcastToLobby(ctx.lobbyId, { type: 'feature-escaped', bugId: bug.id });
+    ctx.events.emit({ type: 'feature-escaped', bugId: bug.id });
     onEscapeCheck();
   },
 
@@ -35,7 +34,7 @@ export const featureDescriptor: EntityDescriptor = {
       ctx.matchLog.log('squash', { bugId: bug.id, type: 'feature', by: pid, activeBugs: Object.keys(state.bugs).length, hp: state.hp });
     }
 
-    network.broadcastToLobby(ctx.lobbyId, {
+    ctx.events.emit({
       type: 'feature-squashed',
       bugId: bug.id,
       playerId: pid,

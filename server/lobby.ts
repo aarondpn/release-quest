@@ -3,6 +3,8 @@ import { createGameState, createCounters } from './state.ts';
 import { createTimerBag } from './timer-bag.ts';
 import * as db from './db.ts';
 import { gameLobbiesActive } from './metrics.ts';
+import { createEventBus } from './event-bus.ts';
+import { broadcastToLobby } from './network.ts';
 import type { GameContext, LobbyMemory, PlayerData, DbLobbyRow, CustomDifficultyConfig, GameTimers } from './types.ts';
 
 function createGameTimers(): GameTimers {
@@ -27,11 +29,14 @@ export async function createLobby(name: string, maxPlayers: number | undefined, 
   const settings = { difficulty, customConfig };
   const row = await db.createLobby(name, mp, settings);
 
+  const events = createEventBus();
+  events.on((msg) => broadcastToLobby(row.id, msg));
   lobbies.set(row.id, {
     state: createGameState(difficulty, customConfig),
     counters: createCounters(),
     timers: createGameTimers(),
     matchLog: null,
+    events,
   });
   gameLobbiesActive.inc();
 
@@ -55,11 +60,14 @@ export async function joinLobby(lobbyId: number, playerId: string, playerData: P
   if (!lobbies.has(lobbyId)) {
     const difficulty = (lobby.settings as any)?.difficulty || 'medium';
     const customConfig = (lobby.settings as any)?.customConfig;
+    const events = createEventBus();
+    events.on((msg) => broadcastToLobby(lobbyId, msg));
     lobbies.set(lobbyId, {
       state: createGameState(difficulty, customConfig),
       counters: createCounters(),
       timers: createGameTimers(),
       matchLog: null,
+      events,
     });
   }
 

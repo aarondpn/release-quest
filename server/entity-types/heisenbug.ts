@@ -1,7 +1,6 @@
 import { baseDescriptor } from './base.ts';
 import { getDifficultyConfig, HEISENBUG_MECHANICS } from '../config.ts';
 import { randomPosition } from '../state.ts';
-import * as network from '../network.ts';
 import * as game from '../game.ts';
 import * as powerups from '../powerups.ts';
 import { gameBugsSquashed } from '../metrics.ts';
@@ -36,7 +35,7 @@ export const heisenbugDescriptor: EntityDescriptor = {
       });
     }
 
-    network.broadcastToLobby(ctx.lobbyId, {
+    ctx.events.emit({
       type: 'bug-squashed',
       bugId: bug.id,
       playerId: pid,
@@ -74,10 +73,10 @@ export const heisenbugDescriptor: EntityDescriptor = {
       const wp = randomPosition();
       bug.x = wp.x;
       bug.y = wp.y;
-      network.broadcastToLobby(ctx.lobbyId, { type: 'bug-wander', bugId: bug.id, x: wp.x, y: wp.y });
+      ctx.events.emit({ type: 'bug-wander', bugId: bug.id, x: wp.x, y: wp.y });
     }, bug.escapeTime * 0.45);
 
-    network.broadcastToLobby(ctx.lobbyId, {
+    ctx.events.emit({
       type: 'bug-flee',
       bugId: bug.id,
       x: newPos.x,

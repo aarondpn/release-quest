@@ -1,5 +1,7 @@
 // Shared type definitions — no runtime code
 
+import type { GameEventBus } from './event-bus.ts';
+
 export type GamePhase = 'lobby' | 'playing' | 'boss' | 'gameover' | 'win';
 
 export interface TimerBag {
@@ -171,6 +173,7 @@ export interface GameContext {
   timers: GameTimers;
   matchLog: MatchLog | null;
   playerInfo: Map<string, PlayerInfo>;
+  events: GameEventBus;
 }
 
 export interface LobbyMemory {
@@ -178,6 +181,7 @@ export interface LobbyMemory {
   counters: GameCounters;
   timers: GameTimers;
   matchLog: MatchLog | null;
+  events: GameEventBus;
 }
 
 export interface EntityDescriptor {
