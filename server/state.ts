@@ -1,4 +1,5 @@
 import { LOGICAL_W, LOGICAL_H, MAX_LEVEL, getDifficultyConfig } from './config.ts';
+import { getDescriptor } from './entity-types/index.ts';
 import type { GameState, GameCounters, LevelConfigEntry, PlayerScoreEntry, DifficultyConfig, CustomDifficultyConfig } from './types.ts';
 
 export function createGameState(difficulty: string = 'medium', customConfig?: CustomDifficultyConfig): GameState {
@@ -75,11 +76,7 @@ export function getStateSnapshot(state: GameState): Record<string, unknown> {
     bugsRemaining: currentLevelConfig(state).bugsTotal - state.bugsSpawned + Object.keys(state.bugs).length,
     bugs: Object.values(state.bugs).map(b => ({
       id: b.id, x: b.x, y: b.y,
-      ...(b.isHeisenbug ? { isHeisenbug: true, fleesRemaining: b.fleesRemaining } : {}),
-      ...(b.isFeature ? { isFeature: true } : {}),
-      ...(b.isMemoryLeak ? { isMemoryLeak: true, growthStage: b.growthStage } : {}),
-      ...(b.mergeConflict ? { mergeConflict: b.mergeConflict, mergePartner: b.mergePartner, mergeSide: b.mergeSide } : {}),
-      ...(b.isPipeline ? { isPipeline: true, chainId: b.chainId, chainIndex: b.chainIndex, chainLength: b.chainLength } : {}),
+      ...getDescriptor(b).broadcastFields(b),
     })),
     rubberDuck: state.rubberDuck ? { id: state.rubberDuck.id, x: state.rubberDuck.x, y: state.rubberDuck.y } : null,
     duckBuff: state.duckBuff ? { expiresAt: state.duckBuff.expiresAt } : null,

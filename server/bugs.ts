@@ -1,7 +1,7 @@
-import { getDifficultyConfig, HEISENBUG_MECHANICS, CODE_REVIEW_MECHANICS, MERGE_CONFLICT_MECHANICS, PIPELINE_BUG_MECHANICS, MEMORY_LEAK_MECHANICS, INFINITE_LOOP_MECHANICS, LOGICAL_W, LOGICAL_H } from './config.ts';
+import { getDifficultyConfig } from './config.ts';
 import { randomPosition, currentLevelConfig } from './state.ts';
 import { createTimerBag } from './timer-bag.ts';
-import { getDescriptor, getType } from './entity-types/index.ts';
+import { getDescriptor, getType, getPlugins } from './entity-types/index.ts';
 import * as game from './game.ts';
 import * as bossModule from './boss.ts';
 import type { GameContext, BugEntity, SpawnEntityOptions } from './types.ts';
@@ -59,7 +59,7 @@ function spawnEntity(ctx: GameContext, opts: SpawnEntityOptions): boolean {
 }
 
 function spawnBug(ctx: GameContext): void {
-  const { state, counters } = ctx;
+  const { state } = ctx;
   if (state.phase !== 'playing') return;
   const cfg = currentLevelConfig(state);
   const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
@@ -70,284 +70,39 @@ function spawnBug(ctx: GameContext): void {
     return;
   }
 
-  const playerCount = Object.keys(state.players).length;
+  const plugins = getPlugins();
+  const specialBugs = diffConfig.specialBugs;
 
-  // Roll for pipeline chain (level 2+, needs room for 3+ bugs)
-  const minChain = PIPELINE_BUG_MECHANICS.minChainLength;
-  if (state.level >= diffConfig.specialBugs.pipelineBugStartLevel
-    && Object.keys(state.bugs).length + minChain <= cfg.maxOnScreen + minChain
-    && state.bugsSpawned + minChain <= cfg.bugsTotal
-    && Math.random() < diffConfig.specialBugs.pipelineBugChance) {
-    const maxLen = Math.min(
-      PIPELINE_BUG_MECHANICS.maxChainLength,
-      cfg.bugsTotal - state.bugsSpawned
-    );
-    if (maxLen >= minChain) {
-      spawnPipelineChain(ctx, cfg, minChain + Math.floor(Math.random() * (maxLen - minChain + 1)));
-      return;
-    }
+  // Multi-entity types first
+  for (const p of plugins) {
+    if (p.spawn.mode !== 'multi') continue;
+    if (p.spawn.startLevelKey && state.level < specialBugs[p.spawn.startLevelKey]) continue;
+    if (Math.random() >= specialBugs[p.spawn.chanceKey]) continue;
+    if (p.spawn.trySpawn(ctx, cfg)) return;
   }
 
-  // Roll for merge conflict (2+ players, needs room for 2 bugs)
-  if (playerCount >= MERGE_CONFLICT_MECHANICS.minPlayers
-    && Object.keys(state.bugs).length + 2 <= cfg.maxOnScreen
-    && Math.random() < diffConfig.specialBugs.mergeConflictChance) {
-    spawnMergeConflict(ctx, cfg);
-    return;
-  }
-
-  // Roll for variant
+  // Single-entity variants
   let variant: Partial<BugEntity> | null = null;
-
-  // Heisenbug: any level
-  if (Math.random() < diffConfig.specialBugs.heisenbugChance) {
-    variant = { isHeisenbug: true, fleesRemaining: HEISENBUG_MECHANICS.maxFlees, lastFleeTime: 0 };
+  let escapeTimeMultiplier = 1;
+  for (const p of plugins) {
+    if (p.spawn.mode !== 'single') continue;
+    if (p.spawn.startLevelKey && state.level < specialBugs[p.spawn.startLevelKey]) continue;
+    if (Math.random() >= specialBugs[p.spawn.chanceKey]) continue;
+    if (p.spawn.canSpawn && !p.spawn.canSpawn(ctx)) continue;
+    variant = p.spawn.createVariant(ctx);
+    escapeTimeMultiplier = p.escapeTimeMultiplier ?? 1;
+    break;
   }
-  // Memory leak: any level (cap scales with player count so there's always a free player)
-  else if (Math.random() < diffConfig.specialBugs.memoryLeakChance
-    && Object.values(state.bugs).filter(b => b.isMemoryLeak).length < Math.max(1, playerCount - 1)) {
-    variant = { isMemoryLeak: true, growthStage: 0 };
-  }
-  // Infinite loop: level 2+
-  else if (state.level >= diffConfig.specialBugs.infiniteLoopStartLevel
-    && Math.random() < diffConfig.specialBugs.infiniteLoopChance) {
-    variant = { isInfiniteLoop: true, loopAngle: 0 };
-  }
-  // Feature-not-a-bug: level 2+
-  else if (state.level >= diffConfig.specialBugs.codeReviewStartLevel && Math.random() < diffConfig.specialBugs.codeReviewChance) {
-    variant = { isFeature: true };
-  }
-
-  const escapeTime = variant && variant.isHeisenbug
-    ? cfg.escapeTime * HEISENBUG_MECHANICS.escapeTimeMultiplier
-    : (variant && variant.isMemoryLeak
-      ? cfg.escapeTime * MEMORY_LEAK_MECHANICS.escapeTimeMultiplier
-      : (variant && variant.isInfiniteLoop
-        ? cfg.escapeTime * INFINITE_LOOP_MECHANICS.escapeTimeMultiplier
-        : cfg.escapeTime));
 
   const spawned = spawnEntity(ctx, {
     phaseCheck: 'playing',
     maxOnScreen: cfg.maxOnScreen,
-    escapeTime,
+    escapeTime: cfg.escapeTime * escapeTimeMultiplier,
     isMinion: false,
     onEscapeCheck: () => game.checkGameState(ctx),
     variant,
   });
   if (spawned) state.bugsSpawned++;
-}
-
-function spawnMergeConflict(ctx: GameContext, cfg: { escapeTime: number; maxOnScreen: number; bugsTotal: number; spawnRate: number }): void {
-  const { state, counters } = ctx;
-  const conflictId = 'conflict_' + (counters.nextConflictId++);
-  const escapeTime = cfg.escapeTime * MERGE_CONFLICT_MECHANICS.escapeTimeMultiplier;
-  const id1 = 'bug_' + (counters.nextBugId++);
-  const id2 = 'bug_' + (counters.nextBugId++);
-
-  // Count both bugs as spawned
-  state.bugsSpawned += 2;
-
-  const pos1 = randomPosition();
-  const pos2 = randomPosition();
-
-  const bug1: BugEntity = {
-    id: id1, x: pos1.x, y: pos1.y, _timers: createTimerBag(),
-    mergeConflict: conflictId, mergePartner: id2, mergeSide: 'left',
-    mergeClicked: false, mergeClickedBy: null, mergeClickedAt: 0,
-    escapeTime, escapeStartedAt: Date.now(),
-  };
-  const bug2: BugEntity = {
-    id: id2, x: pos2.x, y: pos2.y, _timers: createTimerBag(),
-    mergeConflict: conflictId, mergePartner: id1, mergeSide: 'right',
-    mergeClicked: false, mergeClickedBy: null, mergeClickedAt: 0,
-    escapeTime, escapeStartedAt: Date.now(),
-  };
-
-  state.bugs[id1] = bug1;
-  state.bugs[id2] = bug2;
-
-  ctx.events.emit({ type: 'bug-spawned', bug: {
-    id: id1, x: bug1.x, y: bug1.y, mergeConflict: conflictId, mergePartner: id2, mergeSide: 'left',
-  }});
-  ctx.events.emit({ type: 'bug-spawned', bug: {
-    id: id2, x: bug2.x, y: bug2.y, mergeConflict: conflictId, mergePartner: id1, mergeSide: 'right',
-  }});
-
-  // Wander independently
-  bug1._timers.setInterval('wander', () => {
-    if (state.phase !== 'playing' || !state.bugs[id1]) return;
-    const np = randomPosition();
-    bug1.x = np.x; bug1.y = np.y;
-    ctx.events.emit({ type: 'bug-wander', bugId: id1, x: np.x, y: np.y });
-  }, escapeTime * 0.45);
-
-  bug2._timers.setInterval('wander', () => {
-    if (state.phase !== 'playing' || !state.bugs[id2]) return;
-    const np = randomPosition();
-    bug2.x = np.x; bug2.y = np.y;
-    ctx.events.emit({ type: 'bug-wander', bugId: id2, x: np.x, y: np.y });
-  }, escapeTime * 0.45);
-
-  // Shared escape handler — assigned to _onEscape so hammer stun/resume can restart it
-  const escapeHandler = () => {
-    if (!state.bugs[id1] && !state.bugs[id2]) return;
-    const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
-    const damage = MERGE_CONFLICT_MECHANICS.doubleDamage ? diffConfig.hpDamage * 2 : diffConfig.hpDamage;
-    if (state.bugs[id1]) { bug1._timers.clearAll(); delete state.bugs[id1]; }
-    if (state.bugs[id2]) { bug2._timers.clearAll(); delete state.bugs[id2]; }
-    state.hp -= damage;
-    if (state.hp < 0) state.hp = 0;
-    if (ctx.matchLog) {
-      ctx.matchLog.log('escape', { bugId: id1, type: 'merge-conflict', activeBugs: Object.keys(state.bugs).length, hp: state.hp });
-    }
-    ctx.events.emit({ type: 'merge-conflict-escaped', bugId: id1, partnerId: id2, hp: state.hp });
-    game.checkGameState(ctx);
-  };
-
-  bug1._onEscape = escapeHandler;
-  bug2._onEscape = escapeHandler;
-
-  bug1._timers.setTimeout('escape', escapeHandler, escapeTime);
-  // bug2 shares bug1's escape timer (clearing bug1's clears both)
-  bug2._sharedEscapeWith = id1;
-}
-
-function spawnPipelineChain(ctx: GameContext, cfg: { escapeTime: number; maxOnScreen: number; bugsTotal: number; spawnRate: number }, chainLength: number): void {
-  const { state, counters } = ctx;
-  const chainId = 'chain_' + (counters.nextChainId++);
-  const escapeTime = cfg.escapeTime * PIPELINE_BUG_MECHANICS.escapeTimeMultiplier;
-  const pad = 40;
-
-  state.bugsSpawned += chainLength;
-
-  // Position bugs in a snake-like line
-  const startPos = randomPosition();
-  const angle = Math.random() * Math.PI * 2;
-  const spacing = 40;
-
-  const bugIds: string[] = [];
-  const chainBugs: BugEntity[] = [];
-  for (let i = 0; i < chainLength; i++) {
-    const id = 'bug_' + (counters.nextBugId++);
-    const x = Math.max(pad, Math.min(LOGICAL_W - pad, startPos.x + Math.cos(angle) * spacing * i));
-    const y = Math.max(pad, Math.min(LOGICAL_H - pad, startPos.y + Math.sin(angle) * spacing * i));
-    const bug: BugEntity = {
-      id, x, y, _timers: createTimerBag(),
-      isPipeline: true, chainId, chainIndex: i, chainLength,
-      escapeTime, escapeStartedAt: Date.now(),
-    };
-    state.bugs[id] = bug;
-    bugIds.push(id);
-    chainBugs.push(bug);
-  }
-
-  // Snake movement — smooth continuous slithering
-  const snakeSpeed = 30;
-  const snakeTickMs = 350;
-  let snakeAngle = angle + Math.PI;
-  const margin = 100;
-
-  // Store chain wander on head bug's timer bag
-  const headBug = chainBugs[0];
-  headBug._timers.setInterval('chainWander', () => {
-    if (state.phase !== 'playing' || state.hammerStunActive) return;
-    const chain = state.pipelineChains[chainId];
-    if (!chain) { headBug._timers.clear('chainWander'); return; }
-    const alive = chain.bugIds.filter(bid => state.bugs[bid]);
-    if (alive.length === 0) { headBug._timers.clear('chainWander'); return; }
-
-    // Store old positions
-    const oldPos: Record<string, { x: number; y: number }> = {};
-    for (const bid of alive) {
-      const b = state.bugs[bid];
-      oldPos[bid] = { x: b.x, y: b.y };
-    }
-
-    // Gentle random wander
-    chain.snakeAngle += (Math.random() - 0.5) * 0.5;
-
-    // Smooth wall avoidance — steer toward center when near edges
-    const head = state.bugs[alive[0]];
-    if (head.x < margin || head.x > LOGICAL_W - margin ||
-        head.y < margin || head.y > LOGICAL_H - margin) {
-      const toCenter = Math.atan2(LOGICAL_H / 2 - head.y, LOGICAL_W / 2 - head.x);
-      let diff = toCenter - chain.snakeAngle;
-      while (diff > Math.PI) diff -= 2 * Math.PI;
-      while (diff < -Math.PI) diff += 2 * Math.PI;
-      chain.snakeAngle += diff * 0.15;
-    }
-
-    head.x = Math.max(pad, Math.min(LOGICAL_W - pad, head.x + Math.cos(chain.snakeAngle) * snakeSpeed));
-    head.y = Math.max(pad, Math.min(LOGICAL_H - pad, head.y + Math.sin(chain.snakeAngle) * snakeSpeed));
-
-    // Each subsequent bug follows the previous one
-    for (let i = 1; i < alive.length; i++) {
-      const b = state.bugs[alive[i]];
-      b.x = oldPos[alive[i - 1]].x;
-      b.y = oldPos[alive[i - 1]].y;
-    }
-
-    // Broadcast all position updates
-    for (const bid of alive) {
-      const b = state.bugs[bid];
-      ctx.events.emit({ type: 'bug-wander', bugId: bid, x: b.x, y: b.y });
-    }
-  }, snakeTickMs);
-
-  state.pipelineChains[chainId] = {
-    bugIds, nextIndex: 0, length: chainLength,
-    headBugId: headBug.id,
-    snakeAngle,
-  };
-
-  // Broadcast all spawns
-  for (const bug of chainBugs) {
-    ctx.events.emit({ type: 'bug-spawned', bug: {
-      id: bug.id, x: bug.x, y: bug.y,
-      isPipeline: true, chainId, chainIndex: bug.chainIndex, chainLength,
-    }});
-  }
-
-  // Shared escape timer
-  const escapeHandler = () => {
-    const chain = state.pipelineChains[chainId];
-    if (!chain) return;
-    const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
-    // Clear chain wander from head bug
-    const hBug = state.bugs[chain.headBugId];
-    if (hBug) hBug._timers.clear('chainWander');
-    const remaining = bugIds.filter(bid => state.bugs[bid]);
-    if (remaining.length === 0) return;
-    const damage = diffConfig.hpDamage * remaining.length;
-    for (const bid of remaining) {
-      if (state.bugs[bid]) {
-        state.bugs[bid]._timers.clearAll();
-        delete state.bugs[bid];
-      }
-    }
-    delete state.pipelineChains[chainId];
-    state.hp -= damage;
-    if (state.hp < 0) state.hp = 0;
-    if (ctx.matchLog) {
-      ctx.matchLog.log('escape', { chainId, type: 'pipeline-chain', bugsLost: remaining.length, hp: state.hp });
-    }
-    ctx.events.emit({
-      type: 'pipeline-chain-escaped', chainId, bugIds: remaining, hp: state.hp,
-    });
-    if (state.phase === 'boss') game.checkBossGameState(ctx);
-    else game.checkGameState(ctx);
-  };
-
-  // Assign _onEscape so hammer stun/resume can restart the escape timer
-  for (const bug of chainBugs) {
-    bug._onEscape = escapeHandler;
-  }
-
-  // All pipeline bugs share head bug's escape timer
-  headBug._timers.setTimeout('escape', escapeHandler, escapeTime);
-  for (const bug of chainBugs) {
-    if (bug !== headBug) bug._sharedEscapeWith = headBug.id;
-  }
 }
 
 export function spawnMinion(ctx: GameContext): void {
@@ -390,4 +145,4 @@ export function startSpawning(ctx: GameContext, rate: number): void {
   spawnBug(ctx);
 }
 
-export { spawnBug, spawnMergeConflict, spawnEntity };
+export { spawnBug, spawnEntity };

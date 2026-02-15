@@ -1,9 +1,20 @@
 import { baseDescriptor } from './base.ts';
-import { INFINITE_LOOP_MECHANICS, LOGICAL_W, LOGICAL_H } from '../config.ts';
+import { LOGICAL_W, LOGICAL_H } from '../config.ts';
 import * as game from '../game.ts';
 import * as powerups from '../powerups.ts';
 import { gameBugsSquashed } from '../metrics.ts';
-import type { BugEntity, GameContext, EntityDescriptor } from '../types.ts';
+import { getCtxForPlayer } from '../helpers.ts';
+import type { BugEntity, GameContext, EntityDescriptor, BugTypePlugin } from '../types.ts';
+
+export const INFINITE_LOOP_MECHANICS = {
+  loopTickMs: 50,
+  loopPeriodMs: 2800,
+  radiusMin: 70,
+  radiusMax: 130,
+  hitWindowRadians: 0.45,
+  points: 30,
+  escapeTimeMultiplier: 1.8,
+};
 
 export const infiniteLoopDescriptor: EntityDescriptor = {
   ...baseDescriptor,
@@ -82,7 +93,7 @@ export const infiniteLoopDescriptor: EntityDescriptor = {
   },
 };
 
-export function handleBreakpointClick(bug: BugEntity, ctx: GameContext, pid: string): void {
+function handleBreakpointClick(bug: BugEntity, ctx: GameContext, pid: string): void {
   if (!bug.isInfiniteLoop) return;
   const { state } = ctx;
   const player = state.players[pid];
@@ -132,3 +143,27 @@ export function handleBreakpointClick(bug: BugEntity, ctx: GameContext, pid: str
     });
   }
 }
+
+export const infiniteLoopPlugin: BugTypePlugin = {
+  typeKey: 'infiniteLoop',
+  detect: (bug) => !!bug.isInfiniteLoop,
+  descriptor: infiniteLoopDescriptor,
+  escapeTimeMultiplier: INFINITE_LOOP_MECHANICS.escapeTimeMultiplier,
+  spawn: {
+    mode: 'single',
+    chanceKey: 'infiniteLoopChance',
+    startLevelKey: 'infiniteLoopStartLevel',
+    createVariant: () => ({ isInfiniteLoop: true, loopAngle: 0 }),
+  },
+  handlers: {
+    'click-breakpoint': ({ msg, pid, playerInfo }: any) => {
+      const ctx = getCtxForPlayer(pid, playerInfo);
+      if (!ctx) return;
+      const { state: st } = ctx;
+      if (st.phase !== 'playing' && st.phase !== 'boss') return;
+      const bug = st.bugs[msg.bugId];
+      if (!bug || !bug.isInfiniteLoop) return;
+      handleBreakpointClick(bug, ctx, pid);
+    },
+  },
+};

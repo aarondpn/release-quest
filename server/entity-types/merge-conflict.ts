@@ -1,8 +1,18 @@
 import { baseDescriptor } from './base.ts';
-import { getDifficultyConfig, MERGE_CONFLICT_MECHANICS } from '../config.ts';
+import { getDifficultyConfig } from '../config.ts';
+import { randomPosition } from '../state.ts';
+import { createTimerBag } from '../timer-bag.ts';
 import * as game from '../game.ts';
 import { gameBugsSquashed } from '../metrics.ts';
-import type { BugEntity, GameContext, EntityDescriptor } from '../types.ts';
+import type { BugEntity, GameContext, EntityDescriptor, BugTypePlugin, LevelConfigEntry } from '../types.ts';
+
+export const MERGE_CONFLICT_MECHANICS = {
+  resolveWindow: 1500,
+  bonusPoints: 50,
+  doubleDamage: true,
+  escapeTimeMultiplier: 1.2,
+  minPlayers: 2,
+};
 
 export const mergeConflictDescriptor: EntityDescriptor = {
   ...baseDescriptor,
@@ -92,5 +102,94 @@ export const mergeConflictDescriptor: EntityDescriptor = {
         }
       }, MERGE_CONFLICT_MECHANICS.resolveWindow);
     }
+  },
+};
+
+function spawnMergeConflict(ctx: GameContext, cfg: LevelConfigEntry): void {
+  const { state, counters } = ctx;
+  const conflictId = 'conflict_' + (counters.nextConflictId++);
+  const escapeTime = cfg.escapeTime * MERGE_CONFLICT_MECHANICS.escapeTimeMultiplier;
+  const id1 = 'bug_' + (counters.nextBugId++);
+  const id2 = 'bug_' + (counters.nextBugId++);
+
+  state.bugsSpawned += 2;
+
+  const pos1 = randomPosition();
+  const pos2 = randomPosition();
+
+  const bug1: BugEntity = {
+    id: id1, x: pos1.x, y: pos1.y, _timers: createTimerBag(),
+    mergeConflict: conflictId, mergePartner: id2, mergeSide: 'left',
+    mergeClicked: false, mergeClickedBy: null, mergeClickedAt: 0,
+    escapeTime, escapeStartedAt: Date.now(),
+  };
+  const bug2: BugEntity = {
+    id: id2, x: pos2.x, y: pos2.y, _timers: createTimerBag(),
+    mergeConflict: conflictId, mergePartner: id1, mergeSide: 'right',
+    mergeClicked: false, mergeClickedBy: null, mergeClickedAt: 0,
+    escapeTime, escapeStartedAt: Date.now(),
+  };
+
+  state.bugs[id1] = bug1;
+  state.bugs[id2] = bug2;
+
+  ctx.events.emit({ type: 'bug-spawned', bug: {
+    id: id1, x: bug1.x, y: bug1.y, mergeConflict: conflictId, mergePartner: id2, mergeSide: 'left',
+  }});
+  ctx.events.emit({ type: 'bug-spawned', bug: {
+    id: id2, x: bug2.x, y: bug2.y, mergeConflict: conflictId, mergePartner: id1, mergeSide: 'right',
+  }});
+
+  bug1._timers.setInterval('wander', () => {
+    if (state.phase !== 'playing' || !state.bugs[id1]) return;
+    const np = randomPosition();
+    bug1.x = np.x; bug1.y = np.y;
+    ctx.events.emit({ type: 'bug-wander', bugId: id1, x: np.x, y: np.y });
+  }, escapeTime * 0.45);
+
+  bug2._timers.setInterval('wander', () => {
+    if (state.phase !== 'playing' || !state.bugs[id2]) return;
+    const np = randomPosition();
+    bug2.x = np.x; bug2.y = np.y;
+    ctx.events.emit({ type: 'bug-wander', bugId: id2, x: np.x, y: np.y });
+  }, escapeTime * 0.45);
+
+  const escapeHandler = () => {
+    if (!state.bugs[id1] && !state.bugs[id2]) return;
+    const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
+    const damage = MERGE_CONFLICT_MECHANICS.doubleDamage ? diffConfig.hpDamage * 2 : diffConfig.hpDamage;
+    if (state.bugs[id1]) { bug1._timers.clearAll(); delete state.bugs[id1]; }
+    if (state.bugs[id2]) { bug2._timers.clearAll(); delete state.bugs[id2]; }
+    state.hp -= damage;
+    if (state.hp < 0) state.hp = 0;
+    if (ctx.matchLog) {
+      ctx.matchLog.log('escape', { bugId: id1, type: 'merge-conflict', activeBugs: Object.keys(state.bugs).length, hp: state.hp });
+    }
+    ctx.events.emit({ type: 'merge-conflict-escaped', bugId: id1, partnerId: id2, hp: state.hp });
+    game.checkGameState(ctx);
+  };
+
+  bug1._onEscape = escapeHandler;
+  bug2._onEscape = escapeHandler;
+
+  bug1._timers.setTimeout('escape', escapeHandler, escapeTime);
+  bug2._sharedEscapeWith = id1;
+}
+
+export const mergeConflictPlugin: BugTypePlugin = {
+  typeKey: 'mergeConflict',
+  detect: (bug) => !!bug.mergeConflict,
+  descriptor: mergeConflictDescriptor,
+  escapeTimeMultiplier: MERGE_CONFLICT_MECHANICS.escapeTimeMultiplier,
+  spawn: {
+    mode: 'multi',
+    chanceKey: 'mergeConflictChance',
+    trySpawn(ctx: GameContext, cfg: LevelConfigEntry): boolean {
+      const playerCount = Object.keys(ctx.state.players).length;
+      if (playerCount < MERGE_CONFLICT_MECHANICS.minPlayers) return false;
+      if (Object.keys(ctx.state.bugs).length + 2 > cfg.maxOnScreen) return false;
+      spawnMergeConflict(ctx, cfg);
+      return true;
+    },
   },
 };

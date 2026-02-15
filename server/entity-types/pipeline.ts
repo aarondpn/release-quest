@@ -1,10 +1,19 @@
 import { baseDescriptor } from './base.ts';
-import { PIPELINE_BUG_MECHANICS, LOGICAL_W, LOGICAL_H } from '../config.ts';
+import { getDifficultyConfig, LOGICAL_W, LOGICAL_H } from '../config.ts';
 import { randomPosition } from '../state.ts';
+import { createTimerBag } from '../timer-bag.ts';
 import * as game from '../game.ts';
 import * as powerups from '../powerups.ts';
 import { gameBugsSquashed } from '../metrics.ts';
-import type { BugEntity, GameContext, EntityDescriptor } from '../types.ts';
+import type { BugEntity, GameContext, EntityDescriptor, BugTypePlugin, LevelConfigEntry } from '../types.ts';
+
+export const PIPELINE_BUG_MECHANICS = {
+  minChainLength: 3,
+  maxChainLength: 5,
+  escapeTimeMultiplier: 2.0,
+  pointsPerBug: 15,
+  chainBonus: 40,
+};
 
 export const pipelineDescriptor: EntityDescriptor = {
   ...baseDescriptor,
@@ -160,5 +169,153 @@ export const pipelineDescriptor: EntityDescriptor = {
         playerId: pid,
       });
     }
+  },
+};
+
+function spawnPipelineChain(ctx: GameContext, cfg: LevelConfigEntry, chainLength: number): void {
+  const { state, counters } = ctx;
+  const chainId = 'chain_' + (counters.nextChainId++);
+  const escapeTime = cfg.escapeTime * PIPELINE_BUG_MECHANICS.escapeTimeMultiplier;
+  const pad = 40;
+
+  state.bugsSpawned += chainLength;
+
+  const startPos = randomPosition();
+  const angle = Math.random() * Math.PI * 2;
+  const spacing = 40;
+
+  const bugIds: string[] = [];
+  const chainBugs: BugEntity[] = [];
+  for (let i = 0; i < chainLength; i++) {
+    const id = 'bug_' + (counters.nextBugId++);
+    const x = Math.max(pad, Math.min(LOGICAL_W - pad, startPos.x + Math.cos(angle) * spacing * i));
+    const y = Math.max(pad, Math.min(LOGICAL_H - pad, startPos.y + Math.sin(angle) * spacing * i));
+    const bug: BugEntity = {
+      id, x, y, _timers: createTimerBag(),
+      isPipeline: true, chainId, chainIndex: i, chainLength,
+      escapeTime, escapeStartedAt: Date.now(),
+    };
+    state.bugs[id] = bug;
+    bugIds.push(id);
+    chainBugs.push(bug);
+  }
+
+  const snakeSpeed = 30;
+  const snakeTickMs = 350;
+  let snakeAngle = angle + Math.PI;
+  const margin = 100;
+
+  const headBug = chainBugs[0];
+  headBug._timers.setInterval('chainWander', () => {
+    if (state.phase !== 'playing' || state.hammerStunActive) return;
+    const chain = state.pipelineChains[chainId];
+    if (!chain) { headBug._timers.clear('chainWander'); return; }
+    const alive = chain.bugIds.filter(bid => state.bugs[bid]);
+    if (alive.length === 0) { headBug._timers.clear('chainWander'); return; }
+
+    const oldPos: Record<string, { x: number; y: number }> = {};
+    for (const bid of alive) {
+      const b = state.bugs[bid];
+      oldPos[bid] = { x: b.x, y: b.y };
+    }
+
+    chain.snakeAngle += (Math.random() - 0.5) * 0.5;
+
+    const head = state.bugs[alive[0]];
+    if (head.x < margin || head.x > LOGICAL_W - margin ||
+        head.y < margin || head.y > LOGICAL_H - margin) {
+      const toCenter = Math.atan2(LOGICAL_H / 2 - head.y, LOGICAL_W / 2 - head.x);
+      let diff = toCenter - chain.snakeAngle;
+      while (diff > Math.PI) diff -= 2 * Math.PI;
+      while (diff < -Math.PI) diff += 2 * Math.PI;
+      chain.snakeAngle += diff * 0.15;
+    }
+
+    head.x = Math.max(pad, Math.min(LOGICAL_W - pad, head.x + Math.cos(chain.snakeAngle) * snakeSpeed));
+    head.y = Math.max(pad, Math.min(LOGICAL_H - pad, head.y + Math.sin(chain.snakeAngle) * snakeSpeed));
+
+    for (let i = 1; i < alive.length; i++) {
+      const b = state.bugs[alive[i]];
+      b.x = oldPos[alive[i - 1]].x;
+      b.y = oldPos[alive[i - 1]].y;
+    }
+
+    for (const bid of alive) {
+      const b = state.bugs[bid];
+      ctx.events.emit({ type: 'bug-wander', bugId: bid, x: b.x, y: b.y });
+    }
+  }, snakeTickMs);
+
+  state.pipelineChains[chainId] = {
+    bugIds, nextIndex: 0, length: chainLength,
+    headBugId: headBug.id,
+    snakeAngle,
+  };
+
+  for (const bug of chainBugs) {
+    ctx.events.emit({ type: 'bug-spawned', bug: {
+      id: bug.id, x: bug.x, y: bug.y,
+      isPipeline: true, chainId, chainIndex: bug.chainIndex, chainLength,
+    }});
+  }
+
+  const escapeHandler = () => {
+    const chain = state.pipelineChains[chainId];
+    if (!chain) return;
+    const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
+    const hBug = state.bugs[chain.headBugId];
+    if (hBug) hBug._timers.clear('chainWander');
+    const remaining = bugIds.filter(bid => state.bugs[bid]);
+    if (remaining.length === 0) return;
+    const damage = diffConfig.hpDamage * remaining.length;
+    for (const bid of remaining) {
+      if (state.bugs[bid]) {
+        state.bugs[bid]._timers.clearAll();
+        delete state.bugs[bid];
+      }
+    }
+    delete state.pipelineChains[chainId];
+    state.hp -= damage;
+    if (state.hp < 0) state.hp = 0;
+    if (ctx.matchLog) {
+      ctx.matchLog.log('escape', { chainId, type: 'pipeline-chain', bugsLost: remaining.length, hp: state.hp });
+    }
+    ctx.events.emit({
+      type: 'pipeline-chain-escaped', chainId, bugIds: remaining, hp: state.hp,
+    });
+    if (state.phase === 'boss') game.checkBossGameState(ctx);
+    else game.checkGameState(ctx);
+  };
+
+  for (const bug of chainBugs) {
+    bug._onEscape = escapeHandler;
+  }
+
+  headBug._timers.setTimeout('escape', escapeHandler, escapeTime);
+  for (const bug of chainBugs) {
+    if (bug !== headBug) bug._sharedEscapeWith = headBug.id;
+  }
+}
+
+export const pipelinePlugin: BugTypePlugin = {
+  typeKey: 'pipeline',
+  detect: (bug) => !!bug.isPipeline,
+  descriptor: pipelineDescriptor,
+  escapeTimeMultiplier: PIPELINE_BUG_MECHANICS.escapeTimeMultiplier,
+  spawn: {
+    mode: 'multi',
+    chanceKey: 'pipelineBugChance',
+    startLevelKey: 'pipelineBugStartLevel',
+    trySpawn(ctx: GameContext, cfg: LevelConfigEntry): boolean {
+      const { state } = ctx;
+      const minChain = PIPELINE_BUG_MECHANICS.minChainLength;
+      if (Object.keys(state.bugs).length + minChain > cfg.maxOnScreen + minChain) return false;
+      if (state.bugsSpawned + minChain > cfg.bugsTotal) return false;
+      const maxLen = Math.min(PIPELINE_BUG_MECHANICS.maxChainLength, cfg.bugsTotal - state.bugsSpawned);
+      if (maxLen < minChain) return false;
+      const chainLength = minChain + Math.floor(Math.random() * (maxLen - minChain + 1));
+      spawnPipelineChain(ctx, cfg, chainLength);
+      return true;
+    },
   },
 };

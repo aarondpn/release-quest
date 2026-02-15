@@ -1,7 +1,11 @@
 import { baseDescriptor } from './base.ts';
-import { CODE_REVIEW_MECHANICS } from '../config.ts';
 import * as game from '../game.ts';
-import type { BugEntity, GameContext, EntityDescriptor } from '../types.ts';
+import type { BugEntity, GameContext, EntityDescriptor, BugTypePlugin } from '../types.ts';
+
+export const CODE_REVIEW_MECHANICS = {
+  hpPenalty: 10,
+  bossPhaseChance: 0.08,
+};
 
 export const featureDescriptor: EntityDescriptor = {
   ...baseDescriptor,
@@ -44,5 +48,17 @@ export const featureDescriptor: EntityDescriptor = {
 
     if (state.phase === 'boss') game.checkBossGameState(ctx);
     else game.checkGameState(ctx);
+  },
+};
+
+export const featurePlugin: BugTypePlugin = {
+  typeKey: 'feature',
+  detect: (bug) => !!bug.isFeature,
+  descriptor: featureDescriptor,
+  spawn: {
+    mode: 'single',
+    chanceKey: 'codeReviewChance',
+    startLevelKey: 'codeReviewStartLevel',
+    createVariant: () => ({ isFeature: true }),
   },
 };

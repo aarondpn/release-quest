@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import type { LevelConfigEntry, EscalationEntry, DifficultyConfig, CustomDifficultyConfig } from './types.ts';
+import type { DifficultyConfig, CustomDifficultyConfig } from './types.ts';
 
 interface FileConfig {
   server?: { port?: number };
@@ -242,55 +242,6 @@ export function getDifficultyConfig(difficulty: string = 'medium', customConfig?
 
 // Game structure constants
 export const MAX_LEVEL = 3;
-
-// Static mechanic constants (not difficulty-dependent)
-export const HEISENBUG_MECHANICS = {
-  fleeRadius: 100,
-  fleeCooldown: 800,
-  maxFlees: 2,
-  escapeTimeMultiplier: 0.85,
-  pointsMultiplier: 3,
-};
-
-export const CODE_REVIEW_MECHANICS = {
-  hpPenalty: 10,
-  bossPhaseChance: 0.08,
-};
-
-export const MERGE_CONFLICT_MECHANICS = {
-  resolveWindow: 1500,
-  bonusPoints: 50,
-  doubleDamage: true,
-  escapeTimeMultiplier: 1.2,
-  minPlayers: 2,
-};
-
-export const PIPELINE_BUG_MECHANICS = {
-  minChainLength: 3,
-  maxChainLength: 5,
-  escapeTimeMultiplier: 2.0,
-  pointsPerBug: 15,
-  chainBonus: 40,
-};
-
-export const INFINITE_LOOP_MECHANICS = {
-  loopTickMs: 50,
-  loopPeriodMs: 2800,
-  radiusMin: 70,
-  radiusMax: 130,
-  hitWindowRadians: 0.45,
-  points: 30,
-  escapeTimeMultiplier: 1.8,
-};
-
-export const MEMORY_LEAK_MECHANICS = {
-  growthInterval: 500,
-  maxGrowthStage: 3,
-  damageByStage: [5, 10, 15, 20],
-  pointsByStage: [10, 15, 20, 25],
-  escapeTimeMultiplier: 1.3,
-  holdTimeByStage: [400, 600, 800, 1000],
-};
 
 export const GUEST_NAMES = [
   'StackOverflower',

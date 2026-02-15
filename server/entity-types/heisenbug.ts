@@ -1,10 +1,18 @@
 import { baseDescriptor } from './base.ts';
-import { getDifficultyConfig, HEISENBUG_MECHANICS } from '../config.ts';
+import { getDifficultyConfig } from '../config.ts';
 import { randomPosition } from '../state.ts';
 import * as game from '../game.ts';
 import * as powerups from '../powerups.ts';
 import { gameBugsSquashed } from '../metrics.ts';
-import type { BugEntity, GameContext, EntityDescriptor } from '../types.ts';
+import type { BugEntity, GameContext, EntityDescriptor, BugTypePlugin } from '../types.ts';
+
+export const HEISENBUG_MECHANICS = {
+  fleeRadius: 100,
+  fleeCooldown: 800,
+  maxFlees: 2,
+  escapeTimeMultiplier: 0.85,
+  pointsMultiplier: 3,
+};
 
 export const heisenbugDescriptor: EntityDescriptor = {
   ...baseDescriptor,
@@ -83,5 +91,17 @@ export const heisenbugDescriptor: EntityDescriptor = {
       y: newPos.y,
       fleesRemaining: bug.fleesRemaining,
     });
+  },
+};
+
+export const heisenbugPlugin: BugTypePlugin = {
+  typeKey: 'heisenbug',
+  detect: (bug) => !!bug.isHeisenbug,
+  descriptor: heisenbugDescriptor,
+  escapeTimeMultiplier: HEISENBUG_MECHANICS.escapeTimeMultiplier,
+  spawn: {
+    mode: 'single',
+    chanceKey: 'heisenbugChance',
+    createVariant: () => ({ isHeisenbug: true, fleesRemaining: HEISENBUG_MECHANICS.maxFlees, lastFleeTime: 0 }),
   },
 };

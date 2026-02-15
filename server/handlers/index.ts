@@ -3,12 +3,13 @@ import { handleRegister, handleLogin, handleLogout, handleResumeSession } from '
 import { handleSetName } from './profile.ts';
 import { handleListLobbies, handleCreateLobby, handleJoinLobby, handleJoinLobbyByCode, handleLeaveLobby } from './lobby.ts';
 import { handleStartGame } from './game.ts';
-import { handleClickBug, handleClickBreakpoint, handleClickMemoryLeakStart, handleClickMemoryLeakComplete, handleClickBoss } from './bugs.ts';
+import { handleClickBug, handleClickBoss } from './bugs.ts';
 import { handleClickDuck, handleClickHammer } from './powerups.ts';
 import { handleGetLeaderboard, handleGetMyStats, handleGetRecordings, handleShareRecording, handleUnshareRecording } from './stats.ts';
 import { handleCursorMove } from './cursor.ts';
+import { getHandlers as getPluginHandlers } from '../entity-types/index.ts';
 
-export const handlers: Record<string, MessageHandler> = {
+const staticHandlers: Record<string, MessageHandler> = {
   'register': handleRegister,
   'login': handleLogin,
   'logout': handleLogout,
@@ -21,9 +22,6 @@ export const handlers: Record<string, MessageHandler> = {
   'leave-lobby': handleLeaveLobby,
   'start-game': handleStartGame,
   'click-bug': handleClickBug,
-  'click-breakpoint': handleClickBreakpoint,
-  'click-memory-leak-start': handleClickMemoryLeakStart,
-  'click-memory-leak-complete': handleClickMemoryLeakComplete,
   'click-boss': handleClickBoss,
   'click-duck': handleClickDuck,
   'click-hammer': handleClickHammer,
@@ -33,4 +31,9 @@ export const handlers: Record<string, MessageHandler> = {
   'share-recording': handleShareRecording,
   'unshare-recording': handleUnshareRecording,
   'cursor-move': handleCursorMove,
+};
+
+export const handlers: Record<string, MessageHandler> = {
+  ...staticHandlers,
+  ...getPluginHandlers(),
 };

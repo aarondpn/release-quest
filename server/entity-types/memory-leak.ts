@@ -1,10 +1,20 @@
 import { baseDescriptor } from './base.ts';
-import { getDifficultyConfig, MEMORY_LEAK_MECHANICS } from '../config.ts';
+import { getDifficultyConfig } from '../config.ts';
 import { randomPosition } from '../state.ts';
 import * as game from '../game.ts';
 import * as powerups from '../powerups.ts';
 import { gameBugsSquashed } from '../metrics.ts';
-import type { BugEntity, GameContext, EntityDescriptor } from '../types.ts';
+import { getCtxForPlayer } from '../helpers.ts';
+import type { BugEntity, GameContext, EntityDescriptor, BugTypePlugin } from '../types.ts';
+
+export const MEMORY_LEAK_MECHANICS = {
+  growthInterval: 500,
+  maxGrowthStage: 3,
+  damageByStage: [5, 10, 15, 20],
+  pointsByStage: [10, 15, 20, 25],
+  escapeTimeMultiplier: 1.3,
+  holdTimeByStage: [400, 600, 800, 1000],
+};
 
 export const memoryLeakDescriptor: EntityDescriptor = {
   ...baseDescriptor,
@@ -191,5 +201,41 @@ export const memoryLeakDescriptor: EntityDescriptor = {
 
     if (state.phase === 'boss') game.checkBossGameState(ctx);
     else game.checkGameState(ctx);
+  },
+};
+
+export const memoryLeakPlugin: BugTypePlugin = {
+  typeKey: 'memoryLeak',
+  detect: (bug) => !!bug.isMemoryLeak,
+  descriptor: memoryLeakDescriptor,
+  escapeTimeMultiplier: MEMORY_LEAK_MECHANICS.escapeTimeMultiplier,
+  spawn: {
+    mode: 'single',
+    chanceKey: 'memoryLeakChance',
+    createVariant: () => ({ isMemoryLeak: true, growthStage: 0 }),
+    canSpawn: (ctx) => {
+      const playerCount = Object.keys(ctx.state.players).length;
+      return Object.values(ctx.state.bugs).filter(b => b.isMemoryLeak).length < Math.max(1, playerCount - 1);
+    },
+  },
+  handlers: {
+    'click-memory-leak-start': ({ msg, pid, playerInfo }: any) => {
+      const ctx = getCtxForPlayer(pid, playerInfo);
+      if (!ctx) return;
+      const { state: st } = ctx;
+      if (st.phase !== 'playing' && st.phase !== 'boss') return;
+      const bug = st.bugs[msg.bugId];
+      if (!bug || !bug.isMemoryLeak) return;
+      memoryLeakDescriptor.onHoldStart!(bug, ctx, pid);
+    },
+    'click-memory-leak-complete': ({ msg, pid, playerInfo }: any) => {
+      const ctx = getCtxForPlayer(pid, playerInfo);
+      if (!ctx) return;
+      const { state: st } = ctx;
+      if (st.phase !== 'playing' && st.phase !== 'boss') return;
+      const bug = st.bugs[msg.bugId];
+      if (!bug || !bug.isMemoryLeak) return;
+      memoryLeakDescriptor.onHoldComplete!(bug, ctx, pid);
+    },
   },
 };

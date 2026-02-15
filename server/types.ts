@@ -210,6 +210,20 @@ export interface EntityDescriptor {
   _completeHold?(bug: BugEntity, ctx: GameContext): void;
 }
 
+export interface BugTypePlugin {
+  typeKey: string;
+  detect(bug: BugEntity): boolean;
+  descriptor: EntityDescriptor;
+  escapeTimeMultiplier?: number;
+  spawn:
+    | { mode: 'single'; chanceKey: keyof DifficultyConfig['specialBugs']; startLevelKey?: keyof DifficultyConfig['specialBugs'];
+        createVariant(ctx: GameContext): Partial<BugEntity>;
+        canSpawn?(ctx: GameContext): boolean; }
+    | { mode: 'multi'; chanceKey: keyof DifficultyConfig['specialBugs']; startLevelKey?: keyof DifficultyConfig['specialBugs'];
+        trySpawn(ctx: GameContext, cfg: LevelConfigEntry): boolean; };
+  handlers?: Record<string, (ctx: any) => void | Promise<void>>;
+}
+
 export interface SpawnEntityOptions {
   phaseCheck: GamePhase;
   maxOnScreen: number;

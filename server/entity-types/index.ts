@@ -1,39 +1,47 @@
 import { normalDescriptor } from './normal.ts';
 import { minionDescriptor } from './minion.ts';
-import { heisenbugDescriptor } from './heisenbug.ts';
-import { featureDescriptor } from './feature.ts';
-import { memoryLeakDescriptor } from './memory-leak.ts';
-import { mergeConflictDescriptor } from './merge-conflict.ts';
-import { pipelineDescriptor } from './pipeline.ts';
-import { infiniteLoopDescriptor } from './infinite-loop.ts';
-import type { BugEntity, EntityDescriptor } from '../types.ts';
+import { heisenbugPlugin } from './heisenbug.ts';
+import { featurePlugin } from './feature.ts';
+import { memoryLeakPlugin } from './memory-leak.ts';
+import { mergeConflictPlugin } from './merge-conflict.ts';
+import { pipelinePlugin } from './pipeline.ts';
+import { infiniteLoopPlugin } from './infinite-loop.ts';
+import type { BugEntity, BugTypePlugin, EntityDescriptor } from '../types.ts';
 
-export { handleBreakpointClick } from './infinite-loop.ts';
+// Order = detection priority (checked first to last)
+const plugins: BugTypePlugin[] = [
+  infiniteLoopPlugin, pipelinePlugin, mergeConflictPlugin,
+  memoryLeakPlugin, heisenbugPlugin, featurePlugin,
+];
 
-const types: Record<string, EntityDescriptor> = {
+const descriptors: Record<string, EntityDescriptor> = {
   normal: normalDescriptor,
   minion: minionDescriptor,
-  heisenbug: heisenbugDescriptor,
-  feature: featureDescriptor,
-  memoryLeak: memoryLeakDescriptor,
-  mergeConflict: mergeConflictDescriptor,
-  pipeline: pipelineDescriptor,
-  infiniteLoop: infiniteLoopDescriptor,
 };
+for (const p of plugins) descriptors[p.typeKey] = p.descriptor;
 
 function getType(bug: BugEntity): string {
-  if (bug.isInfiniteLoop) return 'infiniteLoop';
-  if (bug.isPipeline) return 'pipeline';
-  if (bug.mergeConflict) return 'mergeConflict';
-  if (bug.isMemoryLeak) return 'memoryLeak';
-  if (bug.isHeisenbug) return 'heisenbug';
-  if (bug.isFeature) return 'feature';
+  for (const p of plugins) {
+    if (p.detect(bug)) return p.typeKey;
+  }
   if (bug.isMinion) return 'minion';
   return 'normal';
 }
 
 export function getDescriptor(bug: BugEntity): EntityDescriptor {
-  return types[getType(bug)];
+  return descriptors[getType(bug)];
 }
 
-export { types, getType };
+export function getPlugins(): BugTypePlugin[] {
+  return plugins;
+}
+
+export function getHandlers(): Record<string, (ctx: any) => void | Promise<void>> {
+  const handlers: Record<string, (ctx: any) => void | Promise<void>> = {};
+  for (const p of plugins) {
+    if (p.handlers) Object.assign(handlers, p.handlers);
+  }
+  return handlers;
+}
+
+export { descriptors as types, getType };
