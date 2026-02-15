@@ -69,6 +69,22 @@ export const gameBugsSquashed = new Counter({
   help: 'Total number of bugs squashed',
 });
 
+// ── Replay metrics ──
+export const replayRecordingsTotal = new Counter({
+  name: 'replay_recordings_total',
+  help: 'Total number of recordings saved',
+});
+
+export const replayEventsTotal = new Counter({
+  name: 'replay_events_total',
+  help: 'Total number of replay events saved',
+});
+
+export const replayMouseEventsTotal = new Counter({
+  name: 'replay_mouse_events_total',
+  help: 'Total number of replay mouse movement events saved',
+});
+
 // ── Express middleware ──
 export function metricsMiddleware(req: Request, res: Response, next: NextFunction): void {
   const start = process.hrtime.bigint();

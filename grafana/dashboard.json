@@ -158,16 +158,83 @@
       }
     },
     {
-      "title": "HTTP & WebSocket",
+      "title": "Replays",
       "type": "row",
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
+      "collapsed": false
+    },
+    {
+      "title": "Total Replays Saved",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 15 },
+      "targets": [
+        {
+          "expr": "replay_recordings_total{instance=~\"$instance\"}",
+          "legendFormat": "Recordings",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Replay Events/sec",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 6, "w": 9, "x": 6, "y": 15 },
+      "targets": [
+        {
+          "expr": "rate(replay_events_total{instance=~\"$instance\"}[5m])",
+          "legendFormat": "Events",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "events/s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Replay Mouse Events/sec",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 6, "w": 9, "x": 15, "y": 15 },
+      "targets": [
+        {
+          "expr": "rate(replay_mouse_events_total{instance=~\"$instance\"}[5m])",
+          "legendFormat": "Mouse Events",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "events/s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "HTTP & WebSocket",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 21 },
       "collapsed": false
     },
     {
       "title": "Request Rate",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 15 },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 22 },
       "targets": [
         {
           "expr": "sum(rate(http_requests_total{instance=~\"$instance\"}[5m])) by (method)",
@@ -186,7 +253,7 @@
       "title": "Request Latency (p50 / p95 / p99)",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 15 },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 22 },
       "targets": [
         {
           "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{instance=~\"$instance\"}[5m])) by (le))",
@@ -215,7 +282,7 @@
       "title": "WS Messages/sec (Total)",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 15 },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 22 },
       "targets": [
         {
           "expr": "sum(rate(ws_messages_received_total{instance=~\"$instance\"}[5m]))",
@@ -239,7 +306,7 @@
       "title": "WS Messages/sec (by Type)",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 23 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 30 },
       "targets": [
         {
           "expr": "sum(rate(ws_messages_received_total{instance=~\"$instance\"}[5m])) by (type)",
@@ -257,14 +324,14 @@
     {
       "title": "System",
       "type": "row",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 31 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 38 },
       "collapsed": false
     },
     {
       "title": "Process Memory",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 32 },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 39 },
       "targets": [
         {
           "expr": "process_resident_memory_bytes{instance=~\"$instance\"}",
@@ -283,7 +350,7 @@
       "title": "CPU Usage",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 32 },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 39 },
       "targets": [
         {
           "expr": "rate(process_cpu_seconds_total{instance=~\"$instance\"}[5m])",
@@ -302,7 +369,7 @@
       "title": "Event Loop Lag",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 32 },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 39 },
       "targets": [
         {
           "expr": "nodejs_eventloop_lag_seconds{instance=~\"$instance\"}",

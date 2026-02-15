@@ -7,6 +7,7 @@ import * as stats from './stats.ts';
 import { createMatchLog } from './match-logger.ts';
 import { startRecording, stopRecording } from './recording.ts';
 import * as db from './db.ts';
+import { replayRecordingsTotal, replayEventsTotal, replayMouseEventsTotal } from './metrics.ts';
 import { gameGamesStarted, gameGamesCompleted } from './metrics.ts';
 import type { GameContext } from './types.ts';
 
@@ -66,7 +67,11 @@ export function endGame(ctx: GameContext, outcome: string, win: boolean): void {
     for (const pid of Object.keys(state.players)) {
       const info = ctx.playerInfo.get(pid);
       if (info?.userId) {
-        db.saveRecording(info.userId, meta, recording.events, recording.mouseMovements).catch(err => {
+        db.saveRecording(info.userId, meta, recording.events, recording.mouseMovements).then(() => {
+          replayRecordingsTotal.inc();
+          replayEventsTotal.inc(recording.events.length);
+          replayMouseEventsTotal.inc(recording.mouseMovements.length);
+        }).catch(err => {
           console.error('[recording] Failed to save recording:', err);
         });
       }
