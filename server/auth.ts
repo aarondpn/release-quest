@@ -8,6 +8,10 @@ function generateToken(): string {
   return crypto.randomBytes(32).toString('hex');
 }
 
+export function generatePlayerSessionToken(): string {
+  return crypto.randomBytes(32).toString('hex');
+}
+
 function getExpiresAt(): Date {
   const d = new Date();
   d.setDate(d.getDate() + AUTH_CONFIG.sessionDurationDays);
@@ -92,4 +96,23 @@ export async function logout(token: string): Promise<void> {
   if (token) {
     await db.deleteSession(token);
   }
+}
+
+export async function createPlayerSession(playerId: string, name: string, color: string, icon: string, userId: number | null = null): Promise<string> {
+  const token = generatePlayerSessionToken();
+  await db.createPlayerSession(token, playerId, name, color, icon, userId, getExpiresAt());
+  return token;
+}
+
+export async function validatePlayerSession(token: string): Promise<{ playerId: string; name: string; color: string; icon: string; userId: number | null } | null> {
+  if (!token || typeof token !== 'string') return null;
+  return await db.getPlayerSession(token);
+}
+
+export async function linkPlayerSessionToUser(playerSessionToken: string, userId: number): Promise<void> {
+  await db.updatePlayerSessionUserId(playerSessionToken, userId);
+}
+
+export async function updatePlayerSessionInfo(playerSessionToken: string, name?: string, icon?: string): Promise<void> {
+  await db.updatePlayerSessionInfo(playerSessionToken, name, icon);
 }

@@ -41,6 +41,12 @@ export function sendMessage(msg) {
     if (clientState.isPlayback) {
       if (msg.type !== 'get-recordings') return;
     }
+    
+    // Include player ID in every message to avoid server-side mapping issues
+    if (clientState.myId && !msg.playerId) {
+      msg.playerId = clientState.myId;
+    }
+    
     if (clientState.ws && clientState.ws.readyState === 1) {
       clientState.ws.send(JSON.stringify(msg));
     }
@@ -53,7 +59,12 @@ export function sendMessage(msg) {
 export function connect() {
   try {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    clientState.ws = new WebSocket(proto + '://' + location.host + location.pathname);
+    
+    // Include player session token if available
+    const playerSessionToken = localStorage.getItem('rq_player_session_token');
+    const queryParams = playerSessionToken ? `?sessionToken=${encodeURIComponent(playerSessionToken)}` : '';
+    
+    clientState.ws = new WebSocket(proto + '://' + location.host + location.pathname + queryParams);
 
     clientState.ws.onopen = () => {
       try {
@@ -166,6 +177,7 @@ export function handleMessageInternal(msg) {
           updateAuthUI();
           // Rebuild icon picker to unlock premium section
           if (typeof window._buildIconPicker === 'function') window._buildIconPicker();
+          buildLobbyIconPicker();
 
           // Auto-join for logged-in users who haven't entered yet
           if (msg.action === 'resume' && !clientState.hasJoined) {
@@ -213,11 +225,25 @@ export function handleMessageInternal(msg) {
     }
 
     case 'welcome': {
+      // Check if this is a returning player BEFORE storing the new session token
+      const hadPlayerSession = !!localStorage.getItem('rq_player_session_token');
+      const hasAuthSession = !!localStorage.getItem('rq_session_token');
+
       clientState.myId = msg.playerId;
       clientState.myColor = msg.color;
       clientState.myIcon = msg.icon;
       clientState.myName = msg.name;
       clientState.currentLobbyId = null;
+
+      // Store player session token for reconnection
+      if (msg.sessionToken) {
+        localStorage.setItem('rq_player_session_token', msg.sessionToken);
+      }
+
+      // Populate name input with persisted guest name
+      if (msg.name && dom.nameInput) {
+        dom.nameInput.value = msg.name;
+      }
 
       if (msg.onlineCount != null && dom.onlineCountEl) {
         dom.onlineCountEl.textContent = msg.onlineCount + ' online';
@@ -234,14 +260,18 @@ export function handleMessageInternal(msg) {
       updatePlayerCount();
 
       if (!clientState.hasJoined) {
-        // If we have a saved token, keep name-entry hidden while we wait
-        // for resume-session result; otherwise show it immediately
-        const savedToken = localStorage.getItem('rq_session_token');
-        if (!savedToken) {
+        // Auto-join returning players with saved sessions
+        if (hadPlayerSession) {
+          dom.nameEntry.classList.add('hidden');
+          if (typeof window._submitJoin === 'function') {
+            window._submitJoin();
+          }
+        } else if (!hasAuthSession) {
+          // New player without session - show name entry screen
           dom.nameEntry.classList.remove('hidden');
           dom.nameInput.focus();
         }
-        hideLobbyBrowser();
+        // If has auth session, keep hidden while waiting for resume-session result
       } else {
         dom.nameEntry.classList.add('hidden');
         // Re-send name and show lobby browser

@@ -53,6 +53,27 @@ export async function initialize(): Promise<void> {
   `);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS player_sessions (
+      token VARCHAR(64) PRIMARY KEY,
+      player_id VARCHAR(64) NOT NULL,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      name VARCHAR(64) NOT NULL,
+      color VARCHAR(16) NOT NULL,
+      icon VARCHAR(16) NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '30 days')
+    )
+  `);
+
+  // Add columns to existing player_sessions table if they don't exist
+  await pool.query(`
+    ALTER TABLE player_sessions 
+    ADD COLUMN IF NOT EXISTS name VARCHAR(64) NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS color VARCHAR(16) NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS icon VARCHAR(16) NOT NULL DEFAULT ''
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS user_stats (
       user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
       games_played INTEGER NOT NULL DEFAULT 0,
@@ -130,6 +151,7 @@ export async function initialize(): Promise<void> {
 
   // Clean expired sessions
   await pool.query(`DELETE FROM sessions WHERE expires_at < NOW()`);
+  await pool.query(`DELETE FROM player_sessions WHERE expires_at < NOW()`);
 
   // Clean up stale lobby data from previous runs
   await pool.query(`DELETE FROM lobby_players`);
@@ -258,6 +280,58 @@ export async function getSessionWithUser(token: string): Promise<DbSessionRow | 
 
 export async function deleteSession(token: string): Promise<void> {
   await pool.query(`DELETE FROM sessions WHERE token = $1`, [token]);
+}
+
+// Player session queries (for both authenticated and guest players)
+
+export async function createPlayerSession(token: string, playerId: string, name: string, color: string, icon: string, userId: number | null, expiresAt: Date): Promise<void> {
+  await pool.query(
+    `INSERT INTO player_sessions (token, player_id, name, color, icon, user_id, expires_at) VALUES ($1, $2, $3, $4, $5, $6, $7)
+     ON CONFLICT (token) DO UPDATE SET player_id = $2, name = $3, color = $4, icon = $5, user_id = $6, expires_at = $7`,
+    [token, playerId, name, color, icon, userId, expiresAt]
+  );
+}
+
+export async function getPlayerSession(token: string): Promise<{ player_id: string; name: string; color: string; icon: string; user_id: number | null } | null> {
+  const result = await pool.query(
+    `SELECT player_id, name, color, icon, user_id FROM player_sessions WHERE token = $1 AND expires_at > NOW()`,
+    [token]
+  );
+  return (result.rows[0] as { player_id: string; name: string; color: string; icon: string; user_id: number | null }) || null;
+}
+
+export async function updatePlayerSessionUserId(token: string, userId: number): Promise<void> {
+  await pool.query(
+    `UPDATE player_sessions SET user_id = $1 WHERE token = $2`,
+    [userId, token]
+  );
+}
+
+export async function updatePlayerSessionInfo(token: string, name?: string, icon?: string): Promise<void> {
+  const updates: string[] = [];
+  const values: any[] = [];
+  let paramIndex = 1;
+
+  if (name !== undefined) {
+    updates.push(`name = $${paramIndex++}`);
+    values.push(name);
+  }
+  if (icon !== undefined) {
+    updates.push(`icon = $${paramIndex++}`);
+    values.push(icon);
+  }
+
+  if (updates.length > 0) {
+    values.push(token);
+    await pool.query(
+      `UPDATE player_sessions SET ${updates.join(', ')} WHERE token = $${paramIndex}`,
+      values
+    );
+  }
+}
+
+export async function deletePlayerSession(token: string): Promise<void> {
+  await pool.query(`DELETE FROM player_sessions WHERE token = $1`, [token]);
 }
 
 // Stats queries

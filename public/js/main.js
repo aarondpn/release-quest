@@ -14,6 +14,11 @@ import { showError, ERROR_LEVELS } from './error-handler.js';
 
 initDom();
 
+// Hide name entry if user has a saved session (before WebSocket connects)
+if (localStorage.getItem('rq_player_session_token') || localStorage.getItem('rq_session_token')) {
+  dom.nameEntry.classList.add('hidden');
+}
+
 // ── Global error handlers ──
 window.addEventListener('error', (event) => {
   console.error('Global error:', event.error);

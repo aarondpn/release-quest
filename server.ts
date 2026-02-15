@@ -3,12 +3,14 @@ import http from 'node:http';
 import path from 'node:path';
 import { WebSocketServer } from 'ws';
 import type { WebSocket } from 'ws';
+import type { IncomingMessage } from 'node:http';
 
 import logger from './server/logger.ts';
 import { SERVER_CONFIG, COLORS, ICONS, GUEST_NAMES } from './server/config.ts';
 import * as network from './server/network.ts';
 import * as db from './server/db.ts';
 import * as lobby from './server/lobby.ts';
+import * as auth from './server/auth.ts';
 import apiRoutes from './server/routes.ts';
 import { errorHandler, notFoundHandler } from './server/middleware.ts';
 import { setupWebSocketConnection } from './server/websocket-handler.ts';
@@ -100,17 +102,76 @@ const wss = new WebSocketServer({ server: httpServer });
 network.init(wss);
 
 // WebSocket connection handler
-wss.on('connection', (ws: WebSocket) => {
-  const playerId = 'player_' + (nextPlayerId++);
-  const color = COLORS[colorIndex % COLORS.length];
-  const icon = ICONS[colorIndex % ICONS.length];
-  colorIndex++;
-  const name = GUEST_NAMES[Math.floor(Math.random() * GUEST_NAMES.length)];
+wss.on('connection', async (ws: WebSocket, req: IncomingMessage) => {
+  // Parse session token from query parameters
+  const url = new URL(req.url || '', `http://${req.headers.host}`);
+  const sessionToken = url.searchParams.get('sessionToken');
+  
+  let playerId: string;
+  let color: string;
+  let icon: string;
+  let name: string;
+  let existingUserId: number | null = null;
+  let playerSessionToken: string;
+  
+  // Try to restore session if token provided
+  if (sessionToken) {
+    try {
+      const session = await auth.validatePlayerSession(sessionToken);
+      if (session) {
+        // Restore from existing session
+        playerId = session.playerId;
+        name = session.name;
+        color = session.color;
+        icon = session.icon;
+        existingUserId = session.userId;
+        playerSessionToken = sessionToken;
+        logger.info({ playerId, userId: existingUserId }, 'Player session restored');
+      } else {
+        // Invalid/expired session, create new
+        playerId = 'player_' + (nextPlayerId++);
+        color = COLORS[colorIndex % COLORS.length];
+        icon = ICONS[colorIndex % ICONS.length];
+        colorIndex++;
+        name = GUEST_NAMES[Math.floor(Math.random() * GUEST_NAMES.length)];
+        playerSessionToken = await auth.createPlayerSession(playerId, name, color, icon);
+      }
+    } catch (err) {
+      logger.error({ err }, 'Error validating player session');
+      playerId = 'player_' + (nextPlayerId++);
+      color = COLORS[colorIndex % COLORS.length];
+      icon = ICONS[colorIndex % ICONS.length];
+      colorIndex++;
+      name = GUEST_NAMES[Math.floor(Math.random() * GUEST_NAMES.length)];
+      playerSessionToken = await auth.createPlayerSession(playerId, name, color, icon);
+    }
+  } else {
+    // No session token, create new player and session
+    playerId = 'player_' + (nextPlayerId++);
+    color = COLORS[colorIndex % COLORS.length];
+    icon = ICONS[colorIndex % ICONS.length];
+    colorIndex++;
+    name = GUEST_NAMES[Math.floor(Math.random() * GUEST_NAMES.length)];
+    playerSessionToken = await auth.createPlayerSession(playerId, name, color, icon);
+  }
+  
+  // If user was authenticated in restored session, override name/icon with user's account info
+  if (existingUserId) {
+    try {
+      const userStats = await db.getUserStats(existingUserId);
+      if (userStats) {
+        name = userStats.display_name;
+        icon = userStats.icon;
+      }
+    } catch (err) {
+      logger.error({ err, userId: existingUserId }, 'Error loading user stats for restored session');
+    }
+  }
 
   wsConnectionOpened();
   ws.on('close', () => wsConnectionClosed());
 
-  setupWebSocketConnection(ws, playerId, color, icon, name, playerInfo, wss);
+  setupWebSocketConnection(ws, playerId, color, icon, name, playerInfo, wss, playerSessionToken, existingUserId);
 });
 
 // ── Startup ──
