@@ -308,32 +308,63 @@ export function rebuildPipelineTether(chainId) {
 function createInfiniteLoopOverlay(bugId, variant) {
   const { loopCenterX, loopCenterY, loopRadiusX, loopRadiusY, breakpointAngle } = variant;
 
-  // Draw SVG ellipse orbit path
+  // Draw SVG ellipse orbit path with animated flowing dashes
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.classList.add('infinite-loop-path');
   svg.setAttribute('data-bug-id', bugId);
   svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:8;';
   const center = logicalToPixel(loopCenterX, loopCenterY);
+  // Bug elements are 48x48px positioned by top-left corner;
+  // offset the orbit path to align with the bug's visual center
+  const bugOffset = 24;
+  center.x += bugOffset;
+  center.y += bugOffset;
   const arenaRect = getArenaRect();
   const scaleX = arenaRect.width / 800;
   const scaleY = arenaRect.height / 500;
+  const rxPx = loopRadiusX * scaleX;
+  const ryPx = loopRadiusY * scaleY;
+
+  // Outer glow track
+  const glowEllipse = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+  glowEllipse.setAttribute('cx', center.x);
+  glowEllipse.setAttribute('cy', center.y);
+  glowEllipse.setAttribute('rx', rxPx);
+  glowEllipse.setAttribute('ry', ryPx);
+  glowEllipse.setAttribute('fill', 'none');
+  glowEllipse.setAttribute('stroke', '#06b6d4');
+  glowEllipse.setAttribute('stroke-width', '4');
+  glowEllipse.setAttribute('opacity', '0.08');
+  svg.appendChild(glowEllipse);
+
+  // Main orbit track with animated dash flow
   const ellipse = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
   ellipse.setAttribute('cx', center.x);
   ellipse.setAttribute('cy', center.y);
-  ellipse.setAttribute('rx', loopRadiusX * scaleX);
-  ellipse.setAttribute('ry', loopRadiusY * scaleY);
+  ellipse.setAttribute('rx', rxPx);
+  ellipse.setAttribute('ry', ryPx);
   ellipse.setAttribute('fill', 'none');
-  ellipse.setAttribute('stroke', '#06b6d4');
+  ellipse.setAttribute('stroke', '#22d3ee');
   ellipse.setAttribute('stroke-width', '1.5');
-  ellipse.setAttribute('stroke-dasharray', '6 4');
-  ellipse.setAttribute('opacity', '0.3');
+  ellipse.setAttribute('stroke-dasharray', '3 8');
+  ellipse.setAttribute('opacity', '0.35');
+  ellipse.setAttribute('stroke-linecap', 'round');
   svg.appendChild(ellipse);
+
+  // Animate dash offset for flowing effect
+  const circumference = Math.PI * 2 * Math.max(rxPx, ryPx);
+  let dashOffset = 0;
+  const dashSpeed = circumference / (variant.loopTickMs ? (2800 / variant.loopTickMs) : 56);
+
   dom.arena.appendChild(svg);
 
   // Create breakpoint marker at the breakpoint angle on the ellipse
+  // Breakpoint uses translate(-50%,-50%) so it's centered — offset to match the bug-center orbit
   const bpX = loopCenterX + Math.cos(breakpointAngle) * loopRadiusX;
   const bpY = loopCenterY + Math.sin(breakpointAngle) * loopRadiusY;
   const bpPos = logicalToPixel(bpX, bpY);
+  bpPos.x += bugOffset;
+  bpPos.y += bugOffset;
   const bp = document.createElement('div');
   bp.className = 'infinite-loop-breakpoint';
   bp.setAttribute('data-bug-id', bugId);
@@ -356,50 +387,74 @@ function createInfiniteLoopOverlay(bugId, variant) {
 
   // Store references for cleanup
   clientState.infiniteLoopOverlays = clientState.infiniteLoopOverlays || {};
-  clientState.infiniteLoopOverlays[bugId] = { svg, breakpoint: bp, variant };
+  clientState.infiniteLoopOverlays[bugId] = {
+    svg, ellipse, breakpoint: bp, variant, dashOffset, dashSpeed, trailTimer: null,
+  };
 
-  // Start proximity glow check
-  startInfiniteLoopProximityCheck(bugId);
+  // Start proximity glow check + dash animation + trail dots
+  startInfiniteLoopAnimations(bugId);
 }
 
-function startInfiniteLoopProximityCheck(bugId) {
+function startInfiniteLoopAnimations(bugId) {
   const overlay = clientState.infiniteLoopOverlays && clientState.infiniteLoopOverlays[bugId];
   if (!overlay) return;
-  const { variant, breakpoint } = overlay;
-  const hitWindow = 0.5; // same as server hitWindowRadians
+  const { variant, breakpoint, ellipse } = overlay;
+  const hitWindow = 0.45; // match server hitWindowRadians
 
-  function checkProximity() {
+  // Trail dot spawning (every 100ms, drop a fading dot at bug's position)
+  overlay.trailTimer = setInterval(() => {
+    const pos = clientState.bugPositions[bugId];
+    if (!pos) return;
+    const pxPos = logicalToPixel(pos.x, pos.y);
+    const dot = document.createElement('div');
+    dot.className = 'infinite-loop-trail-dot';
+    dot.style.left = pxPos.x + 'px';
+    dot.style.top = pxPos.y + 'px';
+    dom.arena.appendChild(dot);
+    setTimeout(() => dot.remove(), 600);
+  }, 100);
+
+  function animate() {
     if (!clientState.infiniteLoopOverlays || !clientState.infiniteLoopOverlays[bugId]) return;
     const bugEl = clientState.bugs[bugId];
     if (!bugEl) return;
 
-    // Estimate current angle from bug position
-    const pos = clientState.bugPositions[bugId];
-    if (!pos) { overlay.rafId = requestAnimationFrame(checkProximity); return; }
-    const dx = pos.x - variant.loopCenterX;
-    const dy = pos.y - variant.loopCenterY;
-    const currentAngle = Math.atan2(dy, dx);
-    let diff = Math.abs(currentAngle - variant.breakpointAngle);
-    if (diff > Math.PI) diff = 2 * Math.PI - diff;
+    // Animate flowing dashes
+    overlay.dashOffset -= overlay.dashSpeed * 0.016; // ~60fps
+    ellipse.setAttribute('stroke-dashoffset', overlay.dashOffset);
 
-    if (diff <= hitWindow * 1.5) {
-      breakpoint.classList.add('hot');
-    } else {
-      breakpoint.classList.remove('hot');
+    // Proximity check: estimate current angle from bug position
+    const pos = clientState.bugPositions[bugId];
+    if (pos) {
+      const dx = pos.x - variant.loopCenterX;
+      const dy = pos.y - variant.loopCenterY;
+      const currentAngle = Math.atan2(dy, dx);
+      let diff = Math.abs(currentAngle - variant.breakpointAngle);
+      if (diff > Math.PI) diff = 2 * Math.PI - diff;
+
+      // "hot" zone at 1.2× the hit window for visual lead-in
+      if (diff <= hitWindow * 1.2) {
+        breakpoint.classList.add('hot');
+      } else {
+        breakpoint.classList.remove('hot');
+      }
     }
 
-    overlay.rafId = requestAnimationFrame(checkProximity);
+    overlay.rafId = requestAnimationFrame(animate);
   }
 
-  overlay.rafId = requestAnimationFrame(checkProximity);
+  overlay.rafId = requestAnimationFrame(animate);
 }
 
 function removeInfiniteLoopOverlay(bugId) {
   if (!clientState.infiniteLoopOverlays || !clientState.infiniteLoopOverlays[bugId]) return;
   const overlay = clientState.infiniteLoopOverlays[bugId];
   if (overlay.rafId) cancelAnimationFrame(overlay.rafId);
+  if (overlay.trailTimer) clearInterval(overlay.trailTimer);
   overlay.svg.remove();
   overlay.breakpoint.remove();
+  // Clean up any lingering trail dots for this bug
+  dom.arena.querySelectorAll('.infinite-loop-trail-dot').forEach(dot => dot.remove());
   delete clientState.infiniteLoopOverlays[bugId];
 }
 

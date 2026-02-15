@@ -274,11 +274,11 @@ export const PIPELINE_BUG_MECHANICS = {
 };
 
 export const INFINITE_LOOP_MECHANICS = {
-  loopTickMs: 150,
-  loopPeriodMs: 2500,
-  radiusMin: 60,
-  radiusMax: 120,
-  hitWindowRadians: 0.5,
+  loopTickMs: 50,
+  loopPeriodMs: 2800,
+  radiusMin: 70,
+  radiusMax: 130,
+  hitWindowRadians: 0.45,
   points: 30,
   escapeTimeMultiplier: 1.8,
 };

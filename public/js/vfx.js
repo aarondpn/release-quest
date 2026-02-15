@@ -162,6 +162,36 @@ export function showPipelineChainResetEffect() {
   setTimeout(() => el.remove(), 1000);
 }
 
+// ── Infinite loop breakpoint hit effect ──
+export function showBreakpointHitEffect(lx, ly) {
+  const pos = logicalToPixel(lx, ly);
+
+  // "BREAK;" rising text
+  const text = document.createElement('div');
+  text.className = 'infinite-loop-break-text';
+  text.style.left = pos.x + 'px';
+  text.style.top = pos.y + 'px';
+  text.textContent = 'BREAK;';
+  dom.arena.appendChild(text);
+  setTimeout(() => text.remove(), 1100);
+
+  // Breakpoint shatter: red diamond shards flying outward
+  const shardCount = 8;
+  for (let i = 0; i < shardCount; i++) {
+    const angle = (Math.PI * 2 * i / shardCount) + (Math.random() - 0.5) * 0.5;
+    const dist = 25 + Math.random() * 35;
+    const shard = document.createElement('div');
+    shard.className = 'bp-shatter-shard';
+    shard.style.left = pos.x + 'px';
+    shard.style.top = pos.y + 'px';
+    shard.style.setProperty('--sx', (Math.cos(angle) * dist) + 'px');
+    shard.style.setProperty('--sy', (Math.sin(angle) * dist) + 'px');
+    shard.style.setProperty('--sr', (Math.random() * 360) + 'deg');
+    dom.arena.appendChild(shard);
+    setTimeout(() => shard.remove(), 500);
+  }
+}
+
 // ── Merge conflict resolved effect ──
 export function showMergeResolvedEffect(lx, ly) {
   const pos = logicalToPixel(lx, ly);

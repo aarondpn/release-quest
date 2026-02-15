@@ -673,15 +673,19 @@ types.infiniteLoop = {
 
   init(bug: BugEntity, _ctx: GameContext, _opts: { phaseCheck: string }) {
     const { radiusMin, radiusMax, loopPeriodMs, loopTickMs } = INFINITE_LOOP_MECHANICS;
-    const rx = radiusMin + Math.random() * (radiusMax - radiusMin);
-    const ry = radiusMin + Math.random() * (radiusMax - radiusMin);
+    // Generate eccentric ellipses: one axis 60-80% of the other for visual interest
+    const major = radiusMin + Math.random() * (radiusMax - radiusMin);
+    const eccentricity = 0.6 + Math.random() * 0.2;
+    const minor = major * eccentricity;
+    const rx = Math.random() > 0.5 ? major : minor;
+    const ry = Math.random() > 0.5 ? major : minor;
     // Pick a center that keeps the ellipse within bounds
-    const pad = 20;
+    const pad = 30;
     bug.loopCenterX = rx + pad + Math.random() * (LOGICAL_W - 2 * (rx + pad));
     bug.loopCenterY = ry + pad + Math.random() * (LOGICAL_H - 2 * (ry + pad));
     bug.loopRadiusX = rx;
     bug.loopRadiusY = ry;
-    bug.loopAngle = 0;
+    bug.loopAngle = Math.random() * 2 * Math.PI; // randomize starting position
     bug.loopSpeed = (2 * Math.PI) / (loopPeriodMs / loopTickMs); // radians per tick
     bug.breakpointAngle = Math.random() * 2 * Math.PI;
     // Set initial position on the ellipse
