@@ -569,7 +569,11 @@ export function setupWebSocketConnection(
     name,
     color,
     icon,
+    onlineCount: wss.clients.size,
   });
+
+  // Broadcast updated online count to all clients
+  network.broadcast({ type: 'online-count', count: wss.clients.size });
 
   // WebSocket error handler
   ws.on('error', (err: Error) => {
@@ -622,6 +626,9 @@ export function setupWebSocketConnection(
         playerInfo.delete(pid);
         console.log(`[disconnect] ${pid} disconnected (${wss.clients.size} online)`);
       }
+
+      // Broadcast updated online count to all remaining clients
+      network.broadcast({ type: 'online-count', count: wss.clients.size });
     } catch (err) {
       console.error('Error handling WebSocket close:', err);
     }

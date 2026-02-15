@@ -134,6 +134,7 @@ export const dom = {
   lobbyProfileGuestView: null,
   lobbyProfileLoggedInView: null,
   lobbyProfileAuthName: null,
+  onlineCountEl: null,
 };
 
 export function initDom() {
@@ -235,4 +236,5 @@ export function initDom() {
   dom.lobbyProfileGuestView = document.querySelector('.lobby-profile-guest-view');
   dom.lobbyProfileLoggedInView = document.querySelector('.lobby-profile-logged-in-view');
   dom.lobbyProfileAuthName = document.getElementById('lobby-profile-auth-name');
+  dom.onlineCountEl = document.getElementById('online-count');
 }

@@ -205,12 +205,21 @@ export function handleMessageInternal(msg) {
       break;
     }
 
+    case 'online-count': {
+      if (dom.onlineCountEl) dom.onlineCountEl.textContent = msg.count + ' online';
+      break;
+    }
+
     case 'welcome': {
       clientState.myId = msg.playerId;
       clientState.myColor = msg.color;
       clientState.myIcon = msg.icon;
       clientState.myName = msg.name;
       clientState.currentLobbyId = null;
+
+      if (msg.onlineCount != null && dom.onlineCountEl) {
+        dom.onlineCountEl.textContent = msg.onlineCount + ' online';
+      }
 
       if (msg.icon) {
         clientState.selectedIcon = msg.icon;
