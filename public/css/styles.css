@@ -1736,7 +1736,6 @@ header p {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   background: var(--bg);
   z-index: 450;
   gap: 24px;
@@ -1774,6 +1773,7 @@ header p {
 .lobby-browser > * {
   position: relative;
   z-index: 1;
+  flex-shrink: 0;
 }
 
 .lobby-browser-title {
@@ -2580,7 +2580,7 @@ header p {
   border: 1px solid rgba(168, 85, 247, 0.15);
   border-radius: 10px;
   overflow: hidden;
-  max-height: 400px;
+  max-height: 600px;
   padding: 16px 20px;
   opacity: 1;
   transition: max-height 0.3s ease, opacity 0.25s ease, padding 0.3s ease;
@@ -2611,14 +2611,14 @@ header p {
 }
 
 .lobby-editor-icon-picker .icon-option {
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 20px;
   border: 2px solid rgba(168,85,247,0.15);
-  border-radius: 6px;
+  border-radius: 5px;
   cursor: pointer;
   transition: border-color 0.15s, transform 0.1s;
 }
@@ -3666,6 +3666,14 @@ header p {
   .lobby-profile-bar { gap: 8px; }
   .lobby-profile-divider { display: none; }
   .lobby-profile-name { font-size: 8px; }
+  .lobby-profile-editor { padding: 10px 12px; }
+  .lobby-editor-icon-picker { gap: 4px; margin-bottom: 8px; }
+  .lobby-editor-icon-picker .icon-picker-label { font-size: 6px; margin: 2px 0; }
+  .lobby-editor-icon-picker .icon-option { width: 30px; height: 30px; font-size: 16px; border-width: 1.5px; border-radius: 4px; }
+  .lobby-editor-icon-picker .icon-option img { width: 22px !important; height: 22px !important; }
+  .lobby-editor-row { gap: 8px; }
+  .lobby-editor-name-input { font-size: 8px; padding: 8px 12px; }
+  .lobby-editor-save-btn { font-size: 7px; padding: 8px 14px; }
 }
 
 /* ── Error Notifications ── */
