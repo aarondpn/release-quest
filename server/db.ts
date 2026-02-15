@@ -393,14 +393,26 @@ export async function getRecordingsList(userId: number): Promise<RecordingRow[]>
   );
   const recordings = recResult.rows as RecordingRow[];
 
-  // Attach players for each recording
-  for (const rec of recordings) {
+  if (recordings.length > 0) {
+    const ids = recordings.map(r => r.id);
     const playersResult = await pool.query(
       `SELECT id, recording_id, player_id, name, icon, color, score
-       FROM recording_players WHERE recording_id = $1`,
-      [rec.id]
+       FROM recording_players WHERE recording_id = ANY($1)`,
+      [ids]
     );
-    rec.players = playersResult.rows as RecordingPlayerRow[];
+    const playersByRecording = new Map<number, RecordingPlayerRow[]>();
+    for (const row of playersResult.rows as RecordingPlayerRow[]) {
+      const list = playersByRecording.get(row.recording_id) ?? [];
+      list.push(row);
+      playersByRecording.set(row.recording_id, list);
+    }
+    for (const rec of recordings) {
+      rec.players = playersByRecording.get(rec.id) ?? [];
+    }
+  } else {
+    for (const rec of recordings) {
+      rec.players = [];
+    }
   }
 
   return recordings;
