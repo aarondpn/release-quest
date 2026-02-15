@@ -3072,9 +3072,13 @@ header p {
   gap: 6px;
   transition: all 0.2s;
 }
-.sc-theme-btn:hover {
+.sc-theme-btn:hover:not(:disabled) {
   border-color: rgba(167,169,190,0.6);
   color: #fff;
+}
+.sc-theme-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 .sc-theme-btn.active {
   border-color: var(--yellow);

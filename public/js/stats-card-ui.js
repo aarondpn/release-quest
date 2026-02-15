@@ -130,6 +130,7 @@ function renderStatsCardPreview() {
       dom.statsCardDownloadBtn.disabled = true;
       dom.statsCardDownloadBtn.title = 'Log in to download your stats card';
     }
+    setThemeButtonsDisabled(true);
     return;
   }
 
@@ -139,6 +140,7 @@ function renderStatsCardPreview() {
       dom.statsCardDownloadBtn.disabled = true;
       dom.statsCardDownloadBtn.title = '';
     }
+    setThemeButtonsDisabled(true);
     return;
   }
 
@@ -201,6 +203,14 @@ function renderStatsCardPreview() {
     dom.statsCardDownloadBtn.disabled = false;
     dom.statsCardDownloadBtn.title = '';
   }
+  setThemeButtonsDisabled(false);
+}
+
+function setThemeButtonsDisabled(disabled) {
+  if (!dom.statsCardThemes) return;
+  dom.statsCardThemes.querySelectorAll('.sc-theme-btn').forEach(btn => {
+    btn.disabled = disabled;
+  });
 }
 
 // ── Theme picker ──
