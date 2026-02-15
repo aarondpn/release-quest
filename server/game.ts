@@ -1,5 +1,6 @@
 import { MAX_LEVEL, getDifficultyConfig } from './config.ts';
 import { currentLevelConfig, getPlayerScores } from './state.ts';
+import logger, { createLobbyLogger } from './logger.ts';
 import * as bugs from './bugs.ts';
 import * as boss from './boss.ts';
 import * as powerups from './powerups.ts';
@@ -59,7 +60,8 @@ export function endGame(ctx: GameContext, outcome: string, win: boolean): void {
       const info = ctx.playerInfo.get(pid);
       if (info?.userId) {
         db.saveRecording(info.userId, meta, recording.events, recording.mouseMovements).catch(err => {
-          console.error('[recording] Failed to save recording:', err);
+          const logCtx = createLobbyLogger(lobbyId.toString());
+          logCtx.error({ err, userId: info.userId }, 'Failed to save recording');
         });
       }
     }
@@ -164,7 +166,8 @@ export function checkGameState(ctx: GameContext): void {
           try {
             boss.startBoss(ctx);
           } catch (err) {
-            console.error('Error starting boss:', err);
+            const logCtx = createLobbyLogger(ctx.lobbyId.toString());
+            logCtx.error({ err }, 'Error starting boss');
           }
         }, 2000);
       } else {
@@ -184,13 +187,14 @@ export function checkGameState(ctx: GameContext): void {
             state.level++;
             startLevel(ctx);
           } catch (err) {
-            console.error('Error starting next level:', err);
+            const logCtx = createLobbyLogger(ctx.lobbyId.toString());
+            logCtx.error({ err }, 'Error starting next level');
           }
         }, 2000);
       }
     }
   } catch (err) {
-    console.error('Error in checkGameState:', err);
+    logger.error({ err, lobbyId: ctx.lobbyId }, 'Error in checkGameState');
   }
 }
 
@@ -202,7 +206,7 @@ export function checkBossGameState(ctx: GameContext): void {
       endGame(ctx, 'loss', false);
     }
   } catch (err) {
-    console.error('Error in checkBossGameState:', err);
+    logger.error({ err, lobbyId: ctx.lobbyId }, 'Error in checkBossGameState');
   }
 }
 

@@ -1,5 +1,6 @@
 import type { HandlerContext, MessageHandler } from './types.ts';
 import { ALL_ICONS } from '../config.ts';
+import { createPlayerLogger } from '../logger.ts';
 import * as network from '../network.ts';
 import * as auth from '../auth.ts';
 import { getCtxForPlayer } from '../helpers.ts';
@@ -10,13 +11,15 @@ export const handleRegister: MessageHandler = ({ ws, msg, pid, playerInfo }) => 
   const displayName = String(msg.displayName || '').trim().slice(0, 16);
   const regIcon: string | undefined = msg.icon && ALL_ICONS.includes(msg.icon) ? msg.icon : undefined;
 
+  const playerLogger = createPlayerLogger(pid);
+
   auth.register(username, password, displayName, regIcon).then(result => {
     if (result.error !== undefined) {
-      console.log(`[auth] ${pid} register failed: ${result.error}`);
+      playerLogger.info({ username, error: result.error }, 'Registration failed');
       network.send(ws, { type: 'auth-result', action: 'register', success: false, error: result.error });
       return;
     }
-    console.log(`[auth] ${pid} registered as "${result.user.username}"`);
+    playerLogger.info({ username: result.user.username, displayName: result.user.displayName }, 'User registered');
     const info = playerInfo.get(pid);
     if (info) {
       info.name = result.user.displayName;
@@ -50,13 +53,15 @@ export const handleLogin: MessageHandler = ({ ws, msg, pid, playerInfo }) => {
   const username = String(msg.username || '').trim();
   const password = String(msg.password || '');
 
+  const playerLogger = createPlayerLogger(pid);
+
   auth.login(username, password).then(result => {
     if (result.error !== undefined) {
-      console.log(`[auth] ${pid} login failed for "${username}": ${result.error}`);
+      playerLogger.info({ username, error: result.error }, 'Login failed');
       network.send(ws, { type: 'auth-result', action: 'login', success: false, error: result.error });
       return;
     }
-    console.log(`[auth] ${pid} logged in as "${result.user.username}"`);
+    playerLogger.info({ username: result.user.username, displayName: result.user.displayName }, 'User logged in');
     const info = playerInfo.get(pid);
     if (info) {
       info.name = result.user.displayName;
@@ -87,9 +92,11 @@ export const handleLogin: MessageHandler = ({ ws, msg, pid, playerInfo }) => {
 
 export const handleLogout: MessageHandler = ({ ws, msg, pid, playerInfo }) => {
   const token = String(msg.token || '');
+  const playerLogger = createPlayerLogger(pid);
+  
   auth.logout(token).then(() => {
     const info = playerInfo.get(pid);
-    console.log(`[auth] ${pid} logged out`);
+    playerLogger.info('User logged out');
     if (info) {
       delete info.userId;
     }
@@ -101,13 +108,15 @@ export const handleLogout: MessageHandler = ({ ws, msg, pid, playerInfo }) => {
 
 export const handleResumeSession: MessageHandler = ({ ws, msg, pid, playerInfo }) => {
   const token = String(msg.token || '');
+  const playerLogger = createPlayerLogger(pid);
+  
   auth.validateSession(token).then(user => {
     if (!user) {
-      console.log(`[auth] ${pid} session resume failed (expired/invalid)`);
+      playerLogger.info('Session resume failed (expired/invalid)');
       network.send(ws, { type: 'auth-result', action: 'resume', success: false, error: 'Session expired' });
       return;
     }
-    console.log(`[auth] ${pid} resumed session as "${user.username}"`);
+    playerLogger.info({ username: user.username, displayName: user.displayName }, 'Session resumed');
     const info = playerInfo.get(pid);
     if (info) {
       info.name = user.displayName;

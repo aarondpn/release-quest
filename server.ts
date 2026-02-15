@@ -4,6 +4,7 @@ import path from 'node:path';
 import { WebSocketServer } from 'ws';
 import type { WebSocket } from 'ws';
 
+import logger from './server/logger.ts';
 import { SERVER_CONFIG, COLORS, ICONS, GUEST_NAMES } from './server/config.ts';
 import * as network from './server/network.ts';
 import * as db from './server/db.ts';
@@ -17,14 +18,12 @@ import type { PlayerInfo } from './server/types.ts';
 
 // ── Global error handlers ──
 process.on('uncaughtException', (err: Error) => {
-  console.error('[FATAL] Uncaught exception:', err);
-  console.error(err.stack);
+  logger.fatal({ err, stack: err.stack }, 'Uncaught exception');
   // Log but don't exit — try to keep server alive
 });
 
 process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
-  console.error('[FATAL] Unhandled promise rejection:', reason);
-  console.error('Promise:', promise);
+  logger.fatal({ reason, promise }, 'Unhandled promise rejection');
 });
 
 // Graceful shutdown handlers
@@ -33,7 +32,7 @@ async function gracefulShutdown(signal: string): Promise<void> {
   if (isShuttingDown) return;
   isShuttingDown = true;
   
-  console.log(`\n[${signal}] Shutting down gracefully...`);
+  logger.info({ signal }, 'Shutting down gracefully');
   
   try {
     // Close all WebSocket connections
@@ -41,27 +40,27 @@ async function gracefulShutdown(signal: string): Promise<void> {
       try {
         client.close(1001, 'Server shutting down');
       } catch (err) {
-        console.error('Error closing client:', err);
+        logger.error({ err }, 'Error closing client');
       }
     });
     
     // Close HTTP server
     httpServer.close(() => {
-      console.log('HTTP server closed');
+      logger.info('HTTP server closed');
     });
     
     // Close database
     try {
       await db.close();
-      console.log('Database closed');
+      logger.info('Database closed');
     } catch (err) {
-      console.error('Error closing database:', err);
+      logger.error({ err }, 'Error closing database');
     }
     
-    console.log('Shutdown complete');
+    logger.info('Shutdown complete');
     process.exit(0);
   } catch (err) {
-    console.error('Error during shutdown:', err);
+    logger.error({ err }, 'Error during shutdown');
     process.exit(1);
   }
 }
@@ -118,10 +117,10 @@ wss.on('connection', (ws: WebSocket) => {
 async function start(): Promise<void> {
   try {
     await db.initialize();
-    console.log('Database initialized');
+    logger.info('Database initialized');
   } catch (err: unknown) {
-    console.error('Database initialization failed:', (err as Error).message);
-    console.log('Starting without database — lobby persistence disabled');
+    logger.error({ err: (err as Error).message }, 'Database initialization failed');
+    logger.warn('Starting without database — lobby persistence disabled');
   }
 
   // Periodic sweep: destroy any lobbies with 0 members every 30s
@@ -130,15 +129,15 @@ async function start(): Promise<void> {
   }, 30_000);
 
   // Expire shared replay links older than 30 days (check hourly)
-  db.expireOldShares().then(n => { if (n > 0) console.log(`Expired ${n} old shared replay(s)`); }).catch(() => {});
+  db.expireOldShares().then(n => { if (n > 0) logger.info({ count: n }, 'Expired old shared replays'); }).catch(() => {});
   setInterval(() => {
-    db.expireOldShares().then(n => { if (n > 0) console.log(`Expired ${n} old shared replay(s)`); }).catch(() => {});
+    db.expireOldShares().then(n => { if (n > 0) logger.info({ count: n }, 'Expired old shared replays'); }).catch(() => {});
   }, 3_600_000);
 
   startMetricsServer();
 
   httpServer.listen(SERVER_CONFIG.port, () => {
-    console.log(`Release Quest running on http://localhost:${SERVER_CONFIG.port}`);
+    logger.info({ port: SERVER_CONFIG.port }, `Release Quest running on http://localhost:${SERVER_CONFIG.port}`);
   });
 }
 

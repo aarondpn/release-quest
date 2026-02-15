@@ -1,6 +1,7 @@
 import http from 'node:http';
 import { collectDefaultMetrics, register, Counter, Histogram, Gauge } from 'prom-client';
 import type { Request, Response, NextFunction } from 'express';
+import logger from './logger.ts';
 import { getRecordingsCount, getReplayEventsCount, getReplayMouseEventsCount } from './db.ts';
 
 // ── Default metrics (CPU, memory, event loop lag, GC) ──
@@ -79,7 +80,7 @@ export const replayRecordingsTotal = new Gauge({
       const count = await getRecordingsCount();
       this.set(count);
     } catch (err) {
-      console.error('[metrics] Failed to collect replay recordings:', err);
+      logger.error({ err }, 'Failed to collect replay recordings metric');
     }
   },
 });
@@ -92,7 +93,7 @@ export const replayEventsTotal = new Gauge({
       const count = await getReplayEventsCount();
       this.set(count);
     } catch (err) {
-      console.error('[metrics] Failed to collect replay events:', err);
+      logger.error({ err }, 'Failed to collect replay events metric');
     }
   },
 });
@@ -105,7 +106,7 @@ export const replayMouseEventsTotal = new Gauge({
       const count = await getReplayMouseEventsCount();
       this.set(count);
     } catch (err) {
-      console.error('[metrics] Failed to collect replay mouse events:', err);
+      logger.error({ err }, 'Failed to collect replay mouse events metric');
     }
   },
 });
@@ -145,7 +146,7 @@ export function startMetricsServer(): void {
   });
 
   server.listen(METRICS_PORT, () => {
-    console.log(`Metrics server listening on http://localhost:${METRICS_PORT}/metrics`);
+    logger.info({ port: METRICS_PORT }, `Metrics server listening on http://localhost:${METRICS_PORT}/metrics`);
   });
 }
 

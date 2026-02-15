@@ -1,3 +1,4 @@
+import logger from './logger.ts';
 import * as db from './db.ts';
 import type { GameState, PlayerInfo } from './types.ts';
 
@@ -20,7 +21,7 @@ export async function recordGameEnd(state: GameState, playerInfo: Map<string, Pl
   const results = await Promise.allSettled(promises);
   for (const r of results) {
     if (r.status === 'rejected') {
-      console.error('[stats] Failed to record stats:', r.reason);
+      logger.error({ err: r.reason }, 'Failed to record game stats');
     }
   }
 }

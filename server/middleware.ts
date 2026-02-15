@@ -1,9 +1,10 @@
 import type { Request, Response, NextFunction } from 'express';
+import logger from './logger.ts';
 import { AppError } from './utils.ts';
 
 // Global error handler middleware
 export function errorHandler(err: Error, req: Request, res: Response, next: NextFunction) {
-  console.error('[Error]', err);
+  logger.error({ err, path: req.path, method: req.method }, 'HTTP request error');
 
   // Handle operational errors
   if (err instanceof AppError && err.isOperational) {
@@ -14,7 +15,7 @@ export function errorHandler(err: Error, req: Request, res: Response, next: Next
   }
 
   // Handle unexpected errors
-  console.error('[FATAL] Unexpected error:', err.stack);
+  logger.fatal({ err, stack: err.stack, path: req.path, method: req.method }, 'Unexpected error');
   res.status(500).json({
     error: 'Internal server error',
     status: 500,

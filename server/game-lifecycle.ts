@@ -1,3 +1,4 @@
+import logger from './logger.ts';
 import type { GamePhase, GameState, GameLifecycle, CleanupHook } from './types.ts';
 
 const VALID_TRANSITIONS: Record<GamePhase, GamePhase[]> = {
@@ -22,7 +23,7 @@ export function createGameLifecycle(): GameLifecycle {
   function transition(state: GameState, to: GamePhase): void {
     const allowed = VALID_TRANSITIONS[state.phase];
     if (!allowed || !allowed.includes(to)) {
-      console.error(`[lifecycle] Invalid phase transition: ${state.phase} → ${to}`);
+      logger.error({ from: state.phase, to }, 'Invalid phase transition');
     }
     state.phase = to;
   }
@@ -30,7 +31,7 @@ export function createGameLifecycle(): GameLifecycle {
   function teardown(): void {
     for (const hook of hooks) {
       try { hook(); } catch (err) {
-        console.error('[lifecycle] Cleanup hook error:', err);
+        logger.error({ err }, 'Cleanup hook error');
       }
     }
   }

@@ -1,5 +1,6 @@
 import type { WebSocket } from 'ws';
 import type { GameContext, PlayerInfo } from './types.ts';
+import logger from './logger.ts';
 import * as network from './network.ts';
 import * as lobby from './lobby.ts';
 import * as game from './game.ts';
@@ -33,7 +34,7 @@ export async function handleLeaveLobby(ws: WebSocket, pid: string, lobbyId: numb
   try {
     await lobby.leaveLobby(lobbyId, pid);
   } catch (err: unknown) {
-    console.error('Error leaving lobby:', err);
+    logger.error({ err, lobbyId, playerId: pid }, 'Error leaving lobby');
   }
 
   if (mem) {

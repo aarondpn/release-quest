@@ -1,5 +1,6 @@
 import { getDifficultyConfig } from './config.ts';
 import { randomPosition } from './state.ts';
+import logger from './logger.ts';
 import * as bugs from './bugs.ts';
 import * as game from './game.ts';
 import * as powerups from './powerups.ts';
@@ -38,11 +39,11 @@ export function setupBossWander(ctx: GameContext, interval: number): void {
         state.boss.y = newPos.y;
         ctx.events.emit({ type: 'boss-wander', x: newPos.x, y: newPos.y });
       } catch (err) {
-        console.error('Error in bossWander:', err);
+        logger.error({ err, lobbyId: ctx.lobbyId }, 'Error in bossWander');
       }
     }, interval);
   } catch (err) {
-    console.error('Error setting up boss wander:', err);
+    logger.error({ err, lobbyId: ctx.lobbyId }, 'Error setting up boss wander');
   }
 }
 
@@ -53,11 +54,11 @@ export function setupMinionSpawning(ctx: GameContext, rate: number): void {
         if (ctx.state.hammerStunActive) return;
         bugs.spawnMinion(ctx);
       } catch (err) {
-        console.error('Error spawning minion:', err);
+        logger.error({ err, lobbyId: ctx.lobbyId }, 'Error spawning minion');
       }
     }, rate);
   } catch (err) {
-    console.error('Error setting up minion spawning:', err);
+    logger.error({ err, lobbyId: ctx.lobbyId }, 'Error setting up minion spawning');
   }
 }
 
@@ -134,13 +135,13 @@ function bossTick(ctx: GameContext): void {
               timeRemaining: state.boss.timeRemaining,
             });
           } catch (err) {
-            console.error('Error logging boss escalation:', err);
+            logger.error({ err, lobbyId: ctx.lobbyId }, 'Error logging boss escalation');
           }
         }
         try {
           setupMinionSpawning(ctx, getEffectiveSpawnRate(ctx));
         } catch (err) {
-          console.error('Error setting up minion spawning during escalation:', err);
+          logger.error({ err, lobbyId: ctx.lobbyId }, 'Error setting up minion spawning during escalation');
         }
       }
     }
@@ -159,7 +160,7 @@ function bossTick(ctx: GameContext): void {
       game.endGame(ctx, 'loss-timeout', false);
     }
   } catch (err) {
-    console.error('Error in bossTick:', err);
+    logger.error({ err, lobbyId: ctx.lobbyId }, 'Error in bossTick');
   }
 }
 
@@ -196,7 +197,7 @@ export function handleBossClick(ctx: GameContext, pid: string): void {
         setupBossWander(ctx, bossConfig.enrageWanderInterval);
         setupMinionSpawning(ctx, getEffectiveSpawnRate(ctx));
       } catch (err) {
-        console.error('Error setting up enraged boss:', err);
+        logger.error({ err, lobbyId: ctx.lobbyId }, 'Error setting up enraged boss');
       }
     }
 
@@ -209,7 +210,7 @@ export function handleBossClick(ctx: GameContext, pid: string): void {
           enraged: state.boss.enraged,
         });
       } catch (err) {
-        console.error('Error logging boss hit:', err);
+        logger.error({ err, lobbyId: ctx.lobbyId }, 'Error logging boss hit');
       }
     }
 
@@ -229,7 +230,7 @@ export function handleBossClick(ctx: GameContext, pid: string): void {
       defeatBoss(ctx);
     }
   } catch (err) {
-    console.error('Error in handleBossClick:', err);
+    logger.error({ err, lobbyId: ctx.lobbyId, playerId: pid }, 'Error in handleBossClick');
   }
 }
 

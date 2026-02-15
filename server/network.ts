@@ -1,4 +1,5 @@
 import type { WebSocket, WebSocketServer } from 'ws';
+import logger from './logger.ts';
 import { recordEvent } from './recording.ts';
 import { wsMessagesSent } from './metrics.ts';
 
@@ -40,11 +41,11 @@ export function broadcast(msg: Record<string, unknown>, exclude?: WebSocket): vo
           wsMessagesSent.inc();
         }
       } catch (err) {
-        console.error('Error broadcasting to client:', err);
+        logger.error({ err }, 'Error broadcasting to client');
       }
     });
   } catch (err) {
-    console.error('Error in broadcast:', err);
+    logger.error({ err }, 'Error in broadcast');
   }
 }
 
@@ -60,12 +61,12 @@ export function broadcastToLobby(lobbyId: number, msg: Record<string, unknown>, 
           wsMessagesSent.inc();
         }
       } catch (err) {
-        console.error(`Error broadcasting to lobby ${lobbyId} client:`, err);
+        logger.error({ err, lobbyId }, 'Error broadcasting to lobby client');
       }
     }
     recordEvent(lobbyId, msg);
   } catch (err) {
-    console.error(`Error in broadcastToLobby ${lobbyId}:`, err);
+    logger.error({ err, lobbyId }, 'Error in broadcastToLobby');
   }
 }
 
@@ -76,6 +77,6 @@ export function send(ws: WebSocket, msg: Record<string, unknown>): void {
       wsMessagesSent.inc();
     }
   } catch (err) {
-    console.error('Error sending message to client:', err);
+    logger.error({ err }, 'Error sending message to client');
   }
 }

@@ -1,6 +1,7 @@
 import type { WebSocket, RawData } from 'ws';
 import type { ZodError } from 'zod';
 import type { PlayerInfo } from './types.ts';
+import logger, { createPlayerLogger } from './logger.ts';
 import * as network from './network.ts';
 import * as lobby from './lobby.ts';
 import { handleLeaveLobby, broadcastLobbyList } from './helpers.ts';
@@ -60,7 +61,8 @@ export function setupWebSocketConnection(
   playerInfo.set(playerId, { name, color, icon });
   network.wsToPlayer.set(ws, playerId);
 
-  console.log(`[connect] ${playerId} connected (${wss.clients.size} online)`);
+  const playerLogger = createPlayerLogger(playerId);
+  playerLogger.info({ onlineCount: wss.clients.size }, 'Player connected');
 
   // Send welcome — no game state yet, player must join a lobby first
   network.send(ws, {
@@ -78,11 +80,11 @@ export function setupWebSocketConnection(
 
   // WebSocket error handler
   ws.on('error', (err: Error) => {
-    console.error(`[ws-error] ${playerId}:`, err.message);
+    playerLogger.error({ err: err.message }, 'WebSocket error');
     try {
       ws.close();
     } catch (closeErr) {
-      console.error('Error closing WebSocket after error:', closeErr);
+      playerLogger.error({ err: closeErr }, 'Error closing WebSocket after error');
     }
   });
 
@@ -103,11 +105,11 @@ export function setupWebSocketConnection(
     try {
       await handleMessage(ws, msg, pid, playerInfo, wss);
     } catch (err) {
-      console.error(`[msg-error] ${pid} handling ${msg.type}:`, err);
+      playerLogger.error({ err, messageType: msg.type }, 'Error handling message');
       try {
         network.send(ws, { type: 'error', message: 'Internal server error' });
       } catch (sendErr) {
-        console.error('Error sending error message:', sendErr);
+        playerLogger.error({ err: sendErr }, 'Error sending error message');
       }
     }
   });
@@ -122,19 +124,21 @@ export function setupWebSocketConnection(
       if (pid) {
         const currentLobbyId = lobby.getLobbyForPlayer(pid);
         if (currentLobbyId) {
-          console.log(`[disconnect] ${pid} left lobby ${currentLobbyId} (disconnected)`);
+          const disconnectLogger = createPlayerLogger(pid, { lobbyId: currentLobbyId });
+          disconnectLogger.info('Player left lobby (disconnected)');
           await handleLeaveLobby(ws, pid, currentLobbyId, playerInfo);
           broadcastLobbyList(wss);
         }
         playerInfo.delete(pid);
-        console.log(`[disconnect] ${pid} disconnected (${wss.clients.size} online)`);
+        const playerLogger = createPlayerLogger(pid);
+        playerLogger.info({ onlineCount: wss.clients.size }, 'Player disconnected');
       }
 
       // Broadcast updated online count to all remaining clients
       network.broadcast({ type: 'online-count', count: wss.clients.size });
       gamePlayersOnline.dec();
     } catch (err) {
-      console.error('Error handling WebSocket close:', err);
+      logger.error({ err }, 'Error handling WebSocket close');
     }
   });
 }

@@ -1,6 +1,7 @@
 import { LOBBY_CONFIG } from './config.ts';
 import { createGameState, createCounters } from './state.ts';
 import { createTimerBag } from './timer-bag.ts';
+import logger, { createLobbyLogger } from './logger.ts';
 import * as db from './db.ts';
 import { gameLobbiesActive } from './metrics.ts';
 import { createEventBus } from './event-bus.ts';
@@ -108,7 +109,7 @@ export async function leaveLobby(lobbyId: number, playerId: string): Promise<voi
   try {
     await db.leaveLobby(lobbyId, playerId);
   } catch (err: unknown) {
-    console.error('DB leaveLobby failed:', (err as Error).message);
+    logger.error({ err: (err as Error).message, lobbyId, playerId }, 'DB leaveLobby failed');
   }
   playerToLobby.delete(playerId);
 
@@ -144,7 +145,7 @@ export async function destroyLobby(lobbyId: number): Promise<void> {
   try {
     await db.deleteLobby(lobbyId);
   } catch (err) {
-    console.error(`Error deleting lobby ${lobbyId} from DB:`, err);
+    logger.error({ err, lobbyId }, 'Error deleting lobby from DB');
   }
 }
 
@@ -156,7 +157,8 @@ export async function listLobbies(): Promise<DbLobbyRow[]> {
 export async function sweepEmptyLobbies(): Promise<void> {
   for (const [lobbyId, mem] of lobbies) {
     if (Object.keys(mem.state.players).length === 0) {
-      console.log(`Sweeping empty lobby ${lobbyId}`);
+      const lobbyLogger = createLobbyLogger(lobbyId.toString());
+      lobbyLogger.info('Sweeping empty lobby');
       await destroyLobby(lobbyId);
     }
   }

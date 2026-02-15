@@ -1,8 +1,9 @@
+import logger, { createLobbyLogger } from './logger.ts';
 import type { MatchLog } from './types.ts';
 
 export function createMatchLog(lobbyId: number): MatchLog {
   const startTime = Date.now();
-  const prefix = `[MATCH ${lobbyId}]`;
+  const matchLogger = createLobbyLogger(lobbyId.toString());
 
   return {
     log(event, data) {
@@ -12,10 +13,10 @@ export function createMatchLog(lobbyId: number): MatchLog {
         event,
         ...data
       };
-      console.log(`${prefix} ${JSON.stringify(logEntry)}`);
+      matchLogger.debug(logEntry, 'Match event');
     },
     close() {
-      console.log(`${prefix} Match ended`);
+      matchLogger.debug('Match ended');
     },
   };
 }

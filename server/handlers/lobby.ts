@@ -1,5 +1,6 @@
 import type { HandlerContext, MessageHandler } from './types.ts';
 import { LOGICAL_W, LOGICAL_H } from '../config.ts';
+import { createPlayerLogger, createLobbyLogger } from '../logger.ts';
 import { getStateSnapshot } from '../state.ts';
 import * as network from '../network.ts';
 import * as db from '../db.ts';
@@ -22,13 +23,15 @@ export const handleCreateLobby: MessageHandler = ({ ws, msg, pid, wss }) => {
   const finalDifficulty = validDifficulties.includes(difficulty) ? difficulty : 'medium';
   const customConfig = msg.customConfig || undefined;
 
+  const playerLogger = createPlayerLogger(pid);
+
   lobby.createLobby(lobbyName, maxPlayers, finalDifficulty, customConfig).then(result => {
     if (result.error) {
-      console.log(`[lobby] ${pid} create failed: ${result.error}`);
+      playerLogger.info({ error: result.error }, 'Lobby creation failed');
       network.send(ws, { type: 'lobby-error', message: result.error });
       return;
     }
-    console.log(`[lobby] ${pid} created lobby "${lobbyName}" (${result.lobby!.code}) difficulty: ${finalDifficulty}${customConfig ? ' (custom)' : ''}`);
+    playerLogger.info({ lobbyName, lobbyCode: result.lobby!.code, difficulty: finalDifficulty, customConfig: !!customConfig }, 'Lobby created');
     network.send(ws, { type: 'lobby-created', lobby: result.lobby });
     // Broadcast updated lobby list to all unattached clients
     broadcastLobbyList(wss);
@@ -53,6 +56,8 @@ export const handleJoinLobby: MessageHandler = async ({ ws, msg, pid, playerInfo
   const info = playerInfo.get(pid);
   if (!info) return;
 
+  const playerLogger = createPlayerLogger(pid);
+
   const playerData = {
     id: pid,
     name: info.name,
@@ -66,7 +71,7 @@ export const handleJoinLobby: MessageHandler = async ({ ws, msg, pid, playerInfo
 
   lobby.joinLobby(lobbyId, pid, playerData).then(result => {
     if (result.error) {
-      console.log(`[lobby] ${pid} join failed (lobby ${lobbyId}): ${result.error}`);
+      playerLogger.info({ lobbyId, error: result.error }, 'Lobby join failed');
       network.send(ws, { type: 'lobby-error', message: result.error });
       return;
     }
@@ -77,7 +82,8 @@ export const handleJoinLobby: MessageHandler = async ({ ws, msg, pid, playerInfo
     const ctx = getCtxForPlayer(pid, playerInfo);
     if (!ctx) return;
 
-    console.log(`[lobby] ${pid} joined lobby ${lobbyId} (${Object.keys(ctx.state.players).length} players)`);
+    const lobbyLogger = createLobbyLogger(lobbyId.toString());
+    lobbyLogger.info({ playerId: pid, playerCount: Object.keys(ctx.state.players).length }, 'Player joined lobby');
 
     // Send lobby-joined with full game state
     network.send(ws, {
@@ -137,9 +143,11 @@ export const handleJoinLobbyByCode: MessageHandler = async ({ ws, msg, pid, play
       bugsSquashed: 0,
     };
 
+    const playerLogger = createPlayerLogger(pid);
+
     const result = await lobby.joinLobby(lobbyId, pid, playerData);
     if (result.error) {
-      console.log(`[lobby] ${pid} join-by-code failed (code ${code}): ${result.error}`);
+      playerLogger.info({ code, error: result.error }, 'Join by code failed');
       network.send(ws, { type: 'lobby-error', message: result.error });
       return;
     }
@@ -150,7 +158,8 @@ export const handleJoinLobbyByCode: MessageHandler = async ({ ws, msg, pid, play
     const ctx = getCtxForPlayer(pid, playerInfo);
     if (!ctx) return;
 
-    console.log(`[lobby] ${pid} joined lobby ${lobbyId} via invite code ${code} (${Object.keys(ctx.state.players).length} players)`);
+    const lobbyLogger = createLobbyLogger(lobbyId.toString());
+    lobbyLogger.info({ playerId: pid, code, playerCount: Object.keys(ctx.state.players).length }, 'Player joined via invite code');
 
     network.send(ws, {
       type: 'lobby-joined',
@@ -175,7 +184,8 @@ export const handleJoinLobbyByCode: MessageHandler = async ({ ws, msg, pid, play
 export const handleLeaveLobby: MessageHandler = async ({ ws, pid, playerInfo, wss }) => {
   const currentLobbyId = lobby.getLobbyForPlayer(pid);
   if (currentLobbyId) {
-    console.log(`[lobby] ${pid} left lobby ${currentLobbyId}`);
+    const lobbyLogger = createLobbyLogger(currentLobbyId.toString());
+    lobbyLogger.info({ playerId: pid }, 'Player left lobby');
     await doLeaveLobby(ws, pid, currentLobbyId, playerInfo);
     network.send(ws, { type: 'lobby-left' });
     broadcastLobbyList(wss);
