@@ -5,6 +5,7 @@ import * as game from '../game.ts';
 import * as powerups from '../powerups.ts';
 import { gameBugsSquashed } from '../metrics.ts';
 import { getCtxForPlayer } from '../helpers.ts';
+import { z } from 'zod';
 import type { BugEntity, GameContext, EntityDescriptor, BugTypePlugin } from '../types.ts';
 
 export const MEMORY_LEAK_MECHANICS = {
@@ -217,6 +218,16 @@ export const memoryLeakPlugin: BugTypePlugin = {
       const playerCount = Object.keys(ctx.state.players).length;
       return Object.values(ctx.state.bugs).filter(b => b.isMemoryLeak).length < Math.max(1, playerCount - 1);
     },
+  },
+  schemas: {
+    'click-memory-leak-start': z.object({
+      type: z.literal('click-memory-leak-start'),
+      bugId: z.string(),
+    }),
+    'click-memory-leak-complete': z.object({
+      type: z.literal('click-memory-leak-complete'),
+      bugId: z.string(),
+    }),
   },
   handlers: {
     'click-memory-leak-start': ({ msg, pid, playerInfo }: any) => {

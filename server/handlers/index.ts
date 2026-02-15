@@ -1,4 +1,6 @@
+import type { ZodType } from 'zod';
 import type { MessageHandler } from './types.ts';
+import { staticSchemas } from './schemas.ts';
 import { handleRegister, handleLogin, handleLogout, handleResumeSession } from './auth.ts';
 import { handleSetName } from './profile.ts';
 import { handleListLobbies, handleCreateLobby, handleJoinLobby, handleJoinLobbyByCode, handleLeaveLobby } from './lobby.ts';
@@ -7,7 +9,7 @@ import { handleClickBug, handleClickBoss } from './bugs.ts';
 import { handleClickDuck, handleClickHammer } from './powerups.ts';
 import { handleGetLeaderboard, handleGetMyStats, handleGetRecordings, handleShareRecording, handleUnshareRecording } from './stats.ts';
 import { handleCursorMove } from './cursor.ts';
-import { getHandlers as getPluginHandlers } from '../entity-types/index.ts';
+import { getHandlers as getPluginHandlers, getSchemas as getPluginSchemas } from '../entity-types/index.ts';
 
 const staticHandlers: Record<string, MessageHandler> = {
   'register': handleRegister,
@@ -36,4 +38,9 @@ const staticHandlers: Record<string, MessageHandler> = {
 export const handlers: Record<string, MessageHandler> = {
   ...staticHandlers,
   ...getPluginHandlers(),
+};
+
+export const schemas: Record<string, ZodType> = {
+  ...staticSchemas,
+  ...getPluginSchemas(),
 };

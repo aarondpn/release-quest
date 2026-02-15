@@ -4,6 +4,7 @@ import * as game from '../game.ts';
 import * as powerups from '../powerups.ts';
 import { gameBugsSquashed } from '../metrics.ts';
 import { getCtxForPlayer } from '../helpers.ts';
+import { z } from 'zod';
 import type { BugEntity, GameContext, EntityDescriptor, BugTypePlugin } from '../types.ts';
 
 export const INFINITE_LOOP_MECHANICS = {
@@ -154,6 +155,12 @@ export const infiniteLoopPlugin: BugTypePlugin = {
     chanceKey: 'infiniteLoopChance',
     startLevelKey: 'infiniteLoopStartLevel',
     createVariant: () => ({ isInfiniteLoop: true, loopAngle: 0 }),
+  },
+  schemas: {
+    'click-breakpoint': z.object({
+      type: z.literal('click-breakpoint'),
+      bugId: z.string(),
+    }),
   },
   handlers: {
     'click-breakpoint': ({ msg, pid, playerInfo }: any) => {

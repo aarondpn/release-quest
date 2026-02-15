@@ -1,6 +1,7 @@
 // Shared type definitions — no runtime code
 
 import type { GameEventBus } from './event-bus.ts';
+import type { ZodType } from 'zod';
 
 export type GamePhase = 'lobby' | 'playing' | 'boss' | 'gameover' | 'win';
 
@@ -222,6 +223,7 @@ export interface BugTypePlugin {
     | { mode: 'multi'; chanceKey: keyof DifficultyConfig['specialBugs']; startLevelKey?: keyof DifficultyConfig['specialBugs'];
         trySpawn(ctx: GameContext, cfg: LevelConfigEntry): boolean; };
   handlers?: Record<string, (ctx: any) => void | Promise<void>>;
+  schemas?: Record<string, ZodType>;
 }
 
 export interface SpawnEntityOptions {

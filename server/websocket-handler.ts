@@ -1,10 +1,23 @@
 import type { WebSocket, RawData } from 'ws';
+import type { ZodError } from 'zod';
 import type { PlayerInfo } from './types.ts';
 import * as network from './network.ts';
 import * as lobby from './lobby.ts';
 import { handleLeaveLobby, broadcastLobbyList } from './helpers.ts';
-import { handlers } from './handlers/index.ts';
+import { handlers, schemas } from './handlers/index.ts';
 import { wsMessagesReceived, gamePlayersOnline } from './metrics.ts';
+
+function formatValidationError(messageType: string, error: ZodError) {
+  return {
+    type: 'validation-error',
+    messageType,
+    errors: error.issues.map(issue => ({
+      path: issue.path.join('.'),
+      message: issue.message,
+      code: issue.code,
+    })),
+  };
+}
 
 /**
  * Handle incoming WebSocket messages
@@ -17,7 +30,19 @@ export async function handleMessage(
   wss: any
 ): Promise<void> {
   const handler = handlers[msg.type];
-  if (handler) await handler({ ws, msg, pid, playerInfo, wss });
+  if (!handler) return;
+
+  const schema = schemas[msg.type];
+  if (schema) {
+    const result = schema.safeParse(msg);
+    if (!result.success) {
+      network.send(ws, formatValidationError(msg.type, result.error));
+      return;
+    }
+    msg = result.data;
+  }
+
+  await handler({ ws, msg, pid, playerInfo, wss });
 }
 
 /**

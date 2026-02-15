@@ -7,6 +7,7 @@ import { mergeConflictPlugin } from './merge-conflict.ts';
 import { pipelinePlugin } from './pipeline.ts';
 import { infiniteLoopPlugin } from './infinite-loop.ts';
 import type { BugEntity, BugTypePlugin, EntityDescriptor } from '../types.ts';
+import type { ZodType } from 'zod';
 
 // Order = detection priority (checked first to last)
 const plugins: BugTypePlugin[] = [
@@ -42,6 +43,14 @@ export function getHandlers(): Record<string, (ctx: any) => void | Promise<void>
     if (p.handlers) Object.assign(handlers, p.handlers);
   }
   return handlers;
+}
+
+export function getSchemas(): Record<string, ZodType> {
+  const schemas: Record<string, ZodType> = {};
+  for (const p of plugins) {
+    if (p.schemas) Object.assign(schemas, p.schemas);
+  }
+  return schemas;
 }
 
 export { descriptors as types, getType };
