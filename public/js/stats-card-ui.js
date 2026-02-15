@@ -125,13 +125,20 @@ function renderStatsCardPreview() {
 
   if (!clientState.isLoggedIn) {
     dom.statsCardPreview.innerHTML = '<div class="stats-card-empty">Log in to create your stats card</div>';
-    if (dom.statsCardDownloadBtn) dom.statsCardDownloadBtn.classList.add('hidden');
+    if (dom.statsCardDownloadBtn) {
+      dom.statsCardDownloadBtn.classList.remove('hidden');
+      dom.statsCardDownloadBtn.disabled = true;
+      dom.statsCardDownloadBtn.title = 'Log in to download your stats card';
+    }
     return;
   }
 
   if (!currentStats) {
     dom.statsCardPreview.innerHTML = '<div class="stats-card-empty">Loading stats...</div>';
-    if (dom.statsCardDownloadBtn) dom.statsCardDownloadBtn.classList.add('hidden');
+    if (dom.statsCardDownloadBtn) {
+      dom.statsCardDownloadBtn.disabled = true;
+      dom.statsCardDownloadBtn.title = '';
+    }
     return;
   }
 
@@ -189,7 +196,11 @@ function renderStatsCardPreview() {
       '<div class="sc-footer">RELEASE QUEST</div>' +
     '</div>';
 
-  if (dom.statsCardDownloadBtn) dom.statsCardDownloadBtn.classList.remove('hidden');
+  if (dom.statsCardDownloadBtn) {
+    dom.statsCardDownloadBtn.classList.remove('hidden');
+    dom.statsCardDownloadBtn.disabled = false;
+    dom.statsCardDownloadBtn.title = '';
+  }
 }
 
 // ── Theme picker ──

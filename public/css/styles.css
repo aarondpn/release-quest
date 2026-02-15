@@ -3096,10 +3096,16 @@ header p {
   letter-spacing: 1px;
   transition: all 0.2s;
 }
-.stats-card-download-btn:hover {
+.stats-card-download-btn:hover:not(:disabled) {
   background: rgba(78,205,196,0.15) !important;
   text-shadow: 0 0 8px rgba(78,205,196,0.5);
   box-shadow: 0 0 12px rgba(78,205,196,0.2);
+}
+.stats-card-download-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  border-color: var(--mid) !important;
+  color: var(--mid) !important;
 }
 
 /* Card preview container */
