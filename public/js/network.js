@@ -146,6 +146,8 @@ export function handleMessageInternal(msg) {
           if (msg.token) {
             clientState.authToken = msg.token;
             localStorage.setItem('rq_session_token', msg.token);
+          } else if (msg.action === 'resume') {
+            clientState.authToken = localStorage.getItem('rq_session_token');
           }
           clientState.authUser = msg.user;
           clientState.isLoggedIn = true;
