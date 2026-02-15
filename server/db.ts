@@ -299,6 +299,11 @@ export async function deleteGuestSession(token: string): Promise<void> {
   await pool.query(`DELETE FROM guest_sessions WHERE token = $1`, [token]);
 }
 
+export async function expireGuestSessions(): Promise<number> {
+  const result = await pool.query(`DELETE FROM guest_sessions WHERE expires_at < NOW()`);
+  return result.rowCount ?? 0;
+}
+
 // Stats queries
 
 export async function recordGameStats(userId: number, score: number, won: boolean, bugsSquashed: number): Promise<void> {
