@@ -6,9 +6,168 @@
   "links": [],
   "panels": [
     {
+      "title": "Overview",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "collapsed": false
+    },
+    {
+      "title": "Players Online",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "targets": [
+        {
+          "expr": "game_players_online{instance=~\"$instance\"}",
+          "legendFormat": "Players",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Active Lobbies",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "targets": [
+        {
+          "expr": "game_lobbies_active{instance=~\"$instance\"}",
+          "legendFormat": "Lobbies",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "purple", "value": null }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "WebSocket Connections",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "targets": [
+        {
+          "expr": "ws_connections_active{instance=~\"$instance\"}",
+          "legendFormat": "Active",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Win Rate",
+      "type": "gauge",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "targets": [
+        {
+          "expr": "sum(rate(game_games_completed_total{outcome=\"win\", instance=~\"$instance\"}[5m])) / sum(rate(game_games_completed_total{instance=~\"$instance\"}[5m]))",
+          "legendFormat": "Win Rate",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0.3 },
+              { "color": "green", "value": 0.6 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Game",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "collapsed": false
+    },
+    {
+      "title": "Games Started / Completed",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "targets": [
+        {
+          "expr": "sum(rate(game_games_started_total{instance=~\"$instance\"}[5m]))",
+          "legendFormat": "Started",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(game_games_completed_total{instance=~\"$instance\"}[5m]))",
+          "legendFormat": "Completed",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "games/s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "Bugs Squashed/sec",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "targets": [
+        {
+          "expr": "rate(game_bugs_squashed_total{instance=~\"$instance\"}[5m])",
+          "legendFormat": "Bugs Squashed",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bugs/s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "title": "HTTP & WebSocket",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
+      "collapsed": false
+    },
+    {
       "title": "Request Rate",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 15 },
       "targets": [
         {
           "expr": "sum(rate(http_requests_total{instance=~\"$instance\"}[5m])) by (method)",
@@ -26,7 +185,8 @@
     {
       "title": "Request Latency (p50 / p95 / p99)",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 15 },
       "targets": [
         {
           "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{instance=~\"$instance\"}[5m])) by (le))",
@@ -52,25 +212,10 @@
       }
     },
     {
-      "title": "Active WebSocket Connections",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 8 },
-      "targets": [
-        {
-          "expr": "ws_connections_active{instance=~\"$instance\"}",
-          "legendFormat": "Active",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      }
-    },
-    {
       "title": "WS Messages/sec",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 15 },
       "targets": [
         {
           "expr": "sum(rate(ws_messages_received_total{instance=~\"$instance\"}[5m]))",
@@ -91,108 +236,15 @@
       }
     },
     {
-      "title": "Active Lobbies",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 8 },
-      "targets": [
-        {
-          "expr": "game_lobbies_active{instance=~\"$instance\"}",
-          "legendFormat": "Lobbies",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      }
-    },
-    {
-      "title": "Players Online",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 12 },
-      "targets": [
-        {
-          "expr": "game_players_online{instance=~\"$instance\"}",
-          "legendFormat": "Players",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      }
-    },
-    {
-      "title": "Games Started / Completed",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
-      "targets": [
-        {
-          "expr": "sum(rate(game_games_started_total{instance=~\"$instance\"}[5m]))",
-          "legendFormat": "Started",
-          "refId": "A"
-        },
-        {
-          "expr": "sum(rate(game_games_completed_total{instance=~\"$instance\"}[5m]))",
-          "legendFormat": "Completed",
-          "refId": "B"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "games/s"
-        },
-        "overrides": []
-      }
-    },
-    {
-      "title": "Win Rate",
-      "type": "gauge",
-      "gridPos": { "h": 8, "w": 6, "x": 6, "y": 12 },
-      "targets": [
-        {
-          "expr": "sum(rate(game_games_completed_total{outcome=\"win\", instance=~\"$instance\"}[5m])) / sum(rate(game_games_completed_total{instance=~\"$instance\"}[5m]))",
-          "legendFormat": "Win Rate",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "min": 0,
-          "max": 1,
-          "thresholds": {
-            "steps": [
-              { "color": "red", "value": null },
-              { "color": "yellow", "value": 0.3 },
-              { "color": "green", "value": 0.6 }
-            ]
-          }
-        },
-        "overrides": []
-      }
-    },
-    {
-      "title": "Bugs Squashed/sec",
-      "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
-      "targets": [
-        {
-          "expr": "rate(game_bugs_squashed_total{instance=~\"$instance\"}[5m])",
-          "legendFormat": "Bugs Squashed",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bugs/s"
-        },
-        "overrides": []
-      }
+      "title": "System",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
+      "collapsed": false
     },
     {
       "title": "Process Memory",
       "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "gridPos": { "h": 8, "w": 8, "x": 0, "y": 24 },
       "targets": [
         {
@@ -211,6 +263,7 @@
     {
       "title": "CPU Usage",
       "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "gridPos": { "h": 8, "w": 8, "x": 8, "y": 24 },
       "targets": [
         {
@@ -229,6 +282,7 @@
     {
       "title": "Event Loop Lag",
       "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "gridPos": { "h": 8, "w": 8, "x": 16, "y": 24 },
       "targets": [
         {
@@ -251,11 +305,19 @@
     "list": [
       {
         "current": {},
-        "definition": "label_values(up, instance)",
+        "name": "DS_PROMETHEUS",
+        "label": "Prometheus",
+        "query": "prometheus",
+        "type": "datasource",
+        "refresh": 1
+      },
+      {
+        "current": {},
+        "definition": "label_values(game_players_online, instance)",
         "includeAll": true,
         "multi": true,
         "name": "instance",
-        "query": "label_values(up, instance)",
+        "query": "label_values(game_players_online, instance)",
         "refresh": 2,
         "type": "query",
         "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
