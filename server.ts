@@ -4,7 +4,7 @@ import path from 'node:path';
 import { WebSocketServer } from 'ws';
 import type { WebSocket } from 'ws';
 
-import { SERVER_CONFIG, COLORS, ICONS } from './server/config.ts';
+import { SERVER_CONFIG, COLORS, ICONS, GUEST_NAMES } from './server/config.ts';
 import * as network from './server/network.ts';
 import * as db from './server/db.ts';
 import * as lobby from './server/lobby.ts';
@@ -101,7 +101,7 @@ wss.on('connection', (ws: WebSocket) => {
   const color = COLORS[colorIndex % COLORS.length];
   const icon = ICONS[colorIndex % ICONS.length];
   colorIndex++;
-  const name = 'Player ' + playerId.split('_')[1];
+  const name = GUEST_NAMES[Math.floor(Math.random() * GUEST_NAMES.length)];
 
   setupWebSocketConnection(ws, playerId, color, icon, name, playerInfo, wss);
 });
