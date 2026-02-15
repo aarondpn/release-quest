@@ -58,18 +58,11 @@ export function switchTab(tab) {
 export function submitLogin() {
   const username = dom.authLoginUsername.value.trim();
   const password = dom.authLoginPassword.value;
-  console.log('submitLogin called', { username, password: password ? '***' : '', hasSendMessage: !!_sendMessage });
   if (!username || !password) {
     showAuthError('Please enter username and password');
     return;
   }
-  if (_sendMessage) {
-    console.log('Sending login message');
-    _sendMessage({ type: 'login', username, password });
-  } else {
-    console.error('_sendMessage is not initialized');
-    showAuthError('Login failed - connection error');
-  }
+  if (_sendMessage) _sendMessage({ type: 'login', username, password });
 }
 
 export function submitRegister() {

@@ -13,7 +13,7 @@ export const handleRegister: MessageHandler = ({ ws, msg, pid, playerInfo }) => 
 
   const playerLogger = createPlayerLogger(pid);
 
-  auth.register(username, password, displayName, regIcon).then(async result => {
+  auth.register(username, password, displayName, regIcon).then(result => {
     if (result.error !== undefined) {
       playerLogger.info({ username, error: result.error }, 'Registration failed');
       network.send(ws, { type: 'auth-result', action: 'register', success: false, error: result.error });
@@ -25,17 +25,6 @@ export const handleRegister: MessageHandler = ({ ws, msg, pid, playerInfo }) => 
       info.name = result.user.displayName;
       info.icon = result.user.icon;
       info.userId = result.user.id;
-    }
-    // Link player session to user
-    const playerSessionToken = network.playerToSessionToken.get(pid);
-    if (playerSessionToken) {
-      try {
-        await auth.linkPlayerSessionToUser(playerSessionToken, result.user.id);
-        // Update session with user's display name and icon
-        await auth.updatePlayerSessionInfo(playerSessionToken, result.user.displayName, result.user.icon);
-      } catch (err) {
-        playerLogger.error({ err }, 'Failed to link player session to user');
-      }
     }
     network.send(ws, {
       type: 'auth-result', action: 'register', success: true,
@@ -66,7 +55,7 @@ export const handleLogin: MessageHandler = ({ ws, msg, pid, playerInfo }) => {
 
   const playerLogger = createPlayerLogger(pid);
 
-  auth.login(username, password).then(async result => {
+  auth.login(username, password).then(result => {
     if (result.error !== undefined) {
       playerLogger.info({ username, error: result.error }, 'Login failed');
       network.send(ws, { type: 'auth-result', action: 'login', success: false, error: result.error });
@@ -78,17 +67,6 @@ export const handleLogin: MessageHandler = ({ ws, msg, pid, playerInfo }) => {
       info.name = result.user.displayName;
       info.icon = result.user.icon;
       info.userId = result.user.id;
-    }
-    // Link player session to user
-    const playerSessionToken = network.playerToSessionToken.get(pid);
-    if (playerSessionToken) {
-      try {
-        await auth.linkPlayerSessionToUser(playerSessionToken, result.user.id);
-        // Update session with user's display name and icon
-        await auth.updatePlayerSessionInfo(playerSessionToken, result.user.displayName, result.user.icon);
-      } catch (err) {
-        playerLogger.error({ err }, 'Failed to link player session to user');
-      }
     }
     network.send(ws, {
       type: 'auth-result', action: 'login', success: true,
@@ -132,7 +110,7 @@ export const handleResumeSession: MessageHandler = ({ ws, msg, pid, playerInfo }
   const token = String(msg.token || '');
   const playerLogger = createPlayerLogger(pid);
   
-  auth.validateSession(token).then(async user => {
+  auth.validateSession(token).then(user => {
     if (!user) {
       playerLogger.info('Session resume failed (expired/invalid)');
       network.send(ws, { type: 'auth-result', action: 'resume', success: false, error: 'Session expired' });
@@ -144,17 +122,6 @@ export const handleResumeSession: MessageHandler = ({ ws, msg, pid, playerInfo }
       info.name = user.displayName;
       info.icon = user.icon;
       info.userId = user.id;
-    }
-    // Link player session to user
-    const playerSessionToken = network.playerToSessionToken.get(pid);
-    if (playerSessionToken) {
-      try {
-        await auth.linkPlayerSessionToUser(playerSessionToken, user.id);
-        // Update session with user's display name and icon
-        await auth.updatePlayerSessionInfo(playerSessionToken, user.displayName, user.icon);
-      } catch (err) {
-        playerLogger.error({ err }, 'Failed to link player session to user');
-      }
     }
     network.send(ws, {
       type: 'auth-result', action: 'resume', success: true,

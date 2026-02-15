@@ -7,7 +7,6 @@ let wss: WebSocketServer | null = null;
 export const wsToPlayer = new Map<WebSocket, string>();
 export const wsToLobby = new Map<WebSocket, number>();
 export const lobbyClients = new Map<number, Set<WebSocket>>();
-export const playerToSessionToken = new Map<string, string>();
 
 export function init(server: WebSocketServer): void {
   wss = server;

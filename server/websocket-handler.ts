@@ -56,13 +56,10 @@ export function setupWebSocketConnection(
   icon: string,
   name: string,
   playerInfo: Map<string, PlayerInfo>,
-  wss: any,
-  playerSessionToken: string,
-  existingUserId?: number | null
+  wss: any
 ) {
-  playerInfo.set(playerId, { name, color, icon, userId: existingUserId || undefined });
+  playerInfo.set(playerId, { name, color, icon });
   network.wsToPlayer.set(ws, playerId);
-  network.playerToSessionToken.set(playerId, playerSessionToken);
 
   const playerLogger = createPlayerLogger(playerId);
   playerLogger.info({ onlineCount: wss.clients.size }, 'Player connected');
@@ -75,7 +72,6 @@ export function setupWebSocketConnection(
     color,
     icon,
     onlineCount: wss.clients.size,
-    sessionToken: playerSessionToken,
   });
 
   // Broadcast updated online count to all clients
@@ -101,21 +97,8 @@ export function setupWebSocketConnection(
       return;
     }
 
-    // Get player ID from WebSocket mapping (fallback to message if not found)
-    let pid = network.wsToPlayer.get(ws);
-    
-    // If mapping failed but message has playerId, use that and restore mapping
-    if (!pid && msg.playerId) {
-      pid = msg.playerId;
-      network.wsToPlayer.set(ws, pid);
-      const tempLogger = createPlayerLogger(pid);
-      tempLogger.warn({ type: msg.type }, 'Restored wsToPlayer mapping from message');
-    }
-    
-    if (!pid) {
-      logger.error({ type: msg.type }, 'No player ID available');
-      return;
-    }
+    const pid = network.wsToPlayer.get(ws);
+    if (!pid) return;
 
     wsMessagesReceived.inc({ type: msg.type || 'unknown' });
 
@@ -147,7 +130,6 @@ export function setupWebSocketConnection(
           broadcastLobbyList(wss);
         }
         playerInfo.delete(pid);
-        network.playerToSessionToken.delete(pid);
         const playerLogger = createPlayerLogger(pid);
         playerLogger.info({ onlineCount: wss.clients.size }, 'Player disconnected');
       }
