@@ -507,6 +507,21 @@ export async function getRecordingByToken(token: string): Promise<RecordingRow |
   return rec;
 }
 
+export async function getRecordingsCount(): Promise<number> {
+  const result = await pool.query(`SELECT COUNT(*)::int AS count FROM game_recordings`);
+  return result.rows[0]?.count || 0;
+}
+
+export async function getReplayEventsCount(): Promise<number> {
+  const result = await pool.query(`SELECT COUNT(*)::int AS count FROM recording_events`);
+  return result.rows[0]?.count || 0;
+}
+
+export async function getReplayMouseEventsCount(): Promise<number> {
+  const result = await pool.query(`SELECT COUNT(*)::int AS count FROM recording_mouse_moves`);
+  return result.rows[0]?.count || 0;
+}
+
 export async function close(): Promise<void> {
   await pool.end();
 }

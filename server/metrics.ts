@@ -1,6 +1,7 @@
 import http from 'node:http';
 import { collectDefaultMetrics, register, Counter, Histogram, Gauge } from 'prom-client';
 import type { Request, Response, NextFunction } from 'express';
+import { getRecordingsCount, getReplayEventsCount, getReplayMouseEventsCount } from './db.ts';
 
 // ── Default metrics (CPU, memory, event loop lag, GC) ──
 collectDefaultMetrics();
@@ -69,20 +70,44 @@ export const gameBugsSquashed = new Counter({
   help: 'Total number of bugs squashed',
 });
 
-// ── Replay metrics ──
-export const replayRecordingsTotal = new Counter({
+// ── Replay metrics (loaded from DB on each scrape) ──
+export const replayRecordingsTotal = new Gauge({
   name: 'replay_recordings_total',
   help: 'Total number of recordings saved',
+  async collect() {
+    try {
+      const count = await getRecordingsCount();
+      this.set(count);
+    } catch (err) {
+      console.error('[metrics] Failed to collect replay recordings:', err);
+    }
+  },
 });
 
-export const replayEventsTotal = new Counter({
+export const replayEventsTotal = new Gauge({
   name: 'replay_events_total',
   help: 'Total number of replay events saved',
+  async collect() {
+    try {
+      const count = await getReplayEventsCount();
+      this.set(count);
+    } catch (err) {
+      console.error('[metrics] Failed to collect replay events:', err);
+    }
+  },
 });
 
-export const replayMouseEventsTotal = new Counter({
+export const replayMouseEventsTotal = new Gauge({
   name: 'replay_mouse_events_total',
   help: 'Total number of replay mouse movement events saved',
+  async collect() {
+    try {
+      const count = await getReplayMouseEventsCount();
+      this.set(count);
+    } catch (err) {
+      console.error('[metrics] Failed to collect replay mouse events:', err);
+    }
+  },
 });
 
 // ── Express middleware ──
