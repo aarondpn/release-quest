@@ -383,14 +383,11 @@ export function clearAllBugs(ctx: GameContext): void {
 }
 
 export function clearSpawnTimer(ctx: GameContext): void {
-  if (ctx.timers.spawnTimer) {
-    clearInterval(ctx.timers.spawnTimer);
-    ctx.timers.spawnTimer = null;
-  }
+  ctx.timers.lobby.clear('spawnTimer');
 }
 
 export function startSpawning(ctx: GameContext, rate: number): void {
-  ctx.timers.spawnTimer = setInterval(() => spawnBug(ctx), rate);
+  ctx.timers.lobby.setInterval('spawnTimer', () => spawnBug(ctx), rate);
   spawnBug(ctx);
 }
 

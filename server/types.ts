@@ -159,7 +159,10 @@ export interface GameCounters {
   nextHammerId: number;
 }
 
-export type GameTimers = Record<string, any>;
+export interface GameTimers {
+  lobby: TimerBag;
+  boss: TimerBag;
+}
 
 export interface GameContext {
   lobbyId: number;
@@ -174,6 +177,7 @@ export interface LobbyMemory {
   state: GameState;
   counters: GameCounters;
   timers: GameTimers;
+  matchLog: MatchLog | null;
 }
 
 export interface EntityDescriptor {

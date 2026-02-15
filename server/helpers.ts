@@ -15,8 +15,8 @@ export function getCtxForPlayer(pid: string, playerInfo: Map<string, PlayerInfo>
   const ctx: GameContext = { lobbyId, state: mem.state, counters: mem.counters, timers: mem.timers, matchLog: null, playerInfo };
   // matchLog must persist across ctx instances so logging survives level transitions
   Object.defineProperty(ctx, 'matchLog', {
-    get() { return mem.timers._matchLog || null; },
-    set(v: unknown) { mem.timers._matchLog = v; },
+    get() { return mem.matchLog; },
+    set(v: unknown) { mem.matchLog = v as GameContext['matchLog']; },
     enumerable: true,
   });
   return ctx;

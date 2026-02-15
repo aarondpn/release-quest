@@ -1,7 +1,12 @@
 import { LOBBY_CONFIG } from './config.ts';
 import { createGameState, createCounters } from './state.ts';
+import { createTimerBag } from './timer-bag.ts';
 import * as db from './db.ts';
-import type { GameContext, LobbyMemory, PlayerData, DbLobbyRow, CustomDifficultyConfig } from './types.ts';
+import type { GameContext, LobbyMemory, PlayerData, DbLobbyRow, CustomDifficultyConfig, GameTimers } from './types.ts';
+
+function createGameTimers(): GameTimers {
+  return { lobby: createTimerBag(), boss: createTimerBag() };
+}
 
 // In-memory registry: lobbyId -> { state, counters, timers }
 export const lobbies = new Map<number, LobbyMemory>();
@@ -24,7 +29,8 @@ export async function createLobby(name: string, maxPlayers: number | undefined, 
   lobbies.set(row.id, {
     state: createGameState(difficulty, customConfig),
     counters: createCounters(),
-    timers: {},
+    timers: createGameTimers(),
+    matchLog: null,
   });
 
   return { lobby: row };
@@ -50,7 +56,8 @@ export async function joinLobby(lobbyId: number, playerId: string, playerData: P
     lobbies.set(lobbyId, {
       state: createGameState(difficulty, customConfig),
       counters: createCounters(),
-      timers: {},
+      timers: createGameTimers(),
+      matchLog: null,
     });
   }
 
@@ -92,42 +99,12 @@ export async function leaveLobby(lobbyId: number, playerId: string): Promise<voi
 export async function destroyLobby(lobbyId: number): Promise<void> {
   const mem = lobbies.get(lobbyId);
   if (mem) {
-    try {
-      // Clear any running game timers
-      for (const key of Object.keys(mem.timers)) {
-        try {
-          clearTimeout(mem.timers[key]);
-          clearInterval(mem.timers[key]);
-        } catch (err) {
-          console.error(`Error clearing timer ${key}:`, err);
-        }
-      }
-    } catch (err) {
-      console.error('Error clearing lobby timers:', err);
+    // Clear all managed timers
+    mem.timers.lobby.clearAll();
+    mem.timers.boss.clearAll();
+    for (const bugId of Object.keys(mem.state.bugs)) {
+      mem.state.bugs[bugId]._timers.clearAll();
     }
-    
-    try {
-      // Clear boss TimerBag
-      if (mem.timers._boss && mem.timers._boss.clearAll) {
-        mem.timers._boss.clearAll();
-      }
-    } catch (err) {
-      console.error('Error clearing boss timers:', err);
-    }
-    
-    try {
-      // Clear bug timers
-      for (const bugId of Object.keys(mem.state.bugs)) {
-        try {
-          mem.state.bugs[bugId]._timers.clearAll();
-        } catch (err) {
-          console.error(`Error clearing bug ${bugId} timers:`, err);
-        }
-      }
-    } catch (err) {
-      console.error('Error clearing bug timers:', err);
-    }
-    
     lobbies.delete(lobbyId);
   }
   

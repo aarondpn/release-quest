@@ -1,25 +1,13 @@
 import { getDifficultyConfig } from './config.ts';
 import { randomPosition } from './state.ts';
 import * as network from './network.ts';
-import { createTimerBag } from './timer-bag.ts';
 import * as bugs from './bugs.ts';
 import * as game from './game.ts';
 import * as powerups from './powerups.ts';
 import type { GameContext } from './types.ts';
 
-function ensureBossTimers(ctx: GameContext) {
-  if (!ctx.timers._boss) ctx.timers._boss = createTimerBag();
-  return ctx.timers._boss;
-}
-
 export function clearBossTimers(ctx: GameContext): void {
-  if (ctx.timers._boss) {
-    ctx.timers._boss.clearAll();
-  }
-  // Legacy cleanup for any raw timers still on ctx.timers
-  if (ctx.timers.bossWander) { clearInterval(ctx.timers.bossWander); ctx.timers.bossWander = null; }
-  if (ctx.timers.bossMinionSpawn) { clearInterval(ctx.timers.bossMinionSpawn); ctx.timers.bossMinionSpawn = null; }
-  if (ctx.timers.bossTick) { clearInterval(ctx.timers.bossTick); ctx.timers.bossTick = null; }
+  ctx.timers.boss.clearAll();
 }
 
 export function getEffectiveSpawnRate(ctx: GameContext): number {
@@ -42,9 +30,8 @@ export function getEffectiveMaxOnScreen(ctx: GameContext): number {
 
 export function setupBossWander(ctx: GameContext, interval: number): void {
   try {
-    const bt = ensureBossTimers(ctx);
     const { lobbyId, state } = ctx;
-    bt.setInterval('bossWander', () => {
+    ctx.timers.boss.setInterval('bossWander', () => {
       try {
         if (state.phase !== 'boss' || !state.boss || state.hammerStunActive) return;
         const newPos = randomPosition();
@@ -62,8 +49,7 @@ export function setupBossWander(ctx: GameContext, interval: number): void {
 
 export function setupMinionSpawning(ctx: GameContext, rate: number): void {
   try {
-    const bt = ensureBossTimers(ctx);
-    bt.setInterval('bossMinionSpawn', () => {
+    ctx.timers.boss.setInterval('bossMinionSpawn', () => {
       try {
         if (ctx.state.hammerStunActive) return;
         bugs.spawnMinion(ctx);
@@ -114,10 +100,9 @@ export function startBoss(ctx: GameContext): void {
     timeRemaining: bossConfig.timeLimit,
   });
 
-  const bt = ensureBossTimers(ctx);
   setupBossWander(ctx, bossConfig.wanderInterval);
   setupMinionSpawning(ctx, bossConfig.minionSpawnRate);
-  bt.setInterval('bossTick', () => bossTick(ctx), 1000);
+  ctx.timers.boss.setInterval('bossTick', () => bossTick(ctx), 1000);
 }
 
 function bossTick(ctx: GameContext): void {

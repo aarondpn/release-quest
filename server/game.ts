@@ -11,36 +11,19 @@ import * as db from './db.ts';
 import type { GameContext } from './types.ts';
 
 function teardownGame(ctx: GameContext): void {
-  try {
-    bugs.clearSpawnTimer(ctx);
-  } catch (err) {
-    console.error('Error clearing spawn timer:', err);
-  }
-  try {
-    bugs.clearAllBugs(ctx);
-  } catch (err) {
-    console.error('Error clearing bugs:', err);
-  }
-  try {
-    boss.clearBossTimers(ctx);
-  } catch (err) {
-    console.error('Error clearing boss timers:', err);
-  }
-  try {
-    powerups.clearDuck(ctx);
-  } catch (err) {
-    console.error('Error clearing duck:', err);
-  }
-  try {
-    powerups.clearHammer(ctx);
-  } catch (err) {
-    console.error('Error clearing hammer:', err);
-  }
-  try {
-    if (ctx.matchLog) { ctx.matchLog.close(); ctx.matchLog = null; }
-  } catch (err) {
-    console.error('Error closing match log:', err);
-  }
+  // Clear all lobby-level timers (spawn, powerups, level transitions)
+  ctx.timers.lobby.clearAll();
+  // Clear boss-phase timers
+  ctx.timers.boss.clearAll();
+  // Clear per-bug timers and state
+  bugs.clearAllBugs(ctx);
+  // Reset powerup state
+  ctx.state.rubberDuck = null;
+  ctx.state.duckBuff = null;
+  ctx.state.hotfixHammer = null;
+  ctx.state.hammerStunActive = false;
+  // Close match log
+  if (ctx.matchLog) { ctx.matchLog.close(); ctx.matchLog = null; }
 }
 
 export function endGame(ctx: GameContext, outcome: string, win: boolean): void {
@@ -183,7 +166,7 @@ export function checkGameState(ctx: GameContext): void {
           level: state.level,
           score: state.score,
         });
-        setTimeout(() => {
+        ctx.timers.lobby.setTimeout('levelTransition', () => {
           try {
             boss.startBoss(ctx);
           } catch (err) {
@@ -199,7 +182,7 @@ export function checkGameState(ctx: GameContext): void {
           level: state.level,
           score: state.score,
         });
-        setTimeout(() => {
+        ctx.timers.lobby.setTimeout('levelTransition', () => {
           try {
             if (state.phase !== 'playing' && state.phase !== 'lobby') {
               if (Object.keys(state.players).length === 0) return;
