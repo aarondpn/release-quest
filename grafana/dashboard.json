@@ -212,7 +212,7 @@
       }
     },
     {
-      "title": "WS Messages/sec",
+      "title": "WS Messages/sec (Total)",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "gridPos": { "h": 8, "w": 8, "x": 16, "y": 15 },
@@ -223,7 +223,7 @@
           "refId": "A"
         },
         {
-          "expr": "rate(ws_messages_sent_total{instance=~\"$instance\"}[5m])",
+          "expr": "sum(rate(ws_messages_sent_total{instance=~\"$instance\"}[5m]))",
           "legendFormat": "Sent",
           "refId": "B"
         }
@@ -236,16 +236,35 @@
       }
     },
     {
+      "title": "WS Messages/sec (by Type)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 23 },
+      "targets": [
+        {
+          "expr": "sum(rate(ws_messages_received_total{instance=~\"$instance\"}[5m])) by (type)",
+          "legendFormat": "{{type}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "msg/s"
+        },
+        "overrides": []
+      }
+    },
+    {
       "title": "System",
       "type": "row",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 31 },
       "collapsed": false
     },
     {
       "title": "Process Memory",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 24 },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 32 },
       "targets": [
         {
           "expr": "process_resident_memory_bytes{instance=~\"$instance\"}",
@@ -264,7 +283,7 @@
       "title": "CPU Usage",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 24 },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 32 },
       "targets": [
         {
           "expr": "rate(process_cpu_seconds_total{instance=~\"$instance\"}[5m])",
@@ -283,7 +302,7 @@
       "title": "Event Loop Lag",
       "type": "timeseries",
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 24 },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 32 },
       "targets": [
         {
           "expr": "nodejs_eventloop_lag_seconds{instance=~\"$instance\"}",
