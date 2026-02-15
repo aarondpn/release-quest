@@ -64,7 +64,7 @@ export function setupMinionSpawning(ctx: GameContext, rate: number): void {
 export function startBoss(ctx: GameContext): void {
   const { state } = ctx;
   const bossConfig = getDifficultyConfig(state.difficulty, state.customConfig).boss;
-  state.phase = 'boss';
+  ctx.lifecycle.transition(state, 'boss');
   const pos = randomPosition();
   const extra = Math.max(0, Object.keys(state.players).length - 1);
   state.boss = {

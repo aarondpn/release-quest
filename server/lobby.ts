@@ -4,11 +4,54 @@ import { createTimerBag } from './timer-bag.ts';
 import * as db from './db.ts';
 import { gameLobbiesActive } from './metrics.ts';
 import { createEventBus } from './event-bus.ts';
+import { createGameLifecycle } from './game-lifecycle.ts';
 import { broadcastToLobby } from './network.ts';
-import type { GameContext, LobbyMemory, PlayerData, DbLobbyRow, CustomDifficultyConfig, GameTimers } from './types.ts';
+import { stopRecording } from './recording.ts';
+import type { LobbyMemory, PlayerData, DbLobbyRow, CustomDifficultyConfig, GameTimers } from './types.ts';
 
 function createGameTimers(): GameTimers {
   return { lobby: createTimerBag(), boss: createTimerBag() };
+}
+
+function createLobbyMemory(lobbyId: number, difficulty: string, customConfig?: CustomDifficultyConfig): LobbyMemory {
+  const timers = createGameTimers();
+  const state = createGameState(difficulty, customConfig);
+  const events = createEventBus();
+  events.on((msg) => broadcastToLobby(lobbyId, msg));
+
+  const lifecycle = createGameLifecycle();
+
+  // Register cleanup hooks in order
+  lifecycle.onCleanup(() => timers.lobby.clearAll());
+  lifecycle.onCleanup(() => timers.boss.clearAll());
+  lifecycle.onCleanup(() => {
+    for (const id of Object.keys(state.bugs)) {
+      state.bugs[id]._timers.clearAll();
+    }
+    state.bugs = {};
+    state.pipelineChains = {};
+  });
+  lifecycle.onCleanup(() => {
+    state.rubberDuck = null;
+    state.duckBuff = null;
+    state.hotfixHammer = null;
+    state.hammerStunActive = false;
+  });
+  // matchLog is mutable on the mem object, so close via a closure over mem reference
+  const mem: LobbyMemory = {
+    state,
+    counters: createCounters(),
+    timers,
+    matchLog: null,
+    events,
+    lifecycle,
+  };
+  lifecycle.onCleanup(() => {
+    if (mem.matchLog) { mem.matchLog.close(); mem.matchLog = null; }
+  });
+  lifecycle.onCleanup(() => stopRecording(lobbyId));
+
+  return mem;
 }
 
 // In-memory registry: lobbyId -> { state, counters, timers }
@@ -29,15 +72,7 @@ export async function createLobby(name: string, maxPlayers: number | undefined, 
   const settings = { difficulty, customConfig };
   const row = await db.createLobby(name, mp, settings);
 
-  const events = createEventBus();
-  events.on((msg) => broadcastToLobby(row.id, msg));
-  lobbies.set(row.id, {
-    state: createGameState(difficulty, customConfig),
-    counters: createCounters(),
-    timers: createGameTimers(),
-    matchLog: null,
-    events,
-  });
+  lobbies.set(row.id, createLobbyMemory(row.id, difficulty, customConfig));
   gameLobbiesActive.inc();
 
   return { lobby: row };
@@ -60,15 +95,7 @@ export async function joinLobby(lobbyId: number, playerId: string, playerData: P
   if (!lobbies.has(lobbyId)) {
     const difficulty = (lobby.settings as any)?.difficulty || 'medium';
     const customConfig = (lobby.settings as any)?.customConfig;
-    const events = createEventBus();
-    events.on((msg) => broadcastToLobby(lobbyId, msg));
-    lobbies.set(lobbyId, {
-      state: createGameState(difficulty, customConfig),
-      counters: createCounters(),
-      timers: createGameTimers(),
-      matchLog: null,
-      events,
-    });
+    lobbies.set(lobbyId, createLobbyMemory(lobbyId, difficulty, customConfig));
   }
 
   const mem = lobbies.get(lobbyId)!;
@@ -109,12 +136,7 @@ export async function leaveLobby(lobbyId: number, playerId: string): Promise<voi
 export async function destroyLobby(lobbyId: number): Promise<void> {
   const mem = lobbies.get(lobbyId);
   if (mem) {
-    // Clear all managed timers
-    mem.timers.lobby.clearAll();
-    mem.timers.boss.clearAll();
-    for (const bugId of Object.keys(mem.state.bugs)) {
-      mem.state.bugs[bugId]._timers.clearAll();
-    }
+    mem.lifecycle.destroy();
     lobbies.delete(lobbyId);
     gameLobbiesActive.dec();
   }

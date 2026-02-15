@@ -4,6 +4,15 @@ import type { GameEventBus } from './event-bus.ts';
 
 export type GamePhase = 'lobby' | 'playing' | 'boss' | 'gameover' | 'win';
 
+export type CleanupHook = () => void;
+
+export interface GameLifecycle {
+  onCleanup(hook: CleanupHook): () => void;
+  transition(state: GameState, to: GamePhase): void;
+  teardown(): void;
+  destroy(): void;
+}
+
 export interface TimerBag {
   setTimeout(name: string, fn: () => void, ms: number): void;
   setInterval(name: string, fn: () => void, ms: number): void;
@@ -174,6 +183,7 @@ export interface GameContext {
   matchLog: MatchLog | null;
   playerInfo: Map<string, PlayerInfo>;
   events: GameEventBus;
+  lifecycle: GameLifecycle;
 }
 
 export interface LobbyMemory {
@@ -182,6 +192,7 @@ export interface LobbyMemory {
   timers: GameTimers;
   matchLog: MatchLog | null;
   events: GameEventBus;
+  lifecycle: GameLifecycle;
 }
 
 export interface EntityDescriptor {

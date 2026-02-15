@@ -11,24 +11,10 @@ import { replayRecordingsTotal, replayEventsTotal, replayMouseEventsTotal } from
 import { gameGamesStarted, gameGamesCompleted } from './metrics.ts';
 import type { GameContext } from './types.ts';
 
-function teardownGame(ctx: GameContext): void {
-  // Clear all lobby-level timers (spawn, powerups, level transitions)
-  ctx.timers.lobby.clearAll();
-  // Clear boss-phase timers
-  ctx.timers.boss.clearAll();
-  // Clear per-bug timers and state
-  bugs.clearAllBugs(ctx);
-  // Reset powerup state
-  ctx.state.rubberDuck = null;
-  ctx.state.duckBuff = null;
-  ctx.state.hotfixHammer = null;
-  ctx.state.hammerStunActive = false;
-  // Close match log
-  if (ctx.matchLog) { ctx.matchLog.close(); ctx.matchLog = null; }
-}
-
 export function endGame(ctx: GameContext, outcome: string, win: boolean): void {
   const { lobbyId, state } = ctx;
+
+  // Log match-end event before teardown closes the log
   if (ctx.matchLog) {
     ctx.matchLog.log('game-end', {
       outcome,
@@ -37,10 +23,17 @@ export function endGame(ctx: GameContext, outcome: string, win: boolean): void {
       duration: Date.now() - (state.gameStartedAt || 0),
     });
   }
-  state.phase = win ? 'win' : 'gameover';
+
+  // Capture recording before teardown stops it (via hook)
+  const recording = stopRecording(lobbyId);
+
+  ctx.lifecycle.transition(state, win ? 'win' : 'gameover');
   gameGamesCompleted.inc({ outcome: win ? 'win' : 'loss', difficulty: state.difficulty });
-  teardownGame(ctx);
+
+  // Teardown clears timers, bugs, powerups, matchLog; recording hook is no-op since already stopped
+  ctx.lifecycle.teardown();
   state.boss = null;
+
   ctx.events.emit({
     type: win ? 'boss-defeated' : 'game-over',
     score: state.score,
@@ -50,7 +43,6 @@ export function endGame(ctx: GameContext, outcome: string, win: boolean): void {
   if (ctx.playerInfo) stats.recordGameEnd(state, ctx.playerInfo, win);
 
   // Save recording for logged-in players
-  const recording = stopRecording(lobbyId);
   if (recording && ctx.playerInfo) {
     const players = Object.values(state.players).map(p => {
       const info = ctx.playerInfo.get(p.id);
@@ -81,13 +73,13 @@ export function endGame(ctx: GameContext, outcome: string, win: boolean): void {
 
 export function startGame(ctx: GameContext): void {
   const { lobbyId, state } = ctx;
-  teardownGame(ctx);
+  ctx.lifecycle.teardown();
 
   const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
   state.score = 0;
   state.hp = diffConfig.startingHp;
   state.level = 1;
-  state.phase = 'playing';
+  ctx.lifecycle.transition(state, 'playing');
   state.boss = null;
   state.gameStartedAt = Date.now();
 
@@ -126,7 +118,6 @@ function startLevel(ctx: GameContext): void {
   const cfg = currentLevelConfig(state);
   state.bugsRemaining = cfg.bugsTotal;
   state.bugsSpawned = 0;
-  state.phase = 'playing';
 
   if (ctx.matchLog) {
     ctx.matchLog.log('level-start', {
@@ -223,8 +214,8 @@ export function checkBossGameState(ctx: GameContext): void {
 export function resetToLobby(ctx: GameContext): void {
   const { state } = ctx;
   const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
-  teardownGame(ctx);
-  state.phase = 'lobby';
+  ctx.lifecycle.teardown();
+  ctx.lifecycle.transition(state, 'lobby');
   state.score = 0;
   state.hp = diffConfig.startingHp;
   state.level = 1;
