@@ -2,7 +2,7 @@ import { getDifficultyConfig, HEISENBUG_MECHANICS, CODE_REVIEW_MECHANICS, MERGE_
 import { randomPosition, currentLevelConfig } from './state.ts';
 import * as network from './network.ts';
 import { createTimerBag } from './timer-bag.ts';
-import { getDescriptor, getType } from './entity-types.ts';
+import { getDescriptor, getType } from './entity-types/index.ts';
 import * as game from './game.ts';
 import * as bossModule from './boss.ts';
 import type { GameContext, BugEntity, SpawnEntityOptions } from './types.ts';

@@ -9,7 +9,7 @@ import * as boss from './boss.ts';
 import * as game from './game.ts';
 import * as powerups from './powerups.ts';
 import * as auth from './auth.ts';
-import * as entityTypes from './entity-types.ts';
+import * as entityTypes from './entity-types/index.ts';
 import { getCtxForPlayer, handleLeaveLobby, broadcastLobbyList, augmentLobbies } from './helpers.ts';
 import { wsMessagesReceived, gamePlayersOnline } from './metrics.ts';
 

@@ -2,7 +2,7 @@ import { getDifficultyConfig } from './config.ts';
 import { randomPosition } from './state.ts';
 import * as network from './network.ts';
 import * as boss from './boss.ts';
-import { getDescriptor } from './entity-types.ts';
+import { getDescriptor } from './entity-types/index.ts';
 import type { GameContext } from './types.ts';
 
 export function startDuckSpawning(ctx: GameContext): void {
