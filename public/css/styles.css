@@ -2044,6 +2044,58 @@ header p {
   border-color: var(--purple);
   box-shadow: 0 0 8px rgba(168, 85, 247, 0.2);
 }
+.advanced-config-input:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  border-color: #1a1a2e;
+}
+
+/* Bug toggle row */
+.bug-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Toggle switch */
+.bug-toggle {
+  position: relative;
+  display: inline-block;
+  width: 24px;
+  height: 14px;
+  flex-shrink: 0;
+}
+.bug-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.bug-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: #1a1a2e;
+  border: 1px solid #2a2a4a;
+  transition: background 0.15s;
+}
+.bug-toggle-slider::before {
+  content: "";
+  position: absolute;
+  height: 8px;
+  width: 8px;
+  left: 2px;
+  bottom: 2px;
+  background: #3d3d5c;
+  transition: transform 0.15s, background 0.15s;
+}
+.bug-toggle input:checked + .bug-toggle-slider {
+  background: var(--green);
+  border-color: var(--green);
+}
+.bug-toggle input:checked + .bug-toggle-slider::before {
+  background: #fff;
+  transform: translateX(10px);
+}
 
 .advanced-reset-btn {
   display: block;

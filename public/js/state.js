@@ -106,6 +106,13 @@ export const dom = {
   configMergeConflict: null,
   configPipelineBug: null,
   configMemoryLeak: null,
+  configInfiniteLoop: null,
+  toggleHeisenbug: null,
+  toggleCodeReview: null,
+  toggleMergeConflict: null,
+  togglePipelineBug: null,
+  toggleMemoryLeak: null,
+  toggleInfiniteLoop: null,
   configDuckDuration: null,
   configHammerDuration: null,
   statsCardPanel: null,
@@ -168,6 +175,13 @@ export function initDom() {
   dom.configMergeConflict = document.getElementById('config-merge-conflict');
   dom.configPipelineBug = document.getElementById('config-pipeline-bug');
   dom.configMemoryLeak = document.getElementById('config-memory-leak');
+  dom.configInfiniteLoop = document.getElementById('config-infinite-loop');
+  dom.toggleHeisenbug = document.getElementById('toggle-heisenbug');
+  dom.toggleCodeReview = document.getElementById('toggle-code-review');
+  dom.toggleMergeConflict = document.getElementById('toggle-merge-conflict');
+  dom.togglePipelineBug = document.getElementById('toggle-pipeline-bug');
+  dom.toggleMemoryLeak = document.getElementById('toggle-memory-leak');
+  dom.toggleInfiniteLoop = document.getElementById('toggle-infinite-loop');
   dom.configDuckDuration = document.getElementById('config-duck-duration');
   dom.configHammerDuration = document.getElementById('config-hammer-duration');
   dom.authStatus = document.getElementById('auth-status');

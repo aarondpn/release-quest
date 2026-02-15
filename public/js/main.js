@@ -45,9 +45,9 @@ fetch('/api/difficulty-presets')
     showError('Failed to load difficulty presets. Using defaults.', ERROR_LEVELS.WARNING);
     // Fallback to hardcoded defaults
     clientState.difficultyPresets = {
-      easy: { startingHp: 150, hpDamage: 5, bugPoints: 15, boss: { hp: 800, timeLimit: 180, clickDamage: 10, killBonus: 500, regenPerSecond: 2 }, specialBugs: { heisenbugChance: 0.03, codeReviewChance: 0.03, mergeConflictChance: 0.02, pipelineBugChance: 0.02, memoryLeakChance: 0.01 }, powerups: { rubberDuckBuffDuration: 15, hotfixHammerStunDuration: 8 } },
-      medium: { startingHp: 100, hpDamage: 10, bugPoints: 10, boss: { hp: 1200, timeLimit: 150, clickDamage: 8, killBonus: 1000, regenPerSecond: 3 }, specialBugs: { heisenbugChance: 0.05, codeReviewChance: 0.05, mergeConflictChance: 0.03, pipelineBugChance: 0.03, memoryLeakChance: 0.02 }, powerups: { rubberDuckBuffDuration: 12, hotfixHammerStunDuration: 6 } },
-      hard: { startingHp: 75, hpDamage: 15, bugPoints: 8, boss: { hp: 1800, timeLimit: 120, clickDamage: 6, killBonus: 2000, regenPerSecond: 5 }, specialBugs: { heisenbugChance: 0.08, codeReviewChance: 0.08, mergeConflictChance: 0.05, pipelineBugChance: 0.05, memoryLeakChance: 0.03 }, powerups: { rubberDuckBuffDuration: 10, hotfixHammerStunDuration: 5 } }
+      easy: { startingHp: 150, hpDamage: 5, bugPoints: 15, boss: { hp: 800, timeLimit: 180, clickDamage: 10, killBonus: 500, regenPerSecond: 2 }, specialBugs: { heisenbugChance: 0.03, codeReviewChance: 0.03, mergeConflictChance: 0.02, pipelineBugChance: 0.02, memoryLeakChance: 0.01, infiniteLoopChance: 0.06 }, powerups: { rubberDuckBuffDuration: 15, hotfixHammerStunDuration: 8 } },
+      medium: { startingHp: 100, hpDamage: 10, bugPoints: 10, boss: { hp: 1200, timeLimit: 150, clickDamage: 8, killBonus: 1000, regenPerSecond: 3 }, specialBugs: { heisenbugChance: 0.05, codeReviewChance: 0.05, mergeConflictChance: 0.03, pipelineBugChance: 0.03, memoryLeakChance: 0.02, infiniteLoopChance: 0.10 }, powerups: { rubberDuckBuffDuration: 12, hotfixHammerStunDuration: 6 } },
+      hard: { startingHp: 75, hpDamage: 15, bugPoints: 8, boss: { hp: 1800, timeLimit: 120, clickDamage: 6, killBonus: 2000, regenPerSecond: 5 }, specialBugs: { heisenbugChance: 0.08, codeReviewChance: 0.08, mergeConflictChance: 0.05, pipelineBugChance: 0.05, memoryLeakChance: 0.03, infiniteLoopChance: 0.12 }, powerups: { rubberDuckBuffDuration: 10, hotfixHammerStunDuration: 5 } }
     };
     updateDifficultyPlaceholders('medium');
   });
@@ -139,6 +139,7 @@ function updateDifficultyPlaceholders(difficulty) {
     dom.configMergeConflict.placeholder = Math.round(preset.specialBugs.mergeConflictChance * 100);
     dom.configPipelineBug.placeholder = Math.round(preset.specialBugs.pipelineBugChance * 100);
     dom.configMemoryLeak.placeholder = Math.round(preset.specialBugs.memoryLeakChance * 100);
+    dom.configInfiniteLoop.placeholder = Math.round(preset.specialBugs.infiniteLoopChance * 100);
     dom.configDuckDuration.placeholder = preset.powerups.rubberDuckBuffDuration;
     dom.configHammerDuration.placeholder = preset.powerups.hotfixHammerStunDuration;
   }
@@ -208,12 +209,10 @@ dom.createLobbyBtn.addEventListener('click', () => {
       customConfig.startingHp = parseInt(dom.configStartingHp.value, 10);
     }
     if (dom.configHpDamage.value) {
-      if (!customConfig.bugs) customConfig.bugs = {};
-      customConfig.bugs.hpDamage = parseInt(dom.configHpDamage.value, 10);
+      customConfig.hpDamage = parseInt(dom.configHpDamage.value, 10);
     }
     if (dom.configBugPoints.value) {
-      if (!customConfig.bugs) customConfig.bugs = {};
-      customConfig.bugs.points = parseInt(dom.configBugPoints.value, 10);
+      customConfig.bugPoints = parseInt(dom.configBugPoints.value, 10);
     }
     if (dom.configBossHp.value) {
       if (!customConfig.boss) customConfig.boss = {};
@@ -235,30 +234,23 @@ dom.createLobbyBtn.addEventListener('click', () => {
       if (!customConfig.boss) customConfig.boss = {};
       customConfig.boss.regenPerSecond = parseFloat(dom.configBossRegen.value);
     }
-    if (dom.configHeisenbug.value) {
-      if (!customConfig.bugs) customConfig.bugs = {};
-      if (!customConfig.bugs.specialBugs) customConfig.bugs.specialBugs = {};
-      customConfig.bugs.specialBugs.heisenbugChance = parseInt(dom.configHeisenbug.value, 10) / 100;
-    }
-    if (dom.configCodeReview.value) {
-      if (!customConfig.bugs) customConfig.bugs = {};
-      if (!customConfig.bugs.specialBugs) customConfig.bugs.specialBugs = {};
-      customConfig.bugs.specialBugs.codeReviewChance = parseInt(dom.configCodeReview.value, 10) / 100;
-    }
-    if (dom.configMergeConflict.value) {
-      if (!customConfig.bugs) customConfig.bugs = {};
-      if (!customConfig.bugs.specialBugs) customConfig.bugs.specialBugs = {};
-      customConfig.bugs.specialBugs.mergeConflictChance = parseInt(dom.configMergeConflict.value, 10) / 100;
-    }
-    if (dom.configPipelineBug.value) {
-      if (!customConfig.bugs) customConfig.bugs = {};
-      if (!customConfig.bugs.specialBugs) customConfig.bugs.specialBugs = {};
-      customConfig.bugs.specialBugs.pipelineBugChance = parseInt(dom.configPipelineBug.value, 10) / 100;
-    }
-    if (dom.configMemoryLeak.value) {
-      if (!customConfig.bugs) customConfig.bugs = {};
-      if (!customConfig.bugs.specialBugs) customConfig.bugs.specialBugs = {};
-      customConfig.bugs.specialBugs.memoryLeakChance = parseInt(dom.configMemoryLeak.value, 10) / 100;
+    // Special bug toggles + percentage inputs
+    const bugToggleMap = [
+      { toggle: dom.toggleHeisenbug, input: dom.configHeisenbug, key: 'heisenbugChance' },
+      { toggle: dom.toggleCodeReview, input: dom.configCodeReview, key: 'codeReviewChance' },
+      { toggle: dom.toggleMergeConflict, input: dom.configMergeConflict, key: 'mergeConflictChance' },
+      { toggle: dom.togglePipelineBug, input: dom.configPipelineBug, key: 'pipelineBugChance' },
+      { toggle: dom.toggleMemoryLeak, input: dom.configMemoryLeak, key: 'memoryLeakChance' },
+      { toggle: dom.toggleInfiniteLoop, input: dom.configInfiniteLoop, key: 'infiniteLoopChance' },
+    ];
+    for (const { toggle, input, key } of bugToggleMap) {
+      if (!toggle.checked) {
+        if (!customConfig.specialBugs) customConfig.specialBugs = {};
+        customConfig.specialBugs[key] = 0;
+      } else if (input.value) {
+        if (!customConfig.specialBugs) customConfig.specialBugs = {};
+        customConfig.specialBugs[key] = parseInt(input.value, 10) / 100;
+      }
     }
     if (dom.configDuckDuration.value) {
       if (!customConfig.powerups) customConfig.powerups = {};
@@ -350,6 +342,20 @@ document.querySelectorAll('.config-section-header').forEach(header => {
   });
 });
 
+// ── Bug toggle listeners ──
+[
+  [dom.toggleHeisenbug, dom.configHeisenbug],
+  [dom.toggleCodeReview, dom.configCodeReview],
+  [dom.toggleMergeConflict, dom.configMergeConflict],
+  [dom.togglePipelineBug, dom.configPipelineBug],
+  [dom.toggleMemoryLeak, dom.configMemoryLeak],
+  [dom.toggleInfiniteLoop, dom.configInfiniteLoop],
+].forEach(([toggle, input]) => {
+  toggle.addEventListener('change', () => {
+    input.disabled = !toggle.checked;
+  });
+});
+
 // ── Advanced config reset ──
 dom.advancedResetBtn.addEventListener('click', () => {
   dom.configStartingHp.value = '';
@@ -365,8 +371,15 @@ dom.advancedResetBtn.addEventListener('click', () => {
   dom.configMergeConflict.value = '';
   dom.configPipelineBug.value = '';
   dom.configMemoryLeak.value = '';
+  dom.configInfiniteLoop.value = '';
   dom.configDuckDuration.value = '';
   dom.configHammerDuration.value = '';
+  // Reset all bug toggles to enabled
+  [dom.toggleHeisenbug, dom.toggleCodeReview, dom.toggleMergeConflict,
+   dom.togglePipelineBug, dom.toggleMemoryLeak, dom.toggleInfiniteLoop].forEach(t => {
+    t.checked = true;
+    t.dispatchEvent(new Event('change'));
+  });
 });
 
 // Cursor broadcasting

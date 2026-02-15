@@ -205,24 +205,46 @@
         <div class="config-section-content collapsed" id="section-bugs">
           <div class="advanced-config-grid">
             <div class="advanced-config-group">
-              <label class="advanced-config-label">Heisenbug %</label>
+              <div class="bug-toggle-row">
+                <label class="bug-toggle"><input type="checkbox" id="toggle-heisenbug" checked><span class="bug-toggle-slider"></span></label>
+                <label class="advanced-config-label">Heisenbug %</label>
+              </div>
               <input class="advanced-config-input" id="config-heisenbug" type="number" min="0" max="100" step="5" placeholder="Auto">
             </div>
             <div class="advanced-config-group">
-              <label class="advanced-config-label">Code Review %</label>
+              <div class="bug-toggle-row">
+                <label class="bug-toggle"><input type="checkbox" id="toggle-code-review" checked><span class="bug-toggle-slider"></span></label>
+                <label class="advanced-config-label">Code Review %</label>
+              </div>
               <input class="advanced-config-input" id="config-code-review" type="number" min="0" max="100" step="5" placeholder="Auto">
             </div>
             <div class="advanced-config-group">
-              <label class="advanced-config-label">Merge Conflict %</label>
+              <div class="bug-toggle-row">
+                <label class="bug-toggle"><input type="checkbox" id="toggle-merge-conflict" checked><span class="bug-toggle-slider"></span></label>
+                <label class="advanced-config-label">Merge Conflict %</label>
+              </div>
               <input class="advanced-config-input" id="config-merge-conflict" type="number" min="0" max="100" step="5" placeholder="Auto">
             </div>
             <div class="advanced-config-group">
-              <label class="advanced-config-label">Pipeline Bug %</label>
+              <div class="bug-toggle-row">
+                <label class="bug-toggle"><input type="checkbox" id="toggle-pipeline-bug" checked><span class="bug-toggle-slider"></span></label>
+                <label class="advanced-config-label">Pipeline Bug %</label>
+              </div>
               <input class="advanced-config-input" id="config-pipeline-bug" type="number" min="0" max="100" step="5" placeholder="Auto">
             </div>
             <div class="advanced-config-group">
-              <label class="advanced-config-label">Memory Leak %</label>
+              <div class="bug-toggle-row">
+                <label class="bug-toggle"><input type="checkbox" id="toggle-memory-leak" checked><span class="bug-toggle-slider"></span></label>
+                <label class="advanced-config-label">Memory Leak %</label>
+              </div>
               <input class="advanced-config-input" id="config-memory-leak" type="number" min="0" max="100" step="5" placeholder="Auto">
+            </div>
+            <div class="advanced-config-group">
+              <div class="bug-toggle-row">
+                <label class="bug-toggle"><input type="checkbox" id="toggle-infinite-loop" checked><span class="bug-toggle-slider"></span></label>
+                <label class="advanced-config-label">Infinite Loop %</label>
+              </div>
+              <input class="advanced-config-input" id="config-infinite-loop" type="number" min="0" max="100" step="5" placeholder="Auto">
             </div>
           </div>
         </div>
