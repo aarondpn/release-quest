@@ -1,5 +1,5 @@
 import { getDifficultyConfig } from '../config.ts';
-import { randomPosition } from '../state.ts';
+import { randomPosition, awardScore } from '../state.ts';
 import * as game from '../game.ts';
 import * as powerups from '../powerups.ts';
 import { gameBugsSquashed } from '../metrics.ts';
@@ -73,10 +73,9 @@ export const baseDescriptor: EntityDescriptor = {
 
     player.bugsSquashed = (player.bugsSquashed || 0) + 1;
     gameBugsSquashed.inc();
-    let points = diffConfig.bugPoints;
-    if (powerups.isDuckBuffActive(ctx)) points *= 2;
-    state.score += points;
-    player.score += points;
+    let rawPoints = diffConfig.bugPoints;
+    if (powerups.isDuckBuffActive(ctx)) rawPoints *= 2;
+    const points = awardScore(ctx, pid, rawPoints);
 
     if (ctx.matchLog) {
       ctx.matchLog.log('squash', {

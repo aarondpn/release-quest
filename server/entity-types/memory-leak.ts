@@ -1,6 +1,6 @@
 import { baseDescriptor } from './base.ts';
 import { getDifficultyConfig } from '../config.ts';
-import { randomPosition } from '../state.ts';
+import { randomPosition, awardScore } from '../state.ts';
 import * as game from '../game.ts';
 import * as powerups from '../powerups.ts';
 import { gameBugsSquashed } from '../metrics.ts';
@@ -164,15 +164,15 @@ export const memoryLeakDescriptor: EntityDescriptor = {
     const holderCount = allHolders.length;
     delete state.bugs[bug.id];
 
-    let points = MEMORY_LEAK_MECHANICS.pointsByStage[bug.holdStartStage!] || diffConfig.bugPoints;
-    if (powerups.isDuckBuffActive(ctx)) points *= 2;
+    let rawPoints = MEMORY_LEAK_MECHANICS.pointsByStage[bug.holdStartStage!] || diffConfig.bugPoints;
+    if (powerups.isDuckBuffActive(ctx)) rawPoints *= 2;
 
+    let points = 0;
     for (const holderId of allHolders) {
       if (state.players[holderId]) {
         state.players[holderId].bugsSquashed = (state.players[holderId].bugsSquashed || 0) + 1;
         gameBugsSquashed.inc();
-        state.players[holderId].score += points;
-        state.score += points;
+        points = awardScore(ctx, holderId, rawPoints);
       }
     }
 

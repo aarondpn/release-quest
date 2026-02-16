@@ -48,6 +48,7 @@ export const DIFFICULTY_PRESETS: Record<string, DifficultyConfig> = {
     startingHp: 150,
     hpDamage: 10,
     bugPoints: 10,
+    scoreMultiplier: 0.5,
     levels: {
       1: { bugsTotal: 6, escapeTime: 6000, spawnRate: 2500, maxOnScreen: 2 },
       2: { bugsTotal: 10, escapeTime: 5000, spawnRate: 2000, maxOnScreen: 2 },
@@ -105,6 +106,7 @@ export const DIFFICULTY_PRESETS: Record<string, DifficultyConfig> = {
     startingHp: 100,
     hpDamage: 15,
     bugPoints: 10,
+    scoreMultiplier: 1,
     levels: {
       1: { bugsTotal: 8, escapeTime: 5000, spawnRate: 2200, maxOnScreen: 2 },
       2: { bugsTotal: 12, escapeTime: 3800, spawnRate: 1600, maxOnScreen: 3 },
@@ -162,6 +164,7 @@ export const DIFFICULTY_PRESETS: Record<string, DifficultyConfig> = {
     startingHp: 75,
     hpDamage: 20,
     bugPoints: 15,
+    scoreMultiplier: 1.5,
     levels: {
       1: { bugsTotal: 10, escapeTime: 4000, spawnRate: 1800, maxOnScreen: 3 },
       2: { bugsTotal: 15, escapeTime: 3000, spawnRate: 1200, maxOnScreen: 4 },

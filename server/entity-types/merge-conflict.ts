@@ -1,6 +1,6 @@
 import { baseDescriptor } from './base.ts';
 import { getDifficultyConfig } from '../config.ts';
-import { randomPosition } from '../state.ts';
+import { randomPosition, awardScore } from '../state.ts';
 import { createTimerBag } from '../timer-bag.ts';
 import * as game from '../game.ts';
 import { gameBugsSquashed } from '../metrics.ts';
@@ -67,8 +67,7 @@ export const mergeConflictDescriptor: EntityDescriptor = {
       const clickers = new Set([pid, partner.mergeClickedBy!]);
       for (const clickerId of clickers) {
         if (state.players[clickerId]) {
-          state.players[clickerId].score += MERGE_CONFLICT_MECHANICS.bonusPoints;
-          state.score += MERGE_CONFLICT_MECHANICS.bonusPoints;
+          awardScore(ctx, clickerId, MERGE_CONFLICT_MECHANICS.bonusPoints);
           state.players[clickerId].bugsSquashed = (state.players[clickerId].bugsSquashed || 0) + 1;
           gameBugsSquashed.inc();
         }

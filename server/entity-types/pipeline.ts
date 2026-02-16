@@ -1,6 +1,6 @@
 import { baseDescriptor } from './base.ts';
 import { getDifficultyConfig, LOGICAL_W, LOGICAL_H } from '../config.ts';
-import { randomPosition } from '../state.ts';
+import { randomPosition, awardScore } from '../state.ts';
 import { createTimerBag } from '../timer-bag.ts';
 import * as game from '../game.ts';
 import * as powerups from '../powerups.ts';
@@ -99,10 +99,9 @@ export const pipelineDescriptor: EntityDescriptor = {
 
       player.bugsSquashed = (player.bugsSquashed || 0) + 1;
       gameBugsSquashed.inc();
-      let points = PIPELINE_BUG_MECHANICS.pointsPerBug;
-      if (powerups.isDuckBuffActive(ctx)) points *= 2;
-      state.score += points;
-      player.score += points;
+      let rawPoints = PIPELINE_BUG_MECHANICS.pointsPerBug;
+      if (powerups.isDuckBuffActive(ctx)) rawPoints *= 2;
+      const points = awardScore(ctx, pid, rawPoints);
 
       if (ctx.matchLog) {
         ctx.matchLog.log('squash', { bugId: bug.id, type: 'pipeline', chainId: bug.chainId, chainIndex: bug.chainIndex, by: pid, score: state.score });
@@ -117,10 +116,9 @@ export const pipelineDescriptor: EntityDescriptor = {
 
       if (chain.nextIndex >= chain.length) {
         // Chain complete — bonus!
-        let bonus = PIPELINE_BUG_MECHANICS.chainBonus;
-        if (powerups.isDuckBuffActive(ctx)) bonus *= 2;
-        state.score += bonus;
-        player.score += bonus;
+        let rawBonus = PIPELINE_BUG_MECHANICS.chainBonus;
+        if (powerups.isDuckBuffActive(ctx)) rawBonus *= 2;
+        const bonus = awardScore(ctx, pid, rawBonus);
 
         const hBug = state.bugs[chain.headBugId];
         if (hBug) hBug._timers.clearAll();

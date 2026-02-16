@@ -1,5 +1,5 @@
 import { getDifficultyConfig } from './config.ts';
-import { randomPosition } from './state.ts';
+import { randomPosition, awardScore, calcScore } from './state.ts';
 import logger from './logger.ts';
 import * as bugs from './bugs.ts';
 import * as game from './game.ts';
@@ -186,8 +186,7 @@ export function handleBossClick(ctx: GameContext, pid: string): void {
     state.boss.hp -= damage;
     if (state.boss.hp < 0) state.boss.hp = 0;
 
-    state.score += bossConfig.clickPoints;
-    player.score += bossConfig.clickPoints;
+    const clickPoints = awardScore(ctx, pid, bossConfig.clickPoints);
 
     let justEnraged = false;
     if (!state.boss.enraged && state.boss.hp <= state.boss.maxHp * bossConfig.enrageThreshold) {
@@ -237,13 +236,14 @@ export function handleBossClick(ctx: GameContext, pid: string): void {
 function defeatBoss(ctx: GameContext): void {
   const { state } = ctx;
   const bossConfig = getDifficultyConfig(state.difficulty, state.customConfig).boss;
+  const killBonus = calcScore(state, bossConfig.killBonus);
   const playerCount = Object.keys(state.players).length;
   if (playerCount > 0) {
-    const bonusEach = Math.floor(bossConfig.killBonus / playerCount);
+    const bonusEach = Math.floor(killBonus / playerCount);
     for (const pid of Object.keys(state.players)) {
       state.players[pid].score += bonusEach;
     }
-    state.score += bossConfig.killBonus;
+    state.score += killBonus;
   }
 
   game.endGame(ctx, 'win', true);

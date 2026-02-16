@@ -1,6 +1,6 @@
 import { LOGICAL_W, LOGICAL_H, MAX_LEVEL, getDifficultyConfig } from './config.ts';
 import { getDescriptor } from './entity-types/index.ts';
-import type { GameState, GameCounters, LevelConfigEntry, PlayerScoreEntry, DifficultyConfig, CustomDifficultyConfig } from './types.ts';
+import type { GameState, GameContext, GameCounters, LevelConfigEntry, PlayerScoreEntry, DifficultyConfig, CustomDifficultyConfig } from './types.ts';
 
 export function createGameState(difficulty: string = 'medium', customConfig?: CustomDifficultyConfig): GameState {
   const diffConfig = getDifficultyConfig(difficulty, customConfig);
@@ -55,6 +55,21 @@ export function currentLevelConfig(state: GameState): LevelConfigEntry {
     spawnRate: Math.max(800, base.spawnRate - extra * 50),
     maxOnScreen: base.maxOnScreen,
   };
+}
+
+/** Apply the difficulty score multiplier to raw points. */
+export function calcScore(state: GameState, rawPoints: number): number {
+  const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
+  return Math.round(rawPoints * diffConfig.scoreMultiplier);
+}
+
+/** Award points to a player and the team total, with the difficulty multiplier applied. Returns the final point value. */
+export function awardScore(ctx: GameContext, pid: string, rawPoints: number): number {
+  const points = calcScore(ctx.state, rawPoints);
+  ctx.state.score += points;
+  const player = ctx.state.players[pid];
+  if (player) player.score += points;
+  return points;
 }
 
 export function getPlayerScores(state: GameState): PlayerScoreEntry[] {

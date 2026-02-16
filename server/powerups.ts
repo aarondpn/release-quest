@@ -1,5 +1,5 @@
 import { getDifficultyConfig } from './config.ts';
-import { randomPosition } from './state.ts';
+import { randomPosition, awardScore } from './state.ts';
 import * as boss from './boss.ts';
 import { getDescriptor } from './entity-types/index.ts';
 import type { GameContext } from './types.ts';
@@ -65,8 +65,7 @@ export function collectDuck(ctx: GameContext, pid: string): void {
   ctx.timers.lobby.clear('duckDespawn');
 
   // Award points
-  state.score += diffConfig.powerups.rubberDuckPoints;
-  player.score += diffConfig.powerups.rubberDuckPoints;
+  awardScore(ctx, pid, diffConfig.powerups.rubberDuckPoints);
 
   state.rubberDuck = null;
 
@@ -158,8 +157,7 @@ export function collectHammer(ctx: GameContext, pid: string): void {
   ctx.timers.lobby.clear('hammerDespawn');
 
   // Award points
-  state.score += diffConfig.powerups.hotfixHammerPoints;
-  player.score += diffConfig.powerups.hotfixHammerPoints;
+  awardScore(ctx, pid, diffConfig.powerups.hotfixHammerPoints);
 
   state.hotfixHammer = null;
 

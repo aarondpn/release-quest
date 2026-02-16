@@ -255,6 +255,7 @@ export interface DifficultyConfig {
   startingHp: number;
   hpDamage: number;
   bugPoints: number;
+  scoreMultiplier: number;
   levels: Record<number, LevelConfigEntry>;
   boss: {
     hp: number;
