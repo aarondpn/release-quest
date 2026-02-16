@@ -83,6 +83,7 @@ export function getStateSnapshot(state: GameState): Record<string, unknown> {
     duckBuff: state.duckBuff ? { expiresAt: state.duckBuff.expiresAt } : null,
     hotfixHammer: state.hotfixHammer ? { id: state.hotfixHammer.id, x: state.hotfixHammer.x, y: state.hotfixHammer.y } : null,
     players: getPlayerScores(state),
+    hasCustomSettings: !!(state.customConfig && Object.keys(state.customConfig).length > 0),
     boss: state.boss ? {
       hp: state.boss.hp,
       maxHp: state.boss.maxHp,

@@ -35,6 +35,10 @@ export function showStartScreen() {
   dom.startScreen.classList.remove('hidden');
   startLobbyAnimations();
   updateLobbyRoster();
+  const warningEl = document.getElementById('lobby-custom-warning');
+  if (warningEl) {
+    warningEl.classList.toggle('hidden', !clientState.hasCustomSettings);
+  }
 }
 
 export function showGameOverScreen(score, level, playerList) {

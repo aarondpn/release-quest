@@ -59,7 +59,9 @@ export async function handleLeaveLobby(ws: WebSocket, pid: string, lobbyId: numb
 export function augmentLobbies(lobbies: any[]): any[] {
   return lobbies.map(l => {
     const mem = lobby.lobbies.get(l.id);
-    return { ...l, started: mem ? mem.state.phase !== 'lobby' : false };
+    const customConfig = (l.settings as any)?.customConfig;
+    const hasCustomSettings = !!(customConfig && Object.keys(customConfig).length > 0);
+    return { ...l, started: mem ? mem.state.phase !== 'lobby' : false, hasCustomSettings };
   });
 }
 

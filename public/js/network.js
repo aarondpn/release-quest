@@ -348,6 +348,7 @@ export function handleMessageInternal(msg) {
     case 'lobby-joined': {
       clientState.currentLobbyId = msg.lobbyId;
       clientState.currentLobbyCode = msg.lobbyCode || null;
+      clientState.hasCustomSettings = msg.hasCustomSettings || false;
       hideLobbyBrowser();
       document.getElementById('hud-leave-btn').classList.remove('hidden');
 
@@ -396,6 +397,7 @@ export function handleMessageInternal(msg) {
     case 'lobby-left': {
       clientState.currentLobbyId = null;
       clientState.currentLobbyCode = null;
+      clientState.hasCustomSettings = false;
       clientState.players = {};
       clearAllBugs();
       removeBossElement();

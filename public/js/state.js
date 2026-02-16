@@ -25,6 +25,7 @@ export const clientState = {
   duckElement: null,
   hammerElement: null,
   difficultyPresets: null,
+  hasCustomSettings: false,
   // Playback state
   isPlayback: false,
   playbackTimers: [],

@@ -357,6 +357,35 @@ document.querySelectorAll('.config-section-header').forEach(header => {
   });
 });
 
+// ── Advanced config unranked warning ──
+const advancedConfigInputs = [
+  dom.configStartingHp, dom.configHpDamage, dom.configBugPoints,
+  dom.configBossHp, dom.configBossTime, dom.configBossClickDamage,
+  dom.configBossKillBonus, dom.configBossRegen,
+  dom.configHeisenbug, dom.configCodeReview, dom.configMergeConflict,
+  dom.configPipelineBug, dom.configMemoryLeak, dom.configInfiniteLoop,
+  dom.configDuckDuration, dom.configHammerDuration,
+];
+const advancedBugToggles = [
+  dom.toggleHeisenbug, dom.toggleCodeReview, dom.toggleMergeConflict,
+  dom.togglePipelineBug, dom.toggleMemoryLeak, dom.toggleInfiniteLoop,
+];
+
+function updateAdvancedWarning() {
+  const warning = document.getElementById('advanced-config-warning');
+  if (!warning) return;
+  const hasCustomValue = advancedConfigInputs.some(input => input && input.value !== '') ||
+    advancedBugToggles.some(toggle => toggle && !toggle.checked);
+  warning.classList.toggle('hidden', !hasCustomValue);
+}
+
+advancedConfigInputs.forEach(input => {
+  if (input) input.addEventListener('input', updateAdvancedWarning);
+});
+advancedBugToggles.forEach(toggle => {
+  if (toggle) toggle.addEventListener('change', updateAdvancedWarning);
+});
+
 // ── Advanced config reset ──
 dom.advancedResetBtn.addEventListener('click', () => {
   dom.configStartingHp.value = '';
@@ -381,6 +410,7 @@ dom.advancedResetBtn.addEventListener('click', () => {
     t.checked = true;
     t.dispatchEvent(new Event('change'));
   });
+  updateAdvancedWarning();
 });
 
 // Cursor broadcasting

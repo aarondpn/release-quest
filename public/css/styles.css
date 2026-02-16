@@ -4015,9 +4015,43 @@ header p {
     right: 10px;
     left: 10px;
   }
-  
+
   .error-notification {
     min-width: auto;
     font-size: 7px;
   }
+}
+
+/* Custom settings warning banner */
+.lobby-custom-warning {
+  margin-top: 12px;
+  padding: 8px 16px;
+  border: 2px solid var(--yellow);
+  background: rgba(255, 230, 109, 0.1);
+  color: var(--yellow);
+  font-size: 8px;
+  text-align: center;
+  border-radius: 6px;
+}
+.lobby-custom-warning.hidden { display: none; }
+
+.advanced-config-warning {
+  margin: 8px 0;
+  padding: 6px 12px;
+  border: 1px solid var(--yellow);
+  background: rgba(255, 230, 109, 0.1);
+  color: var(--yellow);
+  font-size: 7px;
+  text-align: center;
+  border-radius: 4px;
+}
+.advanced-config-warning.hidden { display: none; }
+
+.lobby-list-custom {
+  font-size: 6px;
+  color: var(--yellow);
+  border: 1px solid var(--yellow);
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin-left: 4px;
 }

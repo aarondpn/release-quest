@@ -48,6 +48,7 @@ export function renderLobbyList(lobbies) {
       '<div class="lobby-list-info">' +
         '<span class="lobby-list-name">' + escapeHtml(l.name) + '</span>' +
         '<span class="lobby-list-code">' + l.code + '</span>' +
+        (l.hasCustomSettings ? '<span class="lobby-list-custom" title="Custom settings — unranked">CUSTOM</span>' : '') +
         '<span class="lobby-list-difficulty" title="' + difficulty + '">' + difficultyBadge + '</span>' +
         '<span class="lobby-list-players">' + l.player_count + '/' + l.max_players + '</span>' +
       '</div>' +
