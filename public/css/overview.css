@@ -63,6 +63,62 @@ body {
   padding: 10px 20px;
 }
 
+/* ── Difficulty Selector ── */
+.difficulty-selector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 32px;
+  padding: 14px 20px;
+  background: var(--surface);
+  border: 2px solid #2a2a4a;
+  border-radius: 8px;
+  position: sticky;
+  top: 8px;
+  z-index: 100;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+.difficulty-label {
+  font-size: 8px;
+  color: var(--muted);
+  letter-spacing: 2px;
+  font-weight: bold;
+}
+
+.difficulty-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.diff-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  padding: 8px 16px;
+  background: rgba(0,0,0,0.4);
+  color: var(--muted);
+  border: 2px solid #2a2a4a;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  letter-spacing: 1px;
+}
+
+.diff-btn:hover {
+  border-color: var(--teal);
+  color: var(--teal);
+  box-shadow: 0 0 10px rgba(78,205,196,0.2);
+}
+
+.diff-btn.active {
+  background: rgba(78,205,196,0.15);
+  border-color: var(--teal);
+  color: var(--teal);
+  box-shadow: 0 0 14px rgba(78,205,196,0.3);
+  text-shadow: 0 0 8px rgba(78,205,196,0.5);
+}
+
 /* ── Content ── */
 .overview-content {
   display: flex;
@@ -1069,6 +1125,17 @@ body {
 
   .overview-header p {
     font-size: 7px;
+  }
+
+  .difficulty-selector {
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 14px;
+  }
+
+  .diff-btn {
+    font-size: 7px;
+    padding: 6px 12px;
   }
 
   .overview-section {

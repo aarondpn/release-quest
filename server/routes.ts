@@ -1,6 +1,12 @@
 import express from 'express';
 import type { Request, Response } from 'express';
 import { DIFFICULTY_PRESETS } from './config.ts';
+import { HEISENBUG_MECHANICS } from './entity-types/heisenbug.ts';
+import { MEMORY_LEAK_MECHANICS } from './entity-types/memory-leak.ts';
+import { MERGE_CONFLICT_MECHANICS } from './entity-types/merge-conflict.ts';
+import { PIPELINE_BUG_MECHANICS } from './entity-types/pipeline.ts';
+import { INFINITE_LOOP_MECHANICS } from './entity-types/infinite-loop.ts';
+import { CODE_REVIEW_MECHANICS } from './entity-types/feature.ts';
 import * as db from './db.ts';
 import * as auth from './auth.ts';
 import { asyncHandler, NotFoundError, UnauthorizedError, BadRequestError } from './utils.ts';
@@ -39,6 +45,23 @@ function formatRecordingForClient(recording: RecordingRow) {
 // Get difficulty presets
 router.get('/difficulty-presets', (req: Request, res: Response) => {
   res.json(DIFFICULTY_PRESETS);
+});
+
+// Get full wiki config (difficulty presets + entity mechanics)
+router.get('/wiki-config', (req: Request, res: Response) => {
+  res.json({
+    difficulties: DIFFICULTY_PRESETS,
+    mechanics: {
+      heisenbug: HEISENBUG_MECHANICS,
+      memoryLeak: MEMORY_LEAK_MECHANICS,
+      mergeConflict: MERGE_CONFLICT_MECHANICS,
+      pipeline: PIPELINE_BUG_MECHANICS,
+      infiniteLoop: INFINITE_LOOP_MECHANICS,
+      feature: CODE_REVIEW_MECHANICS,
+      bossHpPerExtraPlayer: 150,
+      bossRegenPerExtraPlayer: 1,
+    },
+  });
 });
 
 // Get shared replay by token (no auth required)

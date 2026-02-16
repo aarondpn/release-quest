@@ -19,12 +19,22 @@
 <div class="deco-pixel" style="top:40%;right:2%;background:var(--red);"></div>
 
 <div class="overview-wrapper">
-  
+
   <header class="overview-header">
     <h1>🐛 GAME WIKI</h1>
     <p>All bugs, bosses & powerups explained</p>
     <a href="/" class="btn btn-back">← BACK TO GAME</a>
   </header>
+
+  <!-- Difficulty selector — shown by JS after config loads -->
+  <div id="difficulty-selector" class="difficulty-selector" hidden>
+    <span class="difficulty-label">DIFFICULTY:</span>
+    <div class="difficulty-buttons">
+      <button data-difficulty="easy" class="diff-btn">Easy</button>
+      <button data-difficulty="medium" class="diff-btn active">Medium</button>
+      <button data-difficulty="hard" class="diff-btn">Hard</button>
+    </div>
+  </div>
 
   <div class="overview-content">
 
@@ -46,14 +56,14 @@
             </div>
           </div>
           <h3 class="card-title">Normal Bug</h3>
-          <div class="card-stats">
+          <div id="normal-bug-stats" class="card-stats">
             <div class="stat">⚡ Click to squash</div>
             <div class="stat">💰 10 points</div>
             <div class="stat">💔 15 HP damage if escaped</div>
           </div>
           <p class="card-description">
-            The standard bug that spawns throughout the levels. Click it before it escapes! 
-            Escape time gets shorter with each level: 5s → 3.8s → 2.8s.
+            The standard bug that spawns throughout the levels. Click it before it escapes!
+            Escape time gets shorter with each level: <span id="normal-escape-times">5s → 3.8s → 3.2s</span>.
           </p>
         </div>
 
@@ -70,16 +80,16 @@
             </div>
           </div>
           <h3 class="card-title">Heisenbug</h3>
-          <div class="card-badge">15% spawn chance</div>
-          <div class="card-stats">
+          <div id="heisenbug-badge" class="card-badge">15% spawn chance</div>
+          <div id="heisenbug-stats" class="card-stats">
             <div class="stat">🏃 Flees when clicked (2x max)</div>
             <div class="stat">💰 30 points (3x multiplier)</div>
             <div class="stat">⏱️ 15% faster escape time</div>
           </div>
           <p class="card-description">
-            A tricky bug inspired by the "Heisenbug" phenomenon. When you click it, 
-            it teleports away! You need to catch it 3 times. Worth triple points but 
-            escapes 15% faster than normal bugs.
+            A tricky bug inspired by the "Heisenbug" phenomenon. When you click it,
+            it teleports away! You need to catch it <span id="heisenbug-catches">3</span> times. Worth <span id="heisenbug-multiplier-word">triple</span> points but
+            escapes <span id="heisenbug-faster">15%</span> faster than normal bugs.
           </p>
         </div>
 
@@ -96,16 +106,16 @@
             </div>
           </div>
           <h3 class="card-title">Feature Bug</h3>
-          <div class="card-badge">12% spawn chance (Level 2+)</div>
-          <div class="card-stats">
+          <div id="feature-badge" class="card-badge">12% spawn chance (Level 2+)</div>
+          <div id="feature-stats" class="card-stats">
             <div class="stat">⚡ Click to squash</div>
             <div class="stat">💰 10 points</div>
             <div class="stat">❤️ No HP damage if escaped</div>
           </div>
           <p class="card-description">
-            "It's not a bug, it's a feature!" These peaceful bugs don't hurt your HP 
-            if they escape. But be careful - you lose HP if you click them! 
-            Starts appearing from Level 2.
+            "It's not a bug, it's a feature!" These peaceful bugs don't hurt your HP
+            if they escape. But be careful - you lose <span id="feature-penalty">10</span> HP if you click them!
+            Starts appearing from Level <span id="feature-start-level">2</span>.
           </p>
         </div>
 
@@ -122,21 +132,21 @@
             </div>
           </div>
           <h3 class="card-title">Memory Leak</h3>
-          <div class="card-badge">12% spawn chance</div>
-          <div class="card-stats">
-            <div class="stat">🖱️ Click & HOLD to clear (0.8-2s)</div>
-            <div class="stat">� Multiple holders = faster progress!</div>
+          <div id="memory-leak-badge" class="card-badge">12% spawn chance</div>
+          <div id="memory-leak-stats" class="card-stats">
+            <div class="stat">🖱️ Click & HOLD to clear (0.4-1s)</div>
+            <div class="stat">👥 Multiple holders = faster progress!</div>
             <div class="stat">📈 Grows while being held!</div>
             <div class="stat">💰 25→20→15→10 points (start early!)</div>
             <div class="stat">💔 5→10→15→20 HP damage (stage-based)</div>
             <div class="stat">⏱️ 30% slower escape time</div>
           </div>
           <p class="card-description">
-            A dangerous bug that grows every 0.5 seconds. You must CLICK AND HOLD 
-            to free the memory - but it keeps growing while you hold! Hold time 
-            increases with each stage (0.8s/1.2s/1.6s/2s). In multiplayer, multiple 
-            players can hold simultaneously - each additional player multiplies the 
-            progress speed! All holders share the points reward. Release too early 
+            A dangerous bug that grows every <span id="memory-leak-growth-interval">0.5</span> seconds. You must CLICK AND HOLD
+            to free the memory - but it keeps growing while you hold! Hold time
+            increases with each stage (<span id="memory-leak-hold-times">0.4s/0.6s/0.8s/1s</span>). In multiplayer, multiple
+            players can hold simultaneously - each additional player multiplies the
+            progress speed! All holders share the points reward. Release too early
             and you'll have to start over.
           </p>
         </div>
@@ -163,17 +173,17 @@
             </div>
           </div>
           <h3 class="card-title">Merge Conflict</h3>
-          <div class="card-badge">8% spawn chance (2+ players)</div>
-          <div class="card-stats">
+          <div id="merge-conflict-badge" class="card-badge">8% spawn chance (2+ players)</div>
+          <div id="merge-conflict-stats" class="card-stats">
             <div class="stat">👥 Spawns in pairs</div>
             <div class="stat">💰 50 bonus points if resolved</div>
             <div class="stat">💔💔 30 HP damage if both escape</div>
             <div class="stat">⏱️ 1.5 second resolve window</div>
           </div>
           <p class="card-description">
-            Two bugs representing conflicting code branches. Click both within 1.5s 
-            to "resolve the conflict" and earn bonus points! If they escape together, 
-            they deal double damage (30 HP). Only spawns in multiplayer.
+            Two bugs representing conflicting code branches. Click both within <span id="merge-conflict-window">1.5</span>s
+            to "resolve the conflict" and earn bonus points! If they escape together,
+            they deal double damage (<span id="merge-conflict-damage">30</span> HP). Only spawns in multiplayer.
           </p>
         </div>
 
@@ -208,8 +218,8 @@
             </div>
           </div>
           <h3 class="card-title">Pipeline Bug</h3>
-          <div class="card-badge">10% spawn chance (Level 2+)</div>
-          <div class="card-stats">
+          <div id="pipeline-badge" class="card-badge">10% spawn chance (Level 2+)</div>
+          <div id="pipeline-stats" class="card-stats">
             <div class="stat">🐍 Spawns in chains of 3-5 bugs</div>
             <div class="stat">🔢 Must squash in order (1→2→3→...)</div>
             <div class="stat">💰 15 points per bug + 40 chain bonus</div>
@@ -220,7 +230,7 @@
             A chain of bugs connected by purple dotted lines, slithering across the arena
             like a snake. You must squash them in order — click bug #1 first, then #2, then
             #3, and so on. Clicking out of order resets the chain! Clear the whole chain
-            for a 40-point deployment bonus.
+            for a <span id="pipeline-bonus">40</span>-point deployment bonus.
           </p>
           <div class="card-tip">
             💡 <strong>Pro Tip:</strong> Follow the snake's head — bug #1 always leads.
@@ -241,8 +251,8 @@
             </div>
           </div>
           <h3 class="card-title">Infinite Loop</h3>
-          <div class="card-badge">6-12% spawn chance (Level 2+)</div>
-          <div class="card-stats">
+          <div id="infinite-loop-badge" class="card-badge">10% spawn chance (Level 2+)</div>
+          <div id="infinite-loop-stats" class="card-stats">
             <div class="stat">🔄 Orbits in an elliptical loop</div>
             <div class="stat">🚫 Invulnerable to direct clicks</div>
             <div class="stat">🔴 Click the red breakpoint as bug passes through</div>
@@ -276,15 +286,15 @@
           </div>
           <h3 class="card-title">Boss Minion</h3>
           <div class="card-badge">Boss Phase Only</div>
-          <div class="card-stats">
+          <div id="boss-minion-stats" class="card-stats">
             <div class="stat">⚡ Click to squash</div>
             <div class="stat">💰 10 points</div>
             <div class="stat">💔 15 HP damage if escaped</div>
             <div class="stat">⏱️ 3.5 second escape time</div>
           </div>
           <p class="card-description">
-            Smaller bugs spawned by the Mega Bug during the boss fight. They behave 
-            like normal bugs but spawn continuously. Spawn rate and max on-screen 
+            Smaller bugs spawned by the Mega Bug during the boss fight. They behave
+            like normal bugs but spawn continuously. Spawn rate and max on-screen
             increase as boss escalates and enrages.
           </p>
         </div>
@@ -322,7 +332,7 @@
           </div>
           <h3 class="card-title">MEGA BUG</h3>
           <div class="card-badge">After Level 3</div>
-          <div class="card-stats">
+          <div id="boss-stats" class="card-stats">
             <div class="stat">❤️ 500 HP (+150 per extra player)</div>
             <div class="stat">💥 5 damage per click</div>
             <div class="stat">💰 5 points per click</div>
@@ -331,10 +341,10 @@
             <div class="stat">🔄 Regenerates 2 HP/s (+1 per extra player)</div>
           </div>
           <p class="card-description">
-            The ultimate challenge! A massive bug that takes many clicks to defeat. 
+            The ultimate challenge! A massive bug that takes many clicks to defeat.
             Click it repeatedly while managing its minions. Has three phases:
           </p>
-          <div class="card-phases">
+          <div id="boss-phases" class="card-phases">
             <div class="phase">
               <strong>⚡ Escalation Levels</strong>
               <ul>
@@ -353,7 +363,7 @@
             </div>
           </div>
           <p class="card-description">
-            <strong>Victory Conditions:</strong> Deplete boss HP to 0 within 120 seconds.<br>
+            <strong>Victory Conditions:</strong> Deplete boss HP to 0 within <span id="boss-time-limit">120</span> seconds.<br>
             <strong>Defeat Conditions:</strong> Time runs out or team HP reaches 0.
           </p>
         </div>
@@ -370,15 +380,15 @@
           <div class="card-icon">🦆</div>
           <h3 class="card-title">Rubber Duck</h3>
           <div class="card-badge">Random spawn</div>
-          <div class="card-stats">
+          <div id="rubber-duck-stats" class="card-stats">
             <div class="stat">💰 25 points on collection</div>
             <div class="stat">✨ 2x points buff for 6 seconds</div>
             <div class="stat">⏱️ Spawns every 20-30 seconds</div>
             <div class="stat">⌛ Despawns after 5 seconds</div>
           </div>
           <p class="card-description">
-            The legendary rubber duck from "rubber duck debugging"! Click it to 
-            activate a powerful buff that doubles all point gains for 6 seconds. 
+            The legendary rubber duck from "rubber duck debugging"! Click it to
+            activate a powerful buff that <span id="duck-buff-multiplier">doubles</span> all point gains for <span id="duck-buff-duration">6</span> seconds.
             Chase it down before it disappears - it wanders around the arena.
           </p>
           <div class="card-tip">
@@ -391,7 +401,7 @@
           <div class="card-icon">🔨</div>
           <h3 class="card-title">Hotfix Hammer</h3>
           <div class="card-badge">Random spawn</div>
-          <div class="card-stats">
+          <div id="hotfix-hammer-stats" class="card-stats">
             <div class="stat">💰 15 points on collection</div>
             <div class="stat">💥 Stuns all bugs and boss for 2 seconds</div>
             <div class="stat">⏱️ Spawns every 25-40 seconds</div>
@@ -399,7 +409,7 @@
           </div>
           <p class="card-description">
             A powerful emergency tool! Click it to release a shockwave that freezes every
-            bug and the boss in place for 2 seconds, giving your team breathing room.
+            bug and the boss in place for <span id="hammer-stun-duration">2</span> seconds, giving your team breathing room.
             Great for buying time when overwhelmed.
           </p>
           <div class="card-tip">
@@ -416,15 +426,15 @@
       <h2 class="section-title">⚙️ GAME MECHANICS</h2>
       <div class="overview-grid mechanics-grid">
 
-        <div class="mechanics-card">
+        <div id="levels-card" class="mechanics-card">
           <h3>📊 Levels</h3>
           <p><strong>Level 1:</strong> 8 bugs, 5s escape, max 2 on screen</p>
           <p><strong>Level 2:</strong> 12 bugs, 3.8s escape, max 3 on screen</p>
-          <p><strong>Level 3:</strong> 16 bugs, 2.8s escape, max 4 on screen</p>
+          <p><strong>Level 3:</strong> 16 bugs, 3.2s escape, max 4 on screen</p>
           <p><strong>Boss:</strong> Appears after completing all 3 levels</p>
         </div>
 
-        <div class="mechanics-card">
+        <div id="health-card" class="mechanics-card">
           <h3>❤️ Health System</h3>
           <p><strong>Starting HP:</strong> 100</p>
           <p><strong>Bug escape:</strong> -15 HP</p>
@@ -435,7 +445,7 @@
           <p><strong>Game Over:</strong> When HP reaches 0</p>
         </div>
 
-        <div class="mechanics-card">
+        <div id="multiplayer-card" class="mechanics-card">
           <h3>👥 Multiplayer</h3>
           <p><strong>Players:</strong> 2-8 per lobby</p>
           <p><strong>Boss scaling:</strong> +150 HP per extra player</p>
@@ -443,7 +453,7 @@
           <p><strong>Competition:</strong> Individual scores and leaderboard</p>
         </div>
 
-        <div class="mechanics-card">
+        <div id="scoring-card" class="mechanics-card">
           <h3>🎯 Scoring</h3>
           <p><strong>Normal bug:</strong> 10 points</p>
           <p><strong>Heisenbug:</strong> 30 points (3x)</p>
@@ -459,7 +469,7 @@
           <p style="margin-top:8px;"><em>All scores are multiplied by the difficulty multiplier (see below).</em></p>
         </div>
 
-        <div class="mechanics-card">
+        <div id="difficulty-card" class="mechanics-card">
           <h3>🎚️ Difficulty Multipliers</h3>
           <p>All point rewards are scaled by a multiplier based on the selected difficulty:</p>
           <p><strong>Easy:</strong> 0.5x score</p>
@@ -475,7 +485,7 @@
     <section class="overview-section">
       <h2 class="section-title">💡 STRATEGY TIPS</h2>
       <div class="tips-container">
-        
+
         <div class="tip-card">
           <div class="tip-icon">🎯</div>
           <h4>Prioritize Bugs</h4>
@@ -489,15 +499,15 @@
         </div>
 
         <div class="tip-card">
-          <div class="tip-icon">�</div>
+          <div class="tip-icon">🧠</div>
           <h4>Memory Leaks = Teamwork!</h4>
           <p>Purple bugs require click-and-hold. In multiplayer, work together - each extra player makes it faster! They grow while held, so commit early!</p>
         </div>
 
         <div class="tip-card">
-          <div class="tip-icon">�🔀</div>
+          <div class="tip-icon">🔀</div>
           <h4>Merge Conflicts</h4>
-          <p>In multiplayer, communicate to resolve merge conflicts together within the 1.5s window!</p>
+          <p>In multiplayer, communicate to resolve merge conflicts together within the resolve window!</p>
         </div>
 
         <div class="tip-card">
@@ -536,5 +546,6 @@
 
 </div>
 
+<script src="js/wiki.js"></script>
 </body>
 </html>
