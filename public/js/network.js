@@ -14,6 +14,7 @@ import { renderRecordingsList, handleRecordingShared, handleRecordingUnshared, r
 import { handleMyStats, requestMyStats } from './stats-card-ui.js';
 import { startPlayback } from './playback.js';
 import { showError, ERROR_LEVELS } from './error-handler.js';
+import { handleChatBroadcast, showChat, hideChat, clearChat } from './chat.js';
 
 // Cursor batching: buffer incoming positions and flush once per frame
 const pendingCursors = {};
@@ -353,8 +354,10 @@ export function handleMessageInternal(msg) {
     case 'lobby-joined': {
       clientState.currentLobbyId = msg.lobbyId;
       clientState.currentLobbyCode = msg.lobbyCode || null;
+      clientState.lobbyCreatorId = msg.creatorId || null;
       clientState.hasCustomSettings = msg.hasCustomSettings || false;
       hideLobbyBrowser();
+      showChat();
       document.getElementById('hud-leave-btn').classList.remove('hidden');
 
       // Load game state from lobby
@@ -402,7 +405,10 @@ export function handleMessageInternal(msg) {
     case 'lobby-left': {
       clientState.currentLobbyId = null;
       clientState.currentLobbyCode = null;
+      clientState.lobbyCreatorId = null;
       clientState.hasCustomSettings = false;
+      clearChat();
+      hideChat();
       clientState.players = {};
       clearAllBugs();
       removeBossElement();
@@ -1114,6 +1120,16 @@ export function handleMessageInternal(msg) {
 
     case 'my-stats': {
       handleMyStats(msg.stats);
+      break;
+    }
+
+    case 'chat-broadcast': {
+      handleChatBroadcast(msg);
+      break;
+    }
+
+    case 'chat-error': {
+      showError(msg.message, ERROR_LEVELS.WARNING);
       break;
     }
   }

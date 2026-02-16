@@ -109,6 +109,13 @@ const clickMemoryLeakCompleteSchema = z.object({
   bugId: z.string(),
 });
 
+// --- Chat messages ---
+
+const chatMessageSchema = z.object({
+  type: z.literal('chat-message'),
+  message: z.string().min(1).max(200),
+});
+
 // --- Registry ---
 
 export const staticSchemas: Record<string, ZodType> = {
@@ -137,6 +144,7 @@ export const staticSchemas: Record<string, ZodType> = {
   'click-breakpoint': clickBreakpointSchema,
   'click-memory-leak-start': clickMemoryLeakStartSchema,
   'click-memory-leak-complete': clickMemoryLeakCompleteSchema,
+  'chat-message': chatMessageSchema,
 };
 
 // --- Inferred types for future handler opt-in ---
@@ -156,3 +164,4 @@ export type CursorMoveMessage = z.infer<typeof cursorMoveSchema>;
 export type ClickBreakpointMessage = z.infer<typeof clickBreakpointSchema>;
 export type ClickMemoryLeakStartMessage = z.infer<typeof clickMemoryLeakStartSchema>;
 export type ClickMemoryLeakCompleteMessage = z.infer<typeof clickMemoryLeakCompleteSchema>;
+export type ChatMessageMessage = z.infer<typeof chatMessageSchema>;

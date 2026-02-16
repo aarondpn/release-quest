@@ -26,6 +26,8 @@ export const clientState = {
   hammerElement: null,
   difficultyPresets: null,
   hasCustomSettings: false,
+  // Chat state
+  lobbyCreatorId: null,
   // Playback state
   isPlayback: false,
   playbackTimers: [],
@@ -137,6 +139,13 @@ export const dom = {
   lobbyProfileLoggedInView: null,
   lobbyProfileAuthName: null,
   onlineCountEl: null,
+  chatPanel: null,
+  chatMessages: null,
+  chatInput: null,
+  chatSendBtn: null,
+  chatToggleBtn: null,
+  chatHandle: null,
+  chatBadge: null,
 };
 
 export function initDom() {
@@ -240,4 +249,11 @@ export function initDom() {
   dom.lobbyProfileLoggedInView = document.querySelector('.lobby-profile-logged-in-view');
   dom.lobbyProfileAuthName = document.getElementById('lobby-profile-auth-name');
   dom.onlineCountEl = document.getElementById('online-count');
+  dom.chatPanel = document.getElementById('chat-panel');
+  dom.chatMessages = document.getElementById('chat-messages');
+  dom.chatInput = document.getElementById('chat-input');
+  dom.chatSendBtn = document.getElementById('chat-send-btn');
+  dom.chatToggleBtn = document.getElementById('chat-toggle-btn');
+  dom.chatHandle = document.getElementById('chat-handle');
+  dom.chatBadge = document.getElementById('chat-badge');
 }

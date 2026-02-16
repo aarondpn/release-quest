@@ -4,6 +4,7 @@ import logger from './logger.ts';
 import * as network from './network.ts';
 import * as lobby from './lobby.ts';
 import * as game from './game.ts';
+import { broadcastSystemChat, removePlayerFromChat } from './handlers/chat.ts';
 
 /**
  * Get the game context for a specific player
@@ -28,6 +29,9 @@ export function getCtxForPlayer(pid: string, playerInfo: Map<string, PlayerInfo>
  */
 export async function handleLeaveLobby(ws: WebSocket, pid: string, lobbyId: number, playerInfo: Map<string, PlayerInfo>): Promise<void> {
   const mem = lobby.getLobbyState(lobbyId);
+  const info = playerInfo.get(pid);
+  broadcastSystemChat(lobbyId, `${info?.name || 'Unknown'} left`);
+  removePlayerFromChat(lobbyId, pid);
   network.wsToLobby.delete(ws);
   network.removeClientFromLobby(lobbyId, ws);
 

@@ -474,6 +474,27 @@
 
 </div>
 
+<div class="chat-panel hidden" id="chat-panel">
+  <div class="chat-handle" id="chat-handle">
+    <div class="chat-handle-bar"></div>
+  </div>
+  <div class="chat-body">
+    <div class="chat-header">CHAT</div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-input-row">
+      <input class="chat-input" id="chat-input" type="text"
+             placeholder="Type a message..." maxlength="200"
+             autocomplete="off" spellcheck="false">
+      <button class="btn btn-small chat-send-btn" id="chat-send-btn">SEND</button>
+    </div>
+  </div>
+</div>
+
+<button class="chat-toggle-btn hidden" id="chat-toggle-btn">
+  <span class="chat-toggle-icon">CHAT</span>
+  <span class="chat-badge hidden" id="chat-badge">0</span>
+</button>
+
 <script src="js/main.min.js"></script>
 
 </body>

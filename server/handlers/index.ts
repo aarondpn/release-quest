@@ -9,6 +9,7 @@ import { handleClickBug, handleClickBoss } from './bugs.ts';
 import { handleClickDuck, handleClickHammer } from './powerups.ts';
 import { handleGetLeaderboard, handleGetMyStats, handleGetRecordings, handleShareRecording, handleUnshareRecording } from './stats.ts';
 import { handleCursorMove } from './cursor.ts';
+import { handleChatMessage } from './chat.ts';
 import { getHandlers as getPluginHandlers, getSchemas as getPluginSchemas } from '../entity-types/index.ts';
 
 const staticHandlers: Record<string, MessageHandler> = {
@@ -34,6 +35,7 @@ const staticHandlers: Record<string, MessageHandler> = {
   'share-recording': handleShareRecording,
   'unshare-recording': handleUnshareRecording,
   'cursor-move': handleCursorMove,
+  'chat-message': handleChatMessage,
 };
 
 export const handlers: Record<string, MessageHandler> = {

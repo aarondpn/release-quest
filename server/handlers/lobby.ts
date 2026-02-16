@@ -6,6 +6,7 @@ import * as network from '../network.ts';
 import * as db from '../db.ts';
 import * as lobby from '../lobby.ts';
 import { getCtxForPlayer, handleLeaveLobby as doLeaveLobby, broadcastLobbyList, augmentLobbies } from '../helpers.ts';
+import { initChatForLobby, getLobbyModerator, removePlayerFromChat, broadcastSystemChat } from './chat.ts';
 
 export const handleListLobbies: MessageHandler = ({ ws }) => {
   lobby.listLobbies().then(lobbies => {
@@ -33,6 +34,7 @@ export const handleCreateLobby: MessageHandler = ({ ws, msg, pid, wss }) => {
       return;
     }
     playerLogger.info({ lobbyName, lobbyCode: result.lobby!.code, difficulty: finalDifficulty, customConfig: !!customConfig }, 'Lobby created');
+    initChatForLobby(result.lobby!.id, pid);
     network.send(ws, { type: 'lobby-created', lobby: result.lobby });
     // Broadcast updated lobby list to all unattached clients
     broadcastLobbyList(wss);
@@ -109,6 +111,7 @@ export const handleJoinLobby: MessageHandler = async ({ ws, msg, pid, playerInfo
       lobbyId,
       lobbyName: result.lobby!.name,
       lobbyCode: result.lobby!.code,
+      creatorId: getLobbyModerator(lobbyId),
       ...getStateSnapshot(ctx.state),
     });
 
@@ -119,6 +122,7 @@ export const handleJoinLobby: MessageHandler = async ({ ws, msg, pid, playerInfo
       playerCount: Object.keys(ctx.state.players).length,
     }, ws);
 
+    broadcastSystemChat(lobbyId, `${info.name} joined`);
     broadcastLobbyList(wss);
   }).catch(() => {
     network.send(ws, { type: 'lobby-error', message: 'Failed to join lobby' });
@@ -198,6 +202,7 @@ export const handleJoinLobbyByCode: MessageHandler = async ({ ws, msg, pid, play
       lobbyId,
       lobbyName: result.lobby!.name,
       lobbyCode: result.lobby!.code,
+      creatorId: getLobbyModerator(lobbyId),
       ...getStateSnapshot(ctx.state),
     });
 
@@ -207,6 +212,7 @@ export const handleJoinLobbyByCode: MessageHandler = async ({ ws, msg, pid, play
       playerCount: Object.keys(ctx.state.players).length,
     }, ws);
 
+    broadcastSystemChat(lobbyId, `${info.name} joined`);
     broadcastLobbyList(wss);
   } catch {
     network.send(ws, { type: 'lobby-error', message: 'Failed to join lobby' });
@@ -218,6 +224,9 @@ export const handleLeaveLobby: MessageHandler = async ({ ws, pid, playerInfo, ws
   if (currentLobbyId) {
     const lobbyLogger = createLobbyLogger(currentLobbyId.toString());
     lobbyLogger.info({ playerId: pid }, 'Player left lobby');
+    const info = playerInfo.get(pid);
+    broadcastSystemChat(currentLobbyId, `${info?.name || 'Unknown'} left`);
+    removePlayerFromChat(currentLobbyId, pid);
     await doLeaveLobby(ws, pid, currentLobbyId, playerInfo);
     network.send(ws, { type: 'lobby-left' });
     broadcastLobbyList(wss);

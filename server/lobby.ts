@@ -8,6 +8,7 @@ import { createEventBus } from './event-bus.ts';
 import { createGameLifecycle } from './game-lifecycle.ts';
 import { broadcastToLobby } from './network.ts';
 import { stopRecording } from './recording.ts';
+import { cleanupChatForLobby } from './handlers/chat.ts';
 import type { LobbyMemory, PlayerData, DbLobbyRow, CustomDifficultyConfig, GameTimers } from './types.ts';
 
 function createGameTimers(): GameTimers {
@@ -142,6 +143,7 @@ export async function destroyLobby(lobbyId: number): Promise<void> {
     lobbies.delete(lobbyId);
     gameLobbiesActive.dec();
   }
+  cleanupChatForLobby(lobbyId);
 
   try {
     await db.deleteLobby(lobbyId);

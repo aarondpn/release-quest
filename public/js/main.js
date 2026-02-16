@@ -11,6 +11,7 @@ import { initReplaysSend, showReplaysTab } from './replays-ui.js';
 import { initStatsCardSend, showStatsCardTab, hideStatsCardTab, initThemePicker, downloadStatsCardPng } from './stats-card-ui.js';
 import { stopPlayback, togglePause, cycleSpeed } from './playback.js';
 import { showError, ERROR_LEVELS } from './error-handler.js';
+import { initChatSend, initChat } from './chat.js';
 
 initDom();
 
@@ -513,6 +514,10 @@ initReplaysSend(sendMessage);
 // Initialize stats card send function
 initStatsCardSend(sendMessage);
 initThemePicker();
+
+// Initialize chat
+initChatSend(sendMessage);
+initChat();
 
 
 // ── Auth handlers ──
