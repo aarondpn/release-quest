@@ -1961,26 +1961,47 @@ header p {
 
 .lobby-create-form {
   display: flex;
+  flex-direction: column;
   gap: 10px;
   align-items: center;
-  flex-wrap: wrap;
-  justify-content: center;
   max-width: 560px;
-  padding: 20px 24px;
+  padding: 16px 20px 12px;
   background: rgba(26, 26, 46, 0.5);
   border: 1px solid rgba(168, 85, 247, 0.15);
   border-radius: 10px;
 }
 
+.lobby-create-main {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.lobby-create-extras {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+.lobby-create-extras:hover,
+.lobby-create-extras:focus-within {
+  opacity: 1;
+}
+
 .btn-advanced-toggle {
-  background: rgba(168, 85, 247, 0.1);
-  border-color: var(--purple);
-  color: var(--purple);
-  font-size: 6px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.2s;
 }
 .btn-advanced-toggle:hover {
-  background: var(--purple);
-  color: var(--bg);
+  color: var(--purple);
 }
 
 .lobby-advanced-config {
@@ -2392,6 +2413,92 @@ header p {
   background: var(--surface);
   color: var(--muted);
   box-shadow: none;
+}
+
+.lobby-join-area {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.lobby-password-prompt {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lobby-password-join-input {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  padding: 6px 8px;
+  background: var(--surface);
+  border: 2px solid var(--purple);
+  border-radius: 4px;
+  color: var(--yellow);
+  outline: none;
+  width: 90px;
+}
+.lobby-password-join-input::placeholder {
+  color: #3d3d5c;
+  font-size: 6px;
+}
+.lobby-password-join-input:focus {
+  border-color: var(--yellow);
+}
+
+.lobby-password-confirm-btn {
+  font-size: 6px !important;
+  padding: 6px 10px !important;
+}
+
+.btn-cancel {
+  background: transparent !important;
+  border-color: #3d3d5c !important;
+  color: var(--muted) !important;
+  font-size: 8px !important;
+  padding: 4px 8px !important;
+}
+.btn-cancel:hover {
+  border-color: var(--red) !important;
+  color: var(--red) !important;
+}
+
+.lobby-list-lock {
+  margin-right: 4px;
+  font-size: 9px;
+}
+
+.lobby-password-field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  border-radius: 4px;
+  padding: 4px 8px;
+  transition: border-color 0.2s;
+}
+.lobby-password-field:focus-within {
+  border-color: var(--purple);
+}
+.lobby-password-icon {
+  font-size: 10px;
+  opacity: 0.5;
+  line-height: 1;
+}
+.lobby-password-input {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  padding: 2px 0;
+  background: transparent;
+  border: none;
+  color: var(--yellow);
+  outline: none;
+  width: 80px;
+}
+.lobby-password-input::placeholder {
+  color: #3d3d5c;
+  font-size: 7px;
 }
 
 .lobby-create-btn {
@@ -3907,7 +4014,9 @@ header p {
   }
   .lobby-tabs::-webkit-scrollbar { display: none; }
   .lobby-tab { padding: 10px 12px; font-size: 6px; white-space: nowrap; }
-  .lobby-create-form { padding: 16px; gap: 8px; }
+  .lobby-create-form { padding: 12px; gap: 6px; }
+  .lobby-create-main { gap: 6px; }
+  .lobby-create-extras { gap: 10px; }
   .lobby-profile-bar { gap: 8px; }
   .lobby-profile-divider { display: none; }
   .lobby-profile-name { font-size: 8px; }

@@ -262,13 +262,21 @@ dom.createLobbyBtn.addEventListener('click', () => {
       customConfig.powerups.hotfixHammerStunDuration = parseInt(dom.configHammerDuration.value, 10);
     }
     
+    const password = dom.lobbyPasswordInput.value.trim();
     const message = { type: 'create-lobby', name, maxPlayers, difficulty };
     if (Object.keys(customConfig).length > 0) {
       message.customConfig = customConfig;
     }
-    
+    if (password) {
+      message.password = password;
+    }
+
+    // Save password so auto-join after creation can use it
+    clientState.pendingLobbyPassword = password || null;
+
     sendMessage(message);
     dom.lobbyNameInput.value = '';
+    dom.lobbyPasswordInput.value = '';
     dom.lobbyError.classList.add('hidden');
   } catch (err) {
     console.error('Error creating lobby:', err);

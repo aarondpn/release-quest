@@ -22,10 +22,11 @@ export const handleCreateLobby: MessageHandler = ({ ws, msg, pid, wss }) => {
   const validDifficulties = ['easy', 'medium', 'hard'];
   const finalDifficulty = validDifficulties.includes(difficulty) ? difficulty : 'medium';
   const customConfig = msg.customConfig || undefined;
+  const password = String(msg.password || '').trim() || undefined;
 
   const playerLogger = createPlayerLogger(pid);
 
-  lobby.createLobby(lobbyName, maxPlayers, finalDifficulty, customConfig).then(result => {
+  lobby.createLobby(lobbyName, maxPlayers, finalDifficulty, customConfig, password).then(result => {
     if (result.error) {
       playerLogger.info({ error: result.error }, 'Lobby creation failed');
       network.send(ws, { type: 'lobby-error', message: result.error });
@@ -45,6 +46,22 @@ export const handleJoinLobby: MessageHandler = async ({ ws, msg, pid, playerInfo
   if (!lobbyId) {
     network.send(ws, { type: 'lobby-error', message: 'Invalid lobby ID' });
     return;
+  }
+
+  // Check password before joining
+  const targetLobby = await db.getLobby(lobbyId);
+  if (targetLobby) {
+    const lobbyPassword = (targetLobby.settings as any)?.password;
+    if (lobbyPassword) {
+      if (!msg.password) {
+        network.send(ws, { type: 'lobby-error', message: 'This lobby requires a password', needsPassword: true, lobbyId });
+        return;
+      }
+      if (msg.password !== lobbyPassword) {
+        network.send(ws, { type: 'lobby-error', message: 'Incorrect password', needsPassword: true, lobbyId });
+        return;
+      }
+    }
   }
 
   // Leave current lobby if in one
@@ -120,6 +137,19 @@ export const handleJoinLobbyByCode: MessageHandler = async ({ ws, msg, pid, play
     if (!targetLobby) {
       network.send(ws, { type: 'lobby-error', message: 'Lobby not found' });
       return;
+    }
+
+    // Check password
+    const lobbyPassword = (targetLobby.settings as any)?.password;
+    if (lobbyPassword) {
+      if (!msg.password) {
+        network.send(ws, { type: 'lobby-error', message: 'This lobby requires a password', needsPassword: true, lobbyId: targetLobby.id, code });
+        return;
+      }
+      if (msg.password !== lobbyPassword) {
+        network.send(ws, { type: 'lobby-error', message: 'Incorrect password', needsPassword: true, lobbyId: targetLobby.id, code });
+        return;
+      }
     }
 
     const lobbyId = targetLobby.id;

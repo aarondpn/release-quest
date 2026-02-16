@@ -61,7 +61,10 @@ export function augmentLobbies(lobbies: any[]): any[] {
     const mem = lobby.lobbies.get(l.id);
     const customConfig = (l.settings as any)?.customConfig;
     const hasCustomSettings = !!(customConfig && Object.keys(customConfig).length > 0);
-    return { ...l, started: mem ? mem.state.phase !== 'lobby' : false, hasCustomSettings };
+    const hasPassword = !!(l.settings as any)?.password;
+    // Strip password from settings before sending to clients
+    const { password: _pw, ...safeSettings } = (l.settings as any) || {};
+    return { ...l, settings: safeSettings, started: mem ? mem.state.phase !== 'lobby' : false, hasCustomSettings, hasPassword };
   });
 }
 

@@ -56,6 +56,7 @@ export const dom = {
   lobbyList: null,
   lobbyNameInput: null,
   lobbyMaxPlayers: null,
+  lobbyPasswordInput: null,
   createLobbyBtn: null,
   lobbyError: null,
   authStatus: null,
@@ -158,6 +159,7 @@ export function initDom() {
   dom.lobbyList = document.getElementById('lobby-list');
   dom.lobbyNameInput = document.getElementById('lobby-name-input');
   dom.lobbyMaxPlayers = document.getElementById('lobby-max-players');
+  dom.lobbyPasswordInput = document.getElementById('lobby-password-input');
   dom.lobbyDifficulty = document.getElementById('lobby-difficulty');
   dom.createLobbyBtn = document.getElementById('create-lobby-btn');
   dom.lobbyError = document.getElementById('lobby-error');

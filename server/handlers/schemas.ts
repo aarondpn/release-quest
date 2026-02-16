@@ -56,16 +56,19 @@ const createLobbySchema = z.object({
   maxPlayers: z.number().optional(),
   difficulty: z.string().optional(),
   customConfig: z.record(z.string(), z.unknown()).optional(),
+  password: z.string().optional(),
 });
 
 const joinLobbySchema = z.object({
   type: z.literal('join-lobby'),
   lobbyId: z.number(),
+  password: z.string().optional(),
 });
 
 const joinLobbyByCodeSchema = z.object({
   type: z.literal('join-lobby-by-code'),
   code: z.string(),
+  password: z.string().optional(),
 });
 
 const clickBugSchema = z.object({

@@ -61,7 +61,7 @@ export const lobbies = new Map<number, LobbyMemory>();
 // Reverse lookup: playerId -> lobbyId
 export const playerToLobby = new Map<string, number>();
 
-export async function createLobby(name: string, maxPlayers: number | undefined, difficulty: string = 'medium', customConfig?: CustomDifficultyConfig): Promise<{ lobby?: DbLobbyRow; error?: string }> {
+export async function createLobby(name: string, maxPlayers: number | undefined, difficulty: string = 'medium', customConfig?: CustomDifficultyConfig, password?: string): Promise<{ lobby?: DbLobbyRow; error?: string }> {
   const lobbyCount = await db.getActiveLobbyCount();
   if (lobbyCount >= LOBBY_CONFIG.maxLobbies) {
     return { error: 'Maximum number of lobbies reached' };
@@ -70,7 +70,8 @@ export async function createLobby(name: string, maxPlayers: number | undefined, 
   let mp = Math.min(maxPlayers || LOBBY_CONFIG.defaultMaxPlayers, LOBBY_CONFIG.maxPlayersLimit);
   mp = Math.max(1, mp);
 
-  const settings = { difficulty, customConfig };
+  const settings: Record<string, unknown> = { difficulty, customConfig };
+  if (password) settings.password = password;
   const row = await db.createLobby(name, mp, settings);
 
   lobbies.set(row.id, createLobbyMemory(row.id, difficulty, customConfig));

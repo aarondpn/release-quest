@@ -6,7 +6,7 @@ import { createBugElement, removeBugElement, clearAllBugs, showSquashEffect, rem
 import { createBossElement, updateBossHp, removeBossElement, showBossHitEffect, formatTime } from './boss.js';
 import { addRemoteCursor, removeRemoteCursor, updateRemoteCursor, clearRemoteCursors } from './players.js';
 import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, showEnrageFlash, showLevelFlash, showEscalationWarning, showBossRegenNumber, showHeisenbugFleeEffect, showFeaturePenaltyEffect, showDuckBuffOverlay, removeDuckBuffOverlay, showMergeResolvedEffect, showPipelineChainResolvedEffect, showPipelineChainResetEffect, showBreakpointHitEffect } from './vfx.js';
-import { showLobbyBrowser, hideLobbyBrowser, renderLobbyList, showLobbyError, buildLobbyIconPicker } from './lobby-ui.js';
+import { showLobbyBrowser, hideLobbyBrowser, renderLobbyList, showLobbyError, buildLobbyIconPicker, joinLobbyWithPassword, joinLobbyByCodeWithPassword } from './lobby-ui.js';
 import { updateAuthUI, hideAuthOverlay, showAuthError } from './auth-ui.js';
 import { isPremium, STANDARD_ICONS } from './avatars.js';
 import { renderLeaderboard } from './leaderboard-ui.js';
@@ -340,8 +340,13 @@ export function handleMessageInternal(msg) {
     }
 
     case 'lobby-created': {
-      // Auto-join the lobby we just created
-      sendMessage({ type: 'join-lobby', lobbyId: msg.lobby.id });
+      // Auto-join the lobby we just created, including password if one was set
+      const joinMsg = { type: 'join-lobby', lobbyId: msg.lobby.id };
+      if (clientState.pendingLobbyPassword) {
+        joinMsg.password = clientState.pendingLobbyPassword;
+      }
+      clientState.pendingLobbyPassword = null;
+      sendMessage(joinMsg);
       break;
     }
 
@@ -419,6 +424,14 @@ export function handleMessageInternal(msg) {
       // (e.g. invite link to a full/missing lobby)
       if (!clientState.currentLobbyId) {
         showLobbyBrowser();
+      }
+      // Handle password-protected lobby prompts for join-by-code
+      if (msg.needsPassword && msg.code) {
+        const password = prompt('This lobby requires a password:');
+        if (password != null) {
+          joinLobbyByCodeWithPassword(msg.code, password);
+        }
+        break;
       }
       showLobbyError(msg.message);
       break;

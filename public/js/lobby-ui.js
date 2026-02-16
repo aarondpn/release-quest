@@ -43,9 +43,10 @@ export function renderLobbyList(lobbies) {
     const statusClass = l.started ? 'lobby-list-status-playing' : 'lobby-list-status-waiting';
     const statusLabel = l.started ? 'In Game' : 'Waiting';
     const difficultyLabel = difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
+    const lockIcon = l.hasPassword ? '<span class="lobby-list-lock" title="Password protected">\u{1F512}</span>' : '';
     return '<div class="lobby-list-item">' +
       '<div class="lobby-list-info">' +
-        '<span class="lobby-list-name">' + escapeHtml(l.name) + '</span>' +
+        '<span class="lobby-list-name">' + lockIcon + escapeHtml(l.name) + '</span>' +
         '<span class="lobby-list-details">' +
           '<span class="lobby-list-detail"><span class="lobby-list-status ' + statusClass + '"></span>' + statusLabel + '</span>' +
           '<span class="lobby-list-sep"></span>' +
@@ -56,20 +57,68 @@ export function renderLobbyList(lobbies) {
         '</span>' +
         '<span class="lobby-list-code">#' + l.code + '</span>' +
       '</div>' +
-      '<button class="btn btn-small lobby-join-btn" data-lobby-id="' + l.id + '"' +
-        (full ? ' disabled' : '') + '>' +
-        (full ? 'FULL' : 'JOIN') +
-      '</button>' +
+      '<div class="lobby-join-area" data-lobby-id="' + l.id + '" data-has-password="' + (l.hasPassword ? '1' : '') + '">' +
+        '<button class="btn btn-small lobby-join-btn"' +
+          (full ? ' disabled' : '') + '>' +
+          (full ? 'FULL' : 'JOIN') +
+        '</button>' +
+      '</div>' +
     '</div>';
   }).join('');
 
   // Attach join handlers
-  dom.lobbyList.querySelectorAll('.lobby-join-btn:not([disabled])').forEach(btn => {
+  dom.lobbyList.querySelectorAll('.lobby-join-area').forEach(area => {
+    const btn = area.querySelector('.lobby-join-btn');
+    if (!btn || btn.disabled) return;
+    const lobbyId = parseInt(area.dataset.lobbyId, 10);
+    const hasPassword = area.dataset.hasPassword === '1';
+
     btn.addEventListener('click', () => {
-      const lobbyId = parseInt(btn.dataset.lobbyId, 10);
-      if (_sendMessage) _sendMessage({ type: 'join-lobby', lobbyId });
+      if (hasPassword) {
+        // Show inline password prompt
+        showInlinePasswordPrompt(area, lobbyId);
+      } else {
+        if (_sendMessage) _sendMessage({ type: 'join-lobby', lobbyId });
+      }
     });
   });
+}
+
+function showInlinePasswordPrompt(area, lobbyId) {
+  // Replace join button with password input + confirm
+  area.innerHTML =
+    '<div class="lobby-password-prompt">' +
+      '<input class="lobby-password-join-input" type="password" placeholder="Password" maxlength="32" autocomplete="off">' +
+      '<button class="btn btn-small lobby-password-confirm-btn">GO</button>' +
+      '<button class="btn btn-small btn-cancel lobby-password-cancel-btn">\u2715</button>' +
+    '</div>';
+  const input = area.querySelector('.lobby-password-join-input');
+  const confirmBtn = area.querySelector('.lobby-password-confirm-btn');
+  const cancelBtn = area.querySelector('.lobby-password-cancel-btn');
+  input.focus();
+
+  function submitPassword() {
+    const password = input.value;
+    if (_sendMessage) _sendMessage({ type: 'join-lobby', lobbyId, password });
+  }
+
+  confirmBtn.addEventListener('click', submitPassword);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submitPassword();
+    if (e.key === 'Escape') cancelBtn.click();
+  });
+  cancelBtn.addEventListener('click', () => {
+    // Re-render the lobby list to restore the join button
+    renderLobbyList(clientState.lobbies);
+  });
+}
+
+export function joinLobbyWithPassword(lobbyId, password) {
+  if (_sendMessage) _sendMessage({ type: 'join-lobby', lobbyId, password });
+}
+
+export function joinLobbyByCodeWithPassword(code, password) {
+  if (_sendMessage) _sendMessage({ type: 'join-lobby-by-code', code, password });
 }
 
 export function showLobbyError(message) {
