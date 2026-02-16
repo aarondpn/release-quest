@@ -2312,10 +2312,11 @@ header p {
 }
 
 .lobby-list-status {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
+  display: inline-block;
 }
 .lobby-list-status-waiting {
   background: var(--teal);
@@ -2333,29 +2334,47 @@ header p {
 
 .lobby-list-info {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 8px;
+  align-items: baseline;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
 }
 
 .lobby-list-name {
   color: var(--yellow);
+  font-size: 8px;
+  flex-shrink: 0;
+}
+
+.lobby-list-details {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 6px;
+  color: var(--muted);
+}
+
+.lobby-list-detail {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.lobby-list-sep {
+  opacity: 0.3;
+}
+
+.lobby-list-sep::before {
+  content: '\00b7';
 }
 
 .lobby-list-code {
   color: var(--teal);
   font-size: 6px;
-  opacity: 0.7;
-}
-
-.lobby-list-difficulty {
-  font-size: 10px;
-  opacity: 0.8;
-}
-
-.lobby-list-players {
-  color: var(--muted);
-  font-size: 6px;
+  opacity: 0.35;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .lobby-join-btn {
@@ -4048,10 +4067,9 @@ header p {
 .advanced-config-warning.hidden { display: none; }
 
 .lobby-list-custom {
-  font-size: 6px;
+  font-size: 5px;
   color: var(--yellow);
   border: 1px solid var(--yellow);
   padding: 1px 4px;
   border-radius: 3px;
-  margin-left: 4px;
 }

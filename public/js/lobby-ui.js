@@ -40,17 +40,21 @@ export function renderLobbyList(lobbies) {
   dom.lobbyList.innerHTML = lobbies.map(l => {
     const full = l.player_count >= l.max_players;
     const difficulty = (l.settings && l.settings.difficulty) || 'medium';
-    const difficultyBadge = difficulty === 'easy' ? '🟢' : difficulty === 'hard' ? '🔴' : '🟡';
     const statusClass = l.started ? 'lobby-list-status-playing' : 'lobby-list-status-waiting';
-    const statusTitle = l.started ? 'In game' : 'Waiting';
+    const statusLabel = l.started ? 'In Game' : 'Waiting';
+    const difficultyLabel = difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
     return '<div class="lobby-list-item">' +
-      '<span class="lobby-list-status ' + statusClass + '" title="' + statusTitle + '"></span>' +
       '<div class="lobby-list-info">' +
         '<span class="lobby-list-name">' + escapeHtml(l.name) + '</span>' +
-        '<span class="lobby-list-code">' + l.code + '</span>' +
-        (l.hasCustomSettings ? '<span class="lobby-list-custom" title="Custom settings — unranked">CUSTOM</span>' : '') +
-        '<span class="lobby-list-difficulty" title="' + difficulty + '">' + difficultyBadge + '</span>' +
-        '<span class="lobby-list-players">' + l.player_count + '/' + l.max_players + '</span>' +
+        '<span class="lobby-list-details">' +
+          '<span class="lobby-list-detail"><span class="lobby-list-status ' + statusClass + '"></span>' + statusLabel + '</span>' +
+          '<span class="lobby-list-sep"></span>' +
+          '<span class="lobby-list-detail">' + difficultyLabel + '</span>' +
+          '<span class="lobby-list-sep"></span>' +
+          '<span class="lobby-list-detail">' + l.player_count + '/' + l.max_players + '</span>' +
+          (l.hasCustomSettings ? '<span class="lobby-list-sep"></span><span class="lobby-list-custom" title="Custom settings — unranked">CUSTOM</span>' : '') +
+        '</span>' +
+        '<span class="lobby-list-code">#' + l.code + '</span>' +
       '</div>' +
       '<button class="btn btn-small lobby-join-btn" data-lobby-id="' + l.id + '"' +
         (full ? ' disabled' : '') + '>' +
