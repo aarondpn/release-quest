@@ -71,6 +71,21 @@
   <button class="btn btn-link auth-back-btn" id="auth-back-btn">BACK</button>
 </div>
 
+<!-- Password prompt modal -->
+<div class="password-modal hidden" id="password-modal">
+  <div class="password-modal-box">
+    <div class="password-modal-icon">&#x1F512;</div>
+    <div class="password-modal-title">PASSWORD REQUIRED</div>
+    <div class="password-modal-sub">This lobby is password protected</div>
+    <input class="password-modal-input" id="password-modal-input" type="password" placeholder="Enter password..." maxlength="32" autocomplete="off">
+    <div class="password-modal-error hidden" id="password-modal-error"></div>
+    <div class="password-modal-buttons">
+      <button class="btn btn-small" id="password-modal-submit">JOIN</button>
+      <button class="btn btn-small btn-leave" id="password-modal-cancel">CANCEL</button>
+    </div>
+  </div>
+</div>
+
 <!-- Lobby browser overlay -->
 <div class="lobby-browser hidden" id="lobby-browser">
   <div class="lobby-browser-spacer"></div>

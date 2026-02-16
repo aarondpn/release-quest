@@ -427,10 +427,7 @@ export function handleMessageInternal(msg) {
       }
       // Handle password-protected lobby prompts for join-by-code
       if (msg.needsPassword && msg.code) {
-        const password = prompt('This lobby requires a password:');
-        if (password != null) {
-          joinLobbyByCodeWithPassword(msg.code, password);
-        }
+        showPasswordModal(msg.code, msg.message !== 'This lobby requires a password' ? msg.message : null);
         break;
       }
       showLobbyError(msg.message);
@@ -1249,4 +1246,50 @@ function checkJoinUrl() {
   const url = new URL(location.href);
   url.searchParams.delete('join');
   history.replaceState(null, '', url.pathname + url.search);
+}
+
+// ── Password modal for invite code joins ──
+
+function showPasswordModal(code, errorMsg) {
+  const modal = document.getElementById('password-modal');
+  const input = document.getElementById('password-modal-input');
+  const error = document.getElementById('password-modal-error');
+  const submitBtn = document.getElementById('password-modal-submit');
+  const cancelBtn = document.getElementById('password-modal-cancel');
+
+  modal.classList.remove('hidden');
+  input.value = '';
+  input.focus();
+
+  if (errorMsg) {
+    error.textContent = errorMsg;
+    error.classList.remove('hidden');
+  } else {
+    error.classList.add('hidden');
+  }
+
+  function cleanup() {
+    modal.classList.add('hidden');
+    submitBtn.replaceWith(submitBtn.cloneNode(true));
+    cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+    input.replaceWith(input.cloneNode(true));
+  }
+
+  function submit() {
+    const password = input.value;
+    if (!password) {
+      error.textContent = 'Please enter a password';
+      error.classList.remove('hidden');
+      return;
+    }
+    cleanup();
+    joinLobbyByCodeWithPassword(code, password);
+  }
+
+  submitBtn.addEventListener('click', submit);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submit();
+    if (e.key === 'Escape') cleanup();
+  });
+  cancelBtn.addEventListener('click', cleanup);
 }

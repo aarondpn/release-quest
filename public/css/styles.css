@@ -2468,6 +2468,86 @@ header p {
   font-size: 9px;
 }
 
+/* Password prompt modal */
+.password-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 20, 0.85);
+  z-index: 520;
+  padding: 20px;
+}
+.password-modal.hidden { display: none; }
+
+.password-modal-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 2px solid var(--purple);
+  border-radius: 10px;
+  padding: 28px 36px;
+  max-width: 320px;
+  width: 100%;
+  box-shadow: 0 0 40px rgba(168, 85, 247, 0.25);
+}
+
+.password-modal-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.password-modal-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  color: var(--yellow);
+  text-shadow: 0 0 16px rgba(255, 230, 109, 0.4);
+}
+
+.password-modal-sub {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--muted);
+}
+
+.password-modal-input {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  padding: 10px 14px;
+  background: var(--bg);
+  border: 2px solid var(--purple);
+  border-radius: 6px;
+  color: var(--yellow);
+  outline: none;
+  width: 100%;
+  text-align: center;
+  box-sizing: border-box;
+}
+.password-modal-input::placeholder {
+  color: #3d3d5c;
+  font-size: 7px;
+}
+.password-modal-input:focus {
+  border-color: var(--yellow);
+  box-shadow: 0 0 12px rgba(255, 230, 109, 0.2);
+}
+
+.password-modal-error {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--red);
+}
+.password-modal-error.hidden { display: none; }
+
+.password-modal-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
 .lobby-password-field {
   display: flex;
   align-items: center;
