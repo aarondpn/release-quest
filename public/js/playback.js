@@ -1,5 +1,5 @@
 import { dom, clientState } from './state.js';
-import { updateHUD, updatePlayerCount, hideAllScreens, hideLiveDashboard } from './hud.js';
+import { updateHUD, updatePlayerCount, hideAllScreens, hideLiveDashboard, showGameOverScreen, showWinScreen } from './hud.js';
 import { clearAllBugs } from './bugs.js';
 import { removeBossElement } from './boss.js';
 import { addRemoteCursor, clearRemoteCursors } from './players.js';
@@ -9,6 +9,7 @@ import { handleMessageInternal } from './network.js';
 
 let progressRafId = null;
 let progressBarClickBound = false;
+let playbackEnded = false;
 
 function formatPlaybackTime(ms) {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -20,18 +21,7 @@ function formatPlaybackTime(ms) {
 function getPlaybackDuration() {
   const recording = clientState.playbackRecording;
   if (!recording) return 0;
-  let maxT = 0;
-  if (recording.events) {
-    for (const e of recording.events) {
-      if (e.t > maxT) maxT = e.t;
-    }
-  }
-  if (recording.mouseMovements) {
-    for (const m of recording.mouseMovements) {
-      if (m.t > maxT) maxT = m.t;
-    }
-  }
-  return maxT;
+  return recording.duration_ms || 0;
 }
 
 function updateProgressBar() {
@@ -43,10 +33,26 @@ function updateProgressBar() {
     dom.playbackProgressFill.style.width = (progress * 100) + '%';
   }
   if (dom.playbackTimeCurrent) {
-    dom.playbackTimeCurrent.textContent = formatPlaybackTime(gameTime);
+    dom.playbackTimeCurrent.textContent = formatPlaybackTime(Math.min(gameTime, duration));
   }
   if (dom.playbackTimeTotal) {
     dom.playbackTimeTotal.textContent = formatPlaybackTime(duration);
+  }
+
+  // Show end screen when playback reaches the end
+  if (!playbackEnded && duration > 0 && gameTime >= duration) {
+    playbackEnded = true;
+    const recording = clientState.playbackRecording;
+    if (recording) {
+      const players = Object.values(clientState.players).map(p => ({
+        id: p.id, name: p.name, icon: p.icon, color: p.color, score: p.score, isGuest: false,
+      }));
+      if (recording.outcome === 'win') {
+        showWinScreen(recording.score, players);
+      } else {
+        showGameOverScreen(recording.score, 3, players);
+      }
+    }
   }
 }
 
@@ -82,6 +88,7 @@ function initProgressBarClick() {
 }
 
 function seekTo(targetTime) {
+  playbackEnded = false;
   // Reset game state for replay
   clearAllBugs();
   removeBossElement();
@@ -130,6 +137,7 @@ export function startPlayback(recording) {
   clientState.playbackPaused = false;
   clientState.playbackTimers = [];
   clientState.playbackMouseTimers = [];
+  playbackEnded = false;
   // Clear myId so all player cursors are shown during replay
   clientState.myId = null;
 
