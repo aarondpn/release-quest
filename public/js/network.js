@@ -999,6 +999,9 @@ export function handleMessageInternal(msg) {
       removeDuckBuffOverlay();
       hideLiveDashboard();
       shakeArena('heavy');
+      if (msg.players) {
+        msg.players.forEach(p => { if (clientState.players[p.id]) { clientState.players[p.id].score = p.score; clientState.players[p.id].bugsSquashed = p.bugsSquashed; } });
+      }
       showGameOverScreen(msg.score, msg.level, msg.players || []);
       break;
     }
@@ -1075,7 +1078,7 @@ export function handleMessageInternal(msg) {
         showWinScreen(msg.score, msg.players || []);
       }
       if (msg.players) {
-        msg.players.forEach(p => { if (clientState.players[p.id]) clientState.players[p.id].score = p.score; });
+        msg.players.forEach(p => { if (clientState.players[p.id]) { clientState.players[p.id].score = p.score; clientState.players[p.id].bugsSquashed = p.bugsSquashed; } });
       }
       updateHUD(msg.score);
       updateLiveDashboard();

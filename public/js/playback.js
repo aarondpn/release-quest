@@ -45,7 +45,7 @@ function updateProgressBar() {
     const recording = clientState.playbackRecording;
     if (recording) {
       const players = Object.values(clientState.players).map(p => ({
-        id: p.id, name: p.name, icon: p.icon, color: p.color, score: p.score, isGuest: false,
+        id: p.id, name: p.name, icon: p.icon, color: p.color, score: p.score, bugsSquashed: p.bugsSquashed || 0, isGuest: false,
       }));
       if (recording.outcome === 'win') {
         showWinScreen(recording.score, players);
