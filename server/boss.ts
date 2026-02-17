@@ -4,28 +4,33 @@ import logger from './logger.ts';
 import * as bugs from './bugs.ts';
 import * as game from './game.ts';
 import * as powerups from './powerups.ts';
-import type { GameContext } from './types.ts';
+import { getDefaultBossType, getBossType } from './boss-types/index.ts';
+import type { GameContext, BossTypePluginInterface } from './types.ts';
+
+let activePlugin: BossTypePluginInterface | null = null;
+
+export function getActivePlugin(): BossTypePluginInterface | null {
+  return activePlugin;
+}
 
 export function clearBossTimers(ctx: GameContext): void {
   ctx.timers.boss.clearAll();
 }
 
 export function getEffectiveSpawnRate(ctx: GameContext): number {
-  const { state } = ctx;
-  const bossConfig = getDifficultyConfig(state.difficulty, state.customConfig).boss;
-  if (!state.boss) return bossConfig.minionSpawnRate;
-  const base = state.boss.currentSpawnRate;
-  if (state.boss.enraged) return Math.min(base, bossConfig.enrageMinionSpawnRate);
-  return base;
+  if (!ctx.state.boss || !activePlugin) {
+    const bossConfig = getDifficultyConfig(ctx.state.difficulty, ctx.state.customConfig).boss;
+    return bossConfig.minionSpawnRate;
+  }
+  return activePlugin.getSpawnRate(ctx);
 }
 
 export function getEffectiveMaxOnScreen(ctx: GameContext): number {
-  const { state } = ctx;
-  const bossConfig = getDifficultyConfig(state.difficulty, state.customConfig).boss;
-  if (!state.boss) return bossConfig.minionMaxOnScreen;
-  const base = state.boss.currentMaxOnScreen;
-  if (state.boss.enraged) return Math.max(base, bossConfig.enrageMinionMaxOnScreen + state.boss.extraPlayers);
-  return base;
+  if (!ctx.state.boss || !activePlugin) {
+    const bossConfig = getDifficultyConfig(ctx.state.difficulty, ctx.state.customConfig).boss;
+    return bossConfig.minionMaxOnScreen;
+  }
+  return activePlugin.getMaxOnScreen(ctx);
 }
 
 export function setupBossWander(ctx: GameContext, interval: number): void {
@@ -62,29 +67,18 @@ export function setupMinionSpawning(ctx: GameContext, rate: number): void {
   }
 }
 
-export function startBoss(ctx: GameContext): void {
+export function startBoss(ctx: GameContext, typeKey?: string): void {
   const { state } = ctx;
   const bossConfig = getDifficultyConfig(state.difficulty, state.customConfig).boss;
+
+  activePlugin = typeKey ? getBossType(typeKey) : getDefaultBossType();
   ctx.lifecycle.transition(state, 'boss');
-  const pos = randomPosition();
-  const extra = Math.max(0, Object.keys(state.players).length - 1);
-  state.boss = {
-    hp: bossConfig.hp + extra * 150,
-    maxHp: bossConfig.hp + extra * 150,
-    x: pos.x,
-    y: pos.y,
-    enraged: false,
-    lastClickBy: {},
-    timeRemaining: bossConfig.timeLimit,
-    escalationLevel: 0,
-    currentSpawnRate: bossConfig.minionSpawnRate,
-    currentMaxOnScreen: bossConfig.minionMaxOnScreen + extra,
-    regenPerSecond: bossConfig.regenPerSecond + extra,
-    extraPlayers: extra,
-  };
+
+  state.boss = activePlugin.init(ctx, bossConfig);
 
   if (ctx.matchLog) {
     ctx.matchLog.log('boss-start', {
+      bossType: activePlugin.typeKey,
       bossHp: state.boss.hp,
       minionSpawnRate: bossConfig.minionSpawnRate,
       timeLimit: bossConfig.timeLimit,
@@ -92,68 +86,43 @@ export function startBoss(ctx: GameContext): void {
     });
   }
 
+  const broadcastExtra = activePlugin.broadcastFields(ctx);
   ctx.events.emit({
     type: 'boss-spawn',
-    boss: { hp: state.boss.hp, maxHp: state.boss.maxHp, x: pos.x, y: pos.y, enraged: false },
+    boss: {
+      hp: state.boss.hp,
+      maxHp: state.boss.maxHp,
+      x: state.boss.x,
+      y: state.boss.y,
+      ...broadcastExtra,
+    },
     hp: state.hp,
     score: state.score,
     timeRemaining: bossConfig.timeLimit,
   });
 
   setupBossWander(ctx, bossConfig.wanderInterval);
-  setupMinionSpawning(ctx, bossConfig.minionSpawnRate);
+  setupMinionSpawning(ctx, activePlugin.getSpawnRate(ctx));
   ctx.timers.boss.setInterval('bossTick', () => bossTick(ctx), 1000);
 }
 
 function bossTick(ctx: GameContext): void {
   try {
     const { state } = ctx;
-    if (state.phase !== 'boss' || !state.boss) return;
-    const bossConfig = getDifficultyConfig(state.difficulty, state.customConfig).boss;
+    if (state.phase !== 'boss' || !state.boss || !activePlugin) return;
 
     state.boss.timeRemaining--;
 
-    const oldHp = state.boss.hp;
-    state.boss.hp = Math.min(state.boss.hp + state.boss.regenPerSecond, state.boss.maxHp);
-    const regenAmount = state.boss.hp - oldHp;
+    // Delegate tick behavior to plugin (regen, shields, screen wipes, etc.)
+    activePlugin.onTick(ctx);
 
-    let escalated = false;
-    const nextLevel = state.boss.escalationLevel;
-    if (nextLevel < bossConfig.escalation.length) {
-      const threshold = bossConfig.escalation[nextLevel];
-      if (state.boss.timeRemaining <= threshold.timeRemaining) {
-        state.boss.escalationLevel++;
-        state.boss.currentSpawnRate = threshold.spawnRate;
-        state.boss.currentMaxOnScreen = threshold.maxOnScreen + state.boss.extraPlayers;
-        escalated = true;
-        if (ctx.matchLog) {
-          try {
-            ctx.matchLog.log('boss-escalation', {
-              escalationLevel: state.boss.escalationLevel,
-              newSpawnRate: threshold.spawnRate,
-              newMaxOnScreen: state.boss.currentMaxOnScreen,
-              timeRemaining: state.boss.timeRemaining,
-            });
-          } catch (err) {
-            logger.error({ err, lobbyId: ctx.lobbyId }, 'Error logging boss escalation');
-          }
-        }
-        try {
-          setupMinionSpawning(ctx, getEffectiveSpawnRate(ctx));
-        } catch (err) {
-          logger.error({ err, lobbyId: ctx.lobbyId }, 'Error setting up minion spawning during escalation');
-        }
-      }
-    }
-
+    const broadcastExtra = activePlugin.broadcastFields(ctx);
     ctx.events.emit({
       type: 'boss-tick',
       timeRemaining: state.boss.timeRemaining,
       bossHp: state.boss.hp,
       bossMaxHp: state.boss.maxHp,
-      enraged: state.boss.enraged,
-      regenAmount,
-      escalated,
+      ...broadcastExtra,
     });
 
     if (state.boss.timeRemaining <= 0) {
@@ -167,7 +136,7 @@ function bossTick(ctx: GameContext): void {
 export function handleBossClick(ctx: GameContext, pid: string): void {
   try {
     const { state } = ctx;
-    if (state.phase !== 'boss' || !state.boss) return;
+    if (state.phase !== 'boss' || !state.boss || !activePlugin) return;
     const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
     const bossConfig = diffConfig.boss;
     const player = state.players[pid];
@@ -183,49 +152,50 @@ export function handleBossClick(ctx: GameContext, pid: string): void {
       damage *= diffConfig.powerups.rubberDuckPointsMultiplier;
     }
 
-    state.boss.hp -= damage;
-    if (state.boss.hp < 0) state.boss.hp = 0;
+    const result = activePlugin.onClick(ctx, pid, damage);
+
+    if (result.blocked) {
+      ctx.events.emit({
+        type: 'boss-hit-blocked',
+        playerId: pid,
+        playerColor: player.color,
+        bossHp: state.boss.hp,
+        bossMaxHp: state.boss.maxHp,
+        ...(result.emit || {}),
+        ...activePlugin.broadcastFields(ctx),
+      });
+      return;
+    }
 
     const clickPoints = awardScore(ctx, pid, bossConfig.clickPoints);
-
-    let justEnraged = false;
-    if (!state.boss.enraged && state.boss.hp <= state.boss.maxHp * bossConfig.enrageThreshold) {
-      state.boss.enraged = true;
-      justEnraged = true;
-      try {
-        setupBossWander(ctx, bossConfig.enrageWanderInterval);
-        setupMinionSpawning(ctx, getEffectiveSpawnRate(ctx));
-      } catch (err) {
-        logger.error({ err, lobbyId: ctx.lobbyId }, 'Error setting up enraged boss');
-      }
-    }
 
     if (ctx.matchLog) {
       try {
         ctx.matchLog.log('boss-hit', {
           player: pid,
-          damage,
+          damage: result.damageApplied,
           bossHp: state.boss.hp,
-          enraged: state.boss.enraged,
         });
       } catch (err) {
         logger.error({ err, lobbyId: ctx.lobbyId }, 'Error logging boss hit');
       }
     }
 
+    const broadcastExtra = activePlugin.broadcastFields(ctx);
     ctx.events.emit({
       type: 'boss-hit',
       bossHp: state.boss.hp,
       bossMaxHp: state.boss.maxHp,
-      enraged: state.boss.enraged,
-      justEnraged,
+      damage: result.damageApplied,
       playerId: pid,
       playerColor: player.color,
       score: state.score,
       playerScore: player.score,
+      ...broadcastExtra,
     });
 
     if (state.boss.hp <= 0) {
+      activePlugin.onDefeat(ctx);
       defeatBoss(ctx);
     }
   } catch (err) {

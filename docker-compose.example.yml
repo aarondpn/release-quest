@@ -21,6 +21,7 @@ services:
     environment:
       DATABASE_URL: postgres://release_quest:release_quest@postgres:5432/release_quest
       PORT: "3000"
+      DEV_MODE: ${DEV_MODE:-false}
     ports:
       - "3000:3000"
       - "9091:9091"

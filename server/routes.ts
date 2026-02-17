@@ -1,6 +1,6 @@
 import express from 'express';
 import type { Request, Response } from 'express';
-import { DIFFICULTY_PRESETS } from './config.ts';
+import { DIFFICULTY_PRESETS, DEV_MODE } from './config.ts';
 import { HEISENBUG_MECHANICS } from './entity-types/heisenbug.ts';
 import { MEMORY_LEAK_MECHANICS } from './entity-types/memory-leak.ts';
 import { MERGE_CONFLICT_MECHANICS } from './entity-types/merge-conflict.ts';
@@ -41,6 +41,11 @@ function formatRecordingForClient(recording: RecordingRow) {
 }
 
 // ── API Routes ──
+
+// Dev mode check
+router.get('/dev-mode', (_req: Request, res: Response) => {
+  res.json({ enabled: DEV_MODE });
+});
 
 // Get difficulty presets
 router.get('/difficulty-presets', (req: Request, res: Response) => {

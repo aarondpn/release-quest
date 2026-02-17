@@ -217,16 +217,31 @@ export function stunBoss(ctx: GameContext): void {
     ctx.timers.boss.clear('bossMinionSpawn');
     state.boss._minionSpawnPaused = true;
   }
+
+  // Notify active plugin of stun
+  const plugin = boss.getActivePlugin();
+  if (plugin) plugin.onStun(ctx);
 }
 
 export function resumeBoss(ctx: GameContext): void {
   const { state } = ctx;
   if (!state.boss || state.phase !== 'boss') return;
-  const bossConfig = getDifficultyConfig(state.difficulty, state.customConfig).boss;
+
+  // Notify active plugin of resume (adjusts shield/wipe timings)
+  const plugin = boss.getActivePlugin();
+  if (plugin) plugin.onResume(ctx);
 
   if (state.boss._wanderPaused) {
-    const wanderInterval = state.boss.enraged ? bossConfig.enrageWanderInterval : bossConfig.wanderInterval;
-    boss.setupBossWander(ctx, wanderInterval);
+    // Phase 3 mega-bug anchors to center — don't resume wandering
+    const data = state.boss.data;
+    const isAnchored = data.phase === 3;
+    if (!isAnchored) {
+      const bossConfig = getDifficultyConfig(state.difficulty, state.customConfig).boss;
+      const wanderInterval = (data.phase === 2)
+        ? bossConfig.bossPhases.phase2WanderInterval
+        : bossConfig.wanderInterval;
+      boss.setupBossWander(ctx, wanderInterval);
+    }
     state.boss._wanderPaused = false;
   }
 

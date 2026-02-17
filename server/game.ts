@@ -111,7 +111,7 @@ export function startGame(ctx: GameContext): void {
   powerups.startHammerSpawning(ctx);
 }
 
-function startLevel(ctx: GameContext): void {
+export function startLevel(ctx: GameContext): void {
   const { state } = ctx;
   const cfg = currentLevelConfig(state);
   state.bugsRemaining = cfg.bugsTotal;

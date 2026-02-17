@@ -896,21 +896,145 @@ header p {
   animation: boss-walk 0.6s steps(2) infinite;
 }
 
-/* Boss enraged state */
-.boss.enraged .boss-body {
-  background: linear-gradient(135deg, #ff6b6b, #dc2626);
-  box-shadow: 0 0 32px rgba(255,107,107,0.8);
-  animation: boss-pulse 0.8s ease-in-out infinite;
+/* ── Boss phase states ── */
+
+/* Phase 1: The Sprint — default purple with subtle aura */
+.boss.phase-sprint .boss-body {
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  box-shadow:
+    0 0 20px rgba(168,85,247,0.5),
+    0 0 40px rgba(168,85,247,0.15);
 }
-.boss.enraged .boss-body::before,
-.boss.enraged .boss-body::after {
-  background: #ff6b6b;
+
+/* Phase 2: The Shield — molten amber, defensive posture */
+.boss.phase-shield .boss-body {
+  background: linear-gradient(135deg, #fbbf24, #d97706, #b45309);
+  box-shadow:
+    0 0 24px rgba(251,191,36,0.6),
+    0 0 48px rgba(217,119,6,0.25),
+    inset 0 0 12px rgba(255,255,255,0.08);
+  animation: boss-pulse-amber 1.2s ease-in-out infinite;
 }
-.boss.enraged .boss-legs span {
-  background: #ff6b6b;
+.boss.phase-shield .boss-body::before,
+.boss.phase-shield .boss-body::after { background: #fbbf24; }
+.boss.phase-shield .boss-legs span { background: #d97706; }
+.boss.phase-shield .boss-crown span { border-bottom-color: #fbbf24; }
+.boss.phase-shield .boss-eyes { color: #451a03; }
+
+/* Phase 3: The Swarm — furious red, shaking, unstable */
+.boss.phase-swarm .boss-body {
+  background: linear-gradient(135deg, #ff6b6b, #dc2626, #991b1b);
+  box-shadow:
+    0 0 28px rgba(255,107,107,0.7),
+    0 0 56px rgba(220,38,38,0.3),
+    inset 0 0 10px rgba(255,255,255,0.06);
+  animation: boss-pulse-swarm 0.5s ease-in-out infinite;
 }
-.boss.enraged .boss-crown span {
-  border-bottom-color: #ff6b6b;
+.boss.phase-swarm .boss-body::before,
+.boss.phase-swarm .boss-body::after { background: #ef4444; }
+.boss.phase-swarm .boss-legs span { background: #dc2626; }
+.boss.phase-swarm .boss-crown span { border-bottom-color: #ef4444; }
+.boss.phase-swarm .boss-eyes { color: #1c1917; letter-spacing: 4px; }
+
+/* Phase 3 jitter — constant micro-vibration conveys instability */
+.boss.phase-swarm.walking {
+  animation: boss-swarm-jitter 0.12s steps(2) infinite;
+}
+
+/* Boss shrink (Phase 3 transition) — implosion effect */
+.boss.boss-shrink {
+  width: 80px;
+  height: 80px;
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1),
+              height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.boss.boss-shrink .boss-body {
+  width: 55px;
+  height: 42px;
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1),
+              height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Boss shield overlay — layered energy field ── */
+.boss-shield-overlay {
+  position: absolute;
+  inset: -16px;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+  /* Outer ring */
+  border: 2px solid rgba(96,165,250,0.5);
+  /* Inner field glow */
+  background:
+    radial-gradient(circle, rgba(96,165,250,0.12) 0%, rgba(59,130,246,0.04) 60%, transparent 100%);
+  /* Second ring via box-shadow */
+  box-shadow:
+    inset 0 0 8px rgba(96,165,250,0.15),
+    0 0 6px rgba(96,165,250,0.2);
+}
+.boss.shielded .boss-shield-overlay {
+  opacity: 1;
+  animation: shield-pulse 1.4s ease-in-out infinite;
+}
+/* When shield is active, dim the boss body slightly to sell the "protected" look */
+.boss.shielded .boss-body {
+  filter: brightness(0.85) saturate(0.8);
+}
+.boss.shielded .boss-eyes {
+  text-shadow: 0 0 6px rgba(96,165,250,0.6);
+}
+
+@keyframes shield-pulse {
+  0%, 100% {
+    border-color: rgba(96,165,250,0.5);
+    box-shadow:
+      inset 0 0 8px rgba(96,165,250,0.15),
+      0 0 8px rgba(96,165,250,0.25);
+    transform: scale(1);
+  }
+  50% {
+    border-color: rgba(147,197,253,0.8);
+    box-shadow:
+      inset 0 0 14px rgba(96,165,250,0.25),
+      0 0 20px rgba(96,165,250,0.45),
+      0 0 40px rgba(59,130,246,0.15);
+    transform: scale(1.04);
+  }
+}
+
+@keyframes boss-pulse-amber {
+  0%, 100% {
+    box-shadow:
+      0 0 24px rgba(251,191,36,0.6),
+      0 0 48px rgba(217,119,6,0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 32px rgba(251,191,36,0.8),
+      0 0 60px rgba(217,119,6,0.35);
+  }
+}
+
+@keyframes boss-pulse-swarm {
+  0%, 100% {
+    box-shadow:
+      0 0 28px rgba(255,107,107,0.7),
+      0 0 56px rgba(220,38,38,0.25);
+  }
+  50% {
+    box-shadow:
+      0 0 36px rgba(255,107,107,0.9),
+      0 0 72px rgba(220,38,38,0.4);
+  }
+}
+
+@keyframes boss-swarm-jitter {
+  0% { transform: translate(-1px, 0px); }
+  25% { transform: translate(1px, -1px); }
+  50% { transform: translate(0px, 1px); }
+  75% { transform: translate(-1px, -1px); }
+  100% { transform: translate(1px, 0px); }
 }
 
 /* Boss HP bar */
@@ -923,12 +1047,17 @@ header p {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
 }
 .boss-hp-bar-label {
   font-family: 'Press Start 2P', monospace;
   font-size: 6px;
   color: var(--muted);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+}
+.boss-phase-name {
+  color: var(--yellow);
+  text-shadow: 0 0 6px rgba(255,230,109,0.4);
 }
 .boss-hp-bar-track {
   width: 300px;
@@ -937,15 +1066,56 @@ header p {
   border: 2px solid #3d3d5c;
   border-radius: 3px;
   overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.4);
 }
 .boss-hp-bar-fill {
   height: 100%;
   background: linear-gradient(90deg, #a855f7, #c084fc);
   border-radius: 1px;
   transition: width 0.3s ease;
+  position: relative;
 }
-.boss-hp-bar-fill.enraged {
-  background: linear-gradient(90deg, #dc2626, #ff6b6b);
+/* Subtle highlight stripe on HP bar for depth */
+.boss-hp-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.18), transparent);
+  border-radius: 1px 1px 0 0;
+}
+.boss-hp-bar-fill.phase-shield {
+  background: linear-gradient(90deg, #b45309, #d97706, #fbbf24);
+  box-shadow: 0 0 8px rgba(251,191,36,0.3);
+}
+.boss-hp-bar-fill.phase-swarm {
+  background: linear-gradient(90deg, #991b1b, #dc2626, #ef4444);
+  box-shadow: 0 0 8px rgba(239,68,68,0.4);
+  animation: hp-bar-swarm-pulse 0.4s ease-in-out infinite;
+}
+@keyframes hp-bar-swarm-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(239,68,68,0.4); filter: brightness(1); }
+  50% { box-shadow: 0 0 14px rgba(239,68,68,0.7); filter: brightness(1.2); }
+}
+
+/* Boss damage reduction indicator */
+.boss-dr-indicator {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 5px;
+  color: #fca5a5;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  letter-spacing: 1px;
+  transition: color 0.3s ease;
+}
+.boss-dr-indicator.high {
+  color: #ef4444;
+  animation: dr-pulse 0.6s ease-in-out infinite;
+}
+@keyframes dr-pulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
 }
 
 /* Boss timer */
@@ -1138,7 +1308,7 @@ header p {
   animation: squash-anim 0.5s ease-out forwards;
 }
 
-/* ── Enrage flash ── */
+/* ── Enrage flash (legacy) ── */
 .enrage-flash {
   position: absolute;
   inset: 0;
@@ -1154,6 +1324,258 @@ header p {
   30% { opacity: 1; }
   60% { opacity: 0.6; }
   100% { opacity: 0; }
+}
+
+/* ── Phase transition flash — CRT glitch reveal ── */
+.phase-transition-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 88;
+  border-radius: 8px;
+  overflow: hidden;
+  animation: phase-flash 1.6s ease-out forwards;
+}
+/* Horizontal glitch scanlines during transition */
+.phase-transition-flash::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 3px,
+    rgba(168,85,247,0.08) 3px,
+    rgba(168,85,247,0.08) 4px
+  );
+  animation: phase-scanline-drift 0.2s steps(3) 4;
+}
+.phase-transition-flash::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(255,255,255,0.12) 48%,
+    rgba(255,255,255,0.25) 50%,
+    rgba(255,255,255,0.12) 52%,
+    transparent 100%
+  );
+  animation: phase-scanbar 0.8s ease-out forwards;
+}
+
+@keyframes phase-flash {
+  0% { opacity: 0; background: rgba(255,255,255,0.5); }
+  5% { opacity: 1; background: rgba(255,255,255,0.45); }
+  12% { background: rgba(168,85,247,0.25); }
+  25% { background: rgba(168,85,247,0.12); }
+  50% { background: rgba(168,85,247,0.06); opacity: 0.8; }
+  100% { opacity: 0; background: transparent; }
+}
+
+@keyframes phase-scanline-drift {
+  0% { transform: translateY(0); }
+  33% { transform: translateY(-2px); }
+  66% { transform: translateY(1px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes phase-scanbar {
+  0% { transform: translateY(-100%); opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+
+/* Phase name text — bold retro arcade callout */
+.phase-transition-text {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.2);
+  z-index: 89;
+  pointer-events: none;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 22px;
+  color: var(--yellow);
+  text-shadow:
+    0 0 8px rgba(255,230,109,0.6),
+    0 0 20px rgba(255,230,109,0.2),
+    0 2px 0 rgba(0,0,0,0.9);
+  letter-spacing: 3px;
+  white-space: nowrap;
+  animation: phase-text-zoom 1.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes phase-text-zoom {
+  0% {
+    transform: translate(-50%, -50%) scale(0.2) translateY(10px);
+    opacity: 0;
+    filter: blur(8px);
+  }
+  8% {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 1;
+    filter: blur(0);
+  }
+  14% {
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+  20% {
+    transform: translate(-50%, -50%) scale(1.02);
+  }
+  26% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  75% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+    filter: blur(0);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.05);
+    opacity: 0;
+    filter: blur(4px);
+  }
+}
+
+/* ── Phase transition spark particles ── */
+.phase-spark {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 90;
+  background: var(--yellow);
+  box-shadow: 0 0 6px var(--yellow), 0 0 12px rgba(255,230,109,0.5);
+  animation: phase-spark-fly 0.55s ease-out forwards;
+}
+
+@keyframes phase-spark-fly {
+  0% {
+    transform: translate(0, 0) scale(1.2);
+    opacity: 1;
+  }
+  60% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(var(--px), var(--py)) scale(0);
+    opacity: 0;
+  }
+}
+
+/* ── Boss blocked text — deflect spark effect ── */
+.boss-blocked-text {
+  position: absolute;
+  pointer-events: none;
+  z-index: 23;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  color: #93c5fd;
+  text-shadow:
+    0 0 10px rgba(96,165,250,0.9),
+    0 0 24px rgba(59,130,246,0.5);
+  white-space: nowrap;
+  animation: blocked-deflect 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+/* Small spark line behind the text */
+.boss-blocked-text::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(147,197,253,0.8), transparent);
+  transform: translate(-50%, -50%) rotate(-15deg);
+  animation: blocked-spark 0.35s ease-out forwards;
+}
+
+@keyframes blocked-deflect {
+  0% {
+    transform: translateY(4px) scale(1.4) rotate(-3deg);
+    opacity: 1;
+  }
+  20% {
+    transform: translateY(-8px) scale(1) rotate(1deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-36px) scale(0.7) rotate(0deg);
+    opacity: 0;
+  }
+}
+
+@keyframes blocked-spark {
+  0% { width: 0; opacity: 1; }
+  40% { width: 50px; opacity: 1; }
+  100% { width: 60px; opacity: 0; }
+}
+
+/* ── Screen wipe flash — sweeping danger warning ── */
+.screen-wipe-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 82;
+  border-radius: 8px;
+  overflow: hidden;
+  animation: screen-wipe-container 0.6s ease-out forwards;
+}
+/* Red tint base */
+.screen-wipe-flash::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(220,38,38,0.15);
+  animation: screen-wipe-pulse 0.6s ease-out forwards;
+}
+/* Horizontal danger stripe sweep */
+.screen-wipe-flash::after {
+  content: '! INCOMING !';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  letter-spacing: 6px;
+  text-align: center;
+  color: rgba(239,68,68,0.7);
+  text-shadow: 0 0 8px rgba(220,38,38,0.6);
+  padding: 6px 0;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(220,38,38,0.08) 0px,
+    rgba(220,38,38,0.08) 8px,
+    transparent 8px,
+    transparent 16px
+  );
+  border-top: 1px solid rgba(239,68,68,0.3);
+  border-bottom: 1px solid rgba(239,68,68,0.3);
+  animation: screen-wipe-stripe 0.6s ease-out forwards;
+}
+
+@keyframes screen-wipe-container {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes screen-wipe-pulse {
+  0% { opacity: 0; }
+  20% { opacity: 1; }
+  60% { opacity: 0.6; }
+  100% { opacity: 0; }
+}
+
+@keyframes screen-wipe-stripe {
+  0% { opacity: 0; transform: translateY(-50%) scaleX(0); }
+  15% { opacity: 1; transform: translateY(-50%) scaleX(1); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-50%) scaleX(1); }
 }
 
 /* ── Level flash ── */
@@ -4797,3 +5219,60 @@ header p {
   .walkout-stat-value { font-size: 16px; }
   .walkout-continue { font-size: 8px; }
 }
+
+/* ── Dev Panel ── */
+#dev-panel {
+  position: fixed;
+  bottom: 12px;
+  right: 12px;
+  z-index: 10000;
+  background: rgba(20, 10, 10, 0.92);
+  border: 2px solid #ff4444;
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 12px;
+  color: #ff8888;
+  min-width: 140px;
+}
+#dev-panel-header {
+  padding: 4px 10px;
+  cursor: pointer;
+  font-weight: bold;
+  text-align: center;
+  letter-spacing: 2px;
+  color: #ff4444;
+  border-bottom: 1px solid #ff444466;
+}
+#dev-panel-body {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+#dev-panel-body.hidden { display: none; }
+.dev-btn {
+  background: #2a1515;
+  color: #ff8888;
+  border: 1px solid #ff444488;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-family: monospace;
+  font-size: 11px;
+}
+.dev-btn:hover { background: #441515; color: #ffaaaa; }
+.dev-level-btns { display: flex; gap: 4px; }
+.dev-level-btns .dev-btn { flex: 1; }
+.dev-hp-row { display: flex; gap: 4px; }
+.dev-hp-row input {
+  flex: 1;
+  background: #1a0a0a;
+  color: #ff8888;
+  border: 1px solid #ff444466;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-family: monospace;
+  font-size: 11px;
+  width: 0;
+}
+.dev-hp-row input::placeholder { color: #ff444488; }

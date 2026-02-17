@@ -4,3 +4,4 @@ dist/
 *.min.js
 *.min.css
 *.min.js.map
+.env

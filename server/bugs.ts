@@ -136,6 +136,51 @@ export function clearAllBugs(ctx: GameContext): void {
   state.pipelineChains = {};
 }
 
+export function clearAllMinions(ctx: GameContext): void {
+  const { state } = ctx;
+  const minionIds = Object.keys(state.bugs).filter(id => state.bugs[id].isMinion);
+  for (const id of minionIds) {
+    state.bugs[id]._timers.clearAll();
+    delete state.bugs[id];
+  }
+  if (minionIds.length > 0) {
+    ctx.events.emit({ type: 'minions-cleared', bugIds: minionIds });
+  }
+}
+
+export function spawnMinionAtPosition(ctx: GameContext, x: number, y: number): void {
+  const { state, counters } = ctx;
+  if (state.phase !== 'boss') return;
+  const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
+
+  const id = 'bug_' + (counters.nextBugId++);
+  const bug: BugEntity = {
+    id, x, y,
+    _timers: createTimerBag(),
+    escapeTime: diffConfig.boss.minionEscapeTime,
+    escapeStartedAt: Date.now(),
+    isMinion: true,
+  };
+
+  state.bugs[id] = bug;
+
+  const descriptor = getDescriptor(bug);
+  descriptor.init(bug, ctx, { phaseCheck: 'boss' });
+
+  const broadcastPayload: Record<string, unknown> = { id, x: bug.x, y: bug.y, isMinion: true };
+  Object.assign(broadcastPayload, descriptor.broadcastFields(bug));
+  ctx.events.emit({ type: 'bug-spawned', bug: broadcastPayload });
+
+  descriptor.setupTimers(bug, ctx);
+  descriptor.createWander(bug, ctx);
+
+  bug._onEscape = () => {
+    if (!state.bugs[id]) return;
+    descriptor.onEscape(bug, ctx, () => game.checkBossGameState(ctx));
+  };
+  bug._timers.setTimeout('escape', bug._onEscape, diffConfig.boss.minionEscapeTime);
+}
+
 export function clearSpawnTimer(ctx: GameContext): void {
   ctx.timers.lobby.clear('spawnTimer');
 }

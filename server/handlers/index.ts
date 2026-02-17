@@ -10,7 +10,9 @@ import { handleClickDuck, handleClickHammer } from './powerups.ts';
 import { handleGetLeaderboard, handleGetMyStats, handleGetRecordings, handleShareRecording, handleUnshareRecording } from './stats.ts';
 import { handleCursorMove } from './cursor.ts';
 import { handleChatMessage } from './chat.ts';
+import { handleDevCommand } from './dev.ts';
 import { getHandlers as getPluginHandlers, getSchemas as getPluginSchemas } from '../entity-types/index.ts';
+import { getBossHandlers, getBossSchemas } from '../boss-types/index.ts';
 
 const staticHandlers: Record<string, MessageHandler> = {
   'register': handleRegister,
@@ -36,14 +38,17 @@ const staticHandlers: Record<string, MessageHandler> = {
   'unshare-recording': handleUnshareRecording,
   'cursor-move': handleCursorMove,
   'chat-message': handleChatMessage,
+  'dev-command': handleDevCommand,
 };
 
 export const handlers: Record<string, MessageHandler> = {
   ...staticHandlers,
   ...getPluginHandlers(),
+  ...getBossHandlers(),
 };
 
 export const schemas: Record<string, ZodType> = {
   ...staticSchemas,
   ...getPluginSchemas(),
+  ...getBossSchemas(),
 };

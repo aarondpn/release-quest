@@ -1,5 +1,6 @@
 import { LOGICAL_W, LOGICAL_H, MAX_LEVEL, getDifficultyConfig } from './config.ts';
 import { getDescriptor } from './entity-types/index.ts';
+import { getActivePlugin } from './boss.ts';
 import type { GameState, GameContext, GameCounters, LevelConfigEntry, PlayerScoreEntry, DifficultyConfig, CustomDifficultyConfig } from './types.ts';
 
 export function createGameState(difficulty: string = 'medium', customConfig?: CustomDifficultyConfig): GameState {
@@ -105,8 +106,8 @@ export function getStateSnapshot(state: GameState): Record<string, unknown> {
       maxHp: state.boss.maxHp,
       x: state.boss.x,
       y: state.boss.y,
-      enraged: state.boss.enraged,
       timeRemaining: state.boss.timeRemaining,
+      ...(getActivePlugin()?.broadcastFields({ state } as any) || {}),
     } : null,
   };
 }

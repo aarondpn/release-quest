@@ -564,6 +564,48 @@ if (dom.playbackControls) {
   dom.playbackControls.querySelector('.playback-speed-btn')?.addEventListener('click', cycleSpeed);
 }
 
+// ── Dev panel ──
+fetch('/api/dev-mode')
+  .then(res => res.json())
+  .then(data => {
+    if (!data.enabled) return;
+    clientState.devMode = true;
+
+    const panel = document.createElement('div');
+    panel.id = 'dev-panel';
+    panel.innerHTML = `
+      <div id="dev-panel-header">DEV</div>
+      <div id="dev-panel-body" class="hidden">
+        <button class="dev-btn" data-cmd="skip-to-boss">Skip to Boss</button>
+        <div class="dev-level-btns">
+          <button class="dev-btn" data-cmd="skip-to-level" data-level="1">Lv 1</button>
+          <button class="dev-btn" data-cmd="skip-to-level" data-level="2">Lv 2</button>
+          <button class="dev-btn" data-cmd="skip-to-level" data-level="3">Lv 3</button>
+        </div>
+        <div class="dev-hp-row">
+          <input type="number" id="dev-boss-hp" placeholder="Boss HP" min="0" />
+          <button class="dev-btn" data-cmd="set-boss-hp">Set</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(panel);
+
+    const header = panel.querySelector('#dev-panel-header');
+    const body = panel.querySelector('#dev-panel-body');
+    header.addEventListener('click', () => body.classList.toggle('hidden'));
+
+    panel.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-cmd]');
+      if (!btn) return;
+      const cmd = btn.dataset.cmd;
+      const msg = { type: 'dev-command', command: cmd };
+      if (cmd === 'skip-to-level') msg.level = parseInt(btn.dataset.level);
+      if (cmd === 'set-boss-hp') msg.value = parseInt(document.getElementById('dev-boss-hp').value) || 1;
+      sendMessage(msg);
+    });
+  })
+  .catch(() => { /* dev-mode endpoint not available */ });
+
 // Start
 connect();
 updateHUD(0, 1, 100);

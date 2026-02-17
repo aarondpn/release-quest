@@ -51,11 +51,67 @@ export function showDamageVignette() {
 }
 
 export function showEnrageFlash() {
+  // Legacy — replaced by phase transition flash
+  showPhaseTransitionFlash('ENRAGED');
+}
+
+export function showPhaseTransitionFlash(phaseName) {
+  const flash = document.createElement('div');
+  flash.className = 'phase-transition-flash';
+  dom.arena.appendChild(flash);
+
+  const text = document.createElement('div');
+  text.className = 'phase-transition-text';
+  text.textContent = phaseName;
+  dom.arena.appendChild(text);
+
+  // Burst of sparks from boss position toward edges
+  if (clientState.bossElement) {
+    const rect = clientState.bossElement.getBoundingClientRect();
+    const arenaRect = dom.arena.getBoundingClientRect();
+    const cx = ((rect.left - arenaRect.left + rect.width / 2) / arenaRect.width) * LOGICAL_W;
+    const cy = ((rect.top - arenaRect.top + rect.height / 2) / arenaRect.height) * LOGICAL_H;
+    // Ring of particles radiating outward
+    const count = 12;
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i / count) + (Math.random() - 0.5) * 0.4;
+      const dist = 60 + Math.random() * 60;
+      const px = Math.cos(angle) * dist;
+      const py = Math.sin(angle) * dist;
+      const pos = logicalToPixel(cx, cy);
+      const p = document.createElement('div');
+      p.className = 'phase-spark';
+      p.style.left = pos.x + 'px';
+      p.style.top = pos.y + 'px';
+      p.style.setProperty('--px', px + 'px');
+      p.style.setProperty('--py', py + 'px');
+      dom.arena.appendChild(p);
+      setTimeout(() => p.remove(), 600);
+    }
+  }
+
+  setTimeout(() => flash.remove(), 1600);
+  setTimeout(() => text.remove(), 1600);
+  shakeArena('heavy');
+}
+
+export function showBlockedText(lx, ly) {
+  const pos = logicalToPixel(lx, ly);
   const el = document.createElement('div');
-  el.className = 'enrage-flash';
+  el.className = 'boss-blocked-text';
+  el.style.left = pos.x + 'px';
+  el.style.top = pos.y + 'px';
+  el.textContent = 'BLOCKED!';
   dom.arena.appendChild(el);
-  setTimeout(() => el.remove(), 450);
-  shakeArena('medium');
+  setTimeout(() => el.remove(), 800);
+}
+
+export function showScreenWipeFlash() {
+  const el = document.createElement('div');
+  el.className = 'screen-wipe-flash';
+  dom.arena.appendChild(el);
+  setTimeout(() => el.remove(), 700);
+  shakeArena('light');
 }
 
 export function showLevelFlash() {

@@ -14,7 +14,10 @@ export const clientState = {
   currentPhase: null,
   bossElement: null,
   bossHpBarContainer: null,
-  bossEnraged: false,
+  bossPhase: 1,
+  bossPhaseName: 'The Sprint',
+  bossShieldActive: false,
+  bossType: null,
   currentLobbyId: null,
   currentLobbyCode: null,
   pendingJoinCode: null,
@@ -28,6 +31,8 @@ export const clientState = {
   hasCustomSettings: false,
   // Chat state
   lobbyCreatorId: null,
+  // Dev mode
+  devMode: false,
   // Playback state
   isPlayback: false,
   playbackTimers: [],

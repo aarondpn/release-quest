@@ -3,9 +3,9 @@ import { dom, clientState } from './state.js';
 import { logicalToPixel } from './coordinates.js';
 import { updateHUD, updatePlayerCount, hideAllScreens, showStartScreen, showGameOverScreen, showWinScreen, showLevelScreen, updateLobbyRoster, updateLiveDashboard, showLiveDashboard, hideLiveDashboard } from './hud.js';
 import { createBugElement, removeBugElement, clearAllBugs, showSquashEffect, removeMergeTether, removePipelineTether, rebuildPipelineTether } from './bugs.js';
-import { createBossElement, updateBossHp, removeBossElement, showBossHitEffect, formatTime } from './boss.js';
+import { createBossElement, updateBossHp, removeBossElement, showBossHitEffect, formatTime, setBossPhase, setBossShield, shrinkBoss, anchorBoss } from './boss.js';
 import { addRemoteCursor, removeRemoteCursor, updateRemoteCursor, clearRemoteCursors } from './players.js';
-import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, showEnrageFlash, showLevelFlash, showEscalationWarning, showBossRegenNumber, showHeisenbugFleeEffect, showFeaturePenaltyEffect, showDuckBuffOverlay, removeDuckBuffOverlay, showMergeResolvedEffect, showPipelineChainResolvedEffect, showPipelineChainResetEffect, showBreakpointHitEffect } from './vfx.js';
+import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, showEnrageFlash, showLevelFlash, showEscalationWarning, showBossRegenNumber, showHeisenbugFleeEffect, showFeaturePenaltyEffect, showDuckBuffOverlay, removeDuckBuffOverlay, showMergeResolvedEffect, showPipelineChainResolvedEffect, showPipelineChainResetEffect, showBreakpointHitEffect, showPhaseTransitionFlash, showBlockedText, showScreenWipeFlash } from './vfx.js';
 import { showLobbyBrowser, hideLobbyBrowser, renderLobbyList, showLobbyError, buildLobbyIconPicker, joinLobbyWithPassword, joinLobbyByCodeWithPassword } from './lobby-ui.js';
 import { updateAuthUI, hideAuthOverlay, showAuthError } from './auth-ui.js';
 import { isPremium, STANDARD_ICONS } from './avatars.js';
@@ -387,8 +387,11 @@ export function handleMessageInternal(msg) {
 
       removeBossElement();
       if (msg.boss) {
-        createBossElement(msg.boss.x, msg.boss.y, msg.boss.hp, msg.boss.maxHp, msg.boss.enraged, msg.boss.timeRemaining);
-        clientState.bossEnraged = msg.boss.enraged;
+        createBossElement(msg.boss.x, msg.boss.y, msg.boss.hp, msg.boss.maxHp, msg.boss.timeRemaining, msg.boss);
+        clientState.bossPhase = msg.boss.phase || 1;
+        clientState.bossPhaseName = msg.boss.phaseName || 'The Sprint';
+        clientState.bossShieldActive = msg.boss.shieldActive || false;
+        clientState.bossType = msg.boss.bossType || null;
       }
 
       updateHUD(msg.score, msg.level, msg.hp);
@@ -1016,7 +1019,11 @@ export function handleMessageInternal(msg) {
     case 'boss-spawn': {
       hideAllScreens();
       dom.levelEl.textContent = 'BOSS';
-      createBossElement(msg.boss.x, msg.boss.y, msg.boss.hp, msg.boss.maxHp, msg.boss.enraged, msg.timeRemaining);
+      createBossElement(msg.boss.x, msg.boss.y, msg.boss.hp, msg.boss.maxHp, msg.timeRemaining, msg.boss);
+      clientState.bossPhase = msg.boss.phase || 1;
+      clientState.bossPhaseName = msg.boss.phaseName || 'The Sprint';
+      clientState.bossShieldActive = msg.boss.shieldActive || false;
+      clientState.bossType = msg.boss.bossType || null;
       updateHUD(msg.score, undefined, msg.hp);
       showLiveDashboard();
       break;
@@ -1033,19 +1040,12 @@ export function handleMessageInternal(msg) {
     }
 
     case 'boss-hit': {
-      updateBossHp(msg.bossHp, msg.bossMaxHp, msg.enraged);
-      showBossHitEffect(msg.playerColor);
-      if (msg.enraged && clientState.bossElement) {
-        clientState.bossElement.classList.add('enraged');
-      }
-      if (msg.justEnraged) {
-        showEnrageFlash();
-      }
+      updateBossHp(msg.bossHp, msg.bossMaxHp, msg.phase, msg.damageReduction);
+      showBossHitEffect(msg.playerColor, msg.damage);
       updateHUD(msg.score);
       if (clientState.players[msg.playerId]) {
         clientState.players[msg.playerId].score = msg.playerScore;
       }
-      clientState.bossEnraged = msg.enraged;
       updateLiveDashboard();
       break;
     }
@@ -1057,12 +1057,56 @@ export function handleMessageInternal(msg) {
         if (msg.timeRemaining <= 20) timerEl.classList.add('urgent');
         else timerEl.classList.remove('urgent');
       }
+      updateBossHp(msg.bossHp, msg.bossMaxHp, msg.phase, msg.damageReduction);
+      break;
+    }
+
+    case 'boss-regen': {
       if (msg.regenAmount > 0) {
-        updateBossHp(msg.bossHp, msg.bossMaxHp, msg.enraged);
+        updateBossHp(msg.bossHp, msg.bossMaxHp);
         showBossRegenNumber(msg.regenAmount);
       }
-      if (msg.escalated) {
-        showEscalationWarning();
+      break;
+    }
+
+    case 'boss-phase-change': {
+      setBossPhase(msg.phase, msg.phaseName);
+      showPhaseTransitionFlash(msg.phaseName);
+      clearAllBugs();
+      if (msg.phase === 3) {
+        shrinkBoss();
+        anchorBoss(msg.x, msg.y);
+      }
+      break;
+    }
+
+    case 'boss-shield-toggle': {
+      setBossShield(msg.active);
+      break;
+    }
+
+    case 'boss-hit-blocked': {
+      if (clientState.bossElement) {
+        const rect = clientState.bossElement.getBoundingClientRect();
+        const arenaRect = dom.arena.getBoundingClientRect();
+        const lx = ((rect.left - arenaRect.left + rect.width / 2) / arenaRect.width) * LOGICAL_W;
+        const ly = ((rect.top - arenaRect.top) / arenaRect.height) * LOGICAL_H;
+        showBlockedText(lx, ly);
+        shakeArena('micro');
+      }
+      break;
+    }
+
+    case 'boss-screen-wipe': {
+      showScreenWipeFlash();
+      break;
+    }
+
+    case 'minions-cleared': {
+      if (msg.bugIds) {
+        for (const bugId of msg.bugIds) {
+          removeBugElement(bugId);
+        }
       }
       break;
     }
@@ -1133,6 +1177,12 @@ export function handleMessageInternal(msg) {
 
     case 'chat-error': {
       showError(msg.message, ERROR_LEVELS.WARNING);
+      break;
+    }
+
+    case 'dev-error': {
+      console.warn('[DEV]', msg.message);
+      showError(`[DEV] ${msg.message}`, ERROR_LEVELS.WARNING);
       break;
     }
   }

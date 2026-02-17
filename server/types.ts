@@ -117,16 +117,39 @@ export interface BossState {
   maxHp: number;
   x: number;
   y: number;
-  enraged: boolean;
   lastClickBy: Record<string, number>;
   timeRemaining: number;
-  escalationLevel: number;
   currentSpawnRate: number;
   currentMaxOnScreen: number;
   regenPerSecond: number;
   extraPlayers: number;
+  bossType: string;
   _wanderPaused?: boolean;
   _minionSpawnPaused?: boolean;
+  data: Record<string, unknown>;
+}
+
+export interface BossClickResult {
+  damageApplied: number;
+  blocked: boolean;
+  points: number;
+  emit?: Record<string, unknown>;
+}
+
+export interface BossTypePluginInterface {
+  typeKey: string;
+  displayName: string;
+  init(ctx: GameContext, bossConfig: DifficultyConfig['boss']): BossState;
+  onTick(ctx: GameContext): void;
+  onClick(ctx: GameContext, pid: string, damage: number): BossClickResult;
+  onStun(ctx: GameContext): void;
+  onResume(ctx: GameContext): void;
+  onDefeat(ctx: GameContext): void;
+  getSpawnRate(ctx: GameContext): number;
+  getMaxOnScreen(ctx: GameContext): number;
+  broadcastFields(ctx: GameContext): Record<string, unknown>;
+  handlers?: Record<string, (ctx: any) => void | Promise<void>>;
+  schemas?: Record<string, ZodType>;
 }
 
 export interface RubberDuck {
@@ -264,17 +287,30 @@ export interface DifficultyConfig {
     clickPoints: number;
     killBonus: number;
     wanderInterval: number;
-    enrageThreshold: number;
-    enrageWanderInterval: number;
     minionSpawnRate: number;
-    enrageMinionSpawnRate: number;
     minionEscapeTime: number;
     minionMaxOnScreen: number;
-    enrageMinionMaxOnScreen: number;
     clickCooldownMs: number;
     regenPerSecond: number;
     timeLimit: number;
     escalation: EscalationEntry[];
+    bossPhases: {
+      phase2Threshold: number;
+      phase3Threshold: number;
+      shieldDuration: number;
+      shieldInterval: number;
+      phase2WanderInterval: number;
+      phase2SpawnRateMultiplier: number;
+      phase3SpawnRateMultiplier: number;
+      phase3MaxOnScreenMultiplier: number;
+      screenWipeInterval: number;
+      screenWipeBugCount: number;
+      transitionInvulnTime: number;
+      phase3TimeReduction: number;
+      phase3SizeMultiplier: number;
+      phase3DamageReductionPerMinion: number;
+      phase3MaxDamageReduction: number;
+    };
   };
   specialBugs: {
     heisenbugChance: number;
