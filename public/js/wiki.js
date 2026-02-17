@@ -167,17 +167,13 @@ function renderBugTypes(d, m) {
   if (m.azubi) {
     setText('azubi-badge',
       pct(d.specialBugs.azubiChance) + ' spawn chance (Level ' + d.specialBugs.azubiStartLevel + '+)');
-    var azubiSpeedupPct = Math.round((1 - m.azubi.spawnSpeedupPerHit) * 100);
     setStats('azubi-stats', [
-      '\uD83D\uDD28 Requires ' + m.azubi.clicksToKill + ' clicks to kill',
+      '\uD83D\uDC64 Follows nearest player\u2019s cursor',
+      '\uD83D\uDEAB Blocks clicks on bugs underneath (high z-index)',
       '\uD83D\uDC1B Spawns bugs every ' + sec(m.azubi.spawnInterval) + 's (50% normal / 50% feature)',
-      '\u26A1 Spawns ' + azubiSpeedupPct + '% faster per hit (panicked!)',
-      '\uD83D\uDCB0 ' + m.azubi.bonusPoints + ' bonus points for killing',
-      '\uD83D\uDC94 ' + m.azubi.escapeDamage + ' HP damage if escaped',
       '\u23F1\uFE0F ' + m.azubi.escapeTimeMultiplier + 'x escape time',
+      '\u2705 Leaves harmlessly when escape timer expires',
     ]);
-    setText('azubi-clicks', m.azubi.clicksToKill);
-    setText('azubi-speedup', azubiSpeedupPct + '%');
   }
 
   // Boss Minion
@@ -296,7 +292,7 @@ function renderMechanics(d, m) {
     '<p><strong>Merge conflict escape:</strong> -' + (d.hpDamage * 2) + ' HP</p>' +
     '<p><strong>Pipeline chain escape:</strong> -' + d.hpDamage + ' HP per bug</p>' +
     '<p><strong>Feature bug clicked:</strong> -' + m.feature.hpPenalty + ' HP</p>' +
-    (m.azubi ? '<p><strong>Azubi escape:</strong> -' + m.azubi.escapeDamage + ' HP</p>' : '') +
+    (m.azubi ? '<p><strong>Azubi escape:</strong> harmless (no damage)</p>' : '') +
     '<p><strong>Game Over:</strong> When HP reaches 0</p>');
 
   // Multiplayer (mostly static)
@@ -318,7 +314,7 @@ function renderMechanics(d, m) {
     '<p><strong>Merge conflict resolved:</strong> +' + m.mergeConflict.bonusPoints + ' bonus</p>' +
     '<p><strong>Pipeline bug:</strong> ' + m.pipeline.pointsPerBug + ' points each + ' + m.pipeline.chainBonus + ' chain bonus</p>' +
     '<p><strong>Infinite loop:</strong> ' + m.infiniteLoop.points + ' points</p>' +
-    (m.azubi ? '<p><strong>Azubi killed:</strong> ' + m.azubi.bonusPoints + ' points</p>' : '') +
+    (m.azubi ? '<p><strong>Azubi:</strong> cannot be killed (click-blocking only)</p>' : '') +
     '<p><strong>Rubber duck:</strong> ' + d.powerups.rubberDuckPoints + ' points + ' + d.powerups.rubberDuckPointsMultiplier + 'x buff</p>' +
     '<p><strong>Hotfix hammer:</strong> ' + d.powerups.hotfixHammerPoints + ' points + stun</p>' +
     '<p><strong>Boss click:</strong> ' + d.boss.clickPoints + ' points</p>' +

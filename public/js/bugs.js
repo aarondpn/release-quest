@@ -3,6 +3,42 @@ import { dom, clientState } from './state.js';
 import { logicalToPixel, getArenaRect } from './coordinates.js';
 import { showError, ERROR_LEVELS } from './error-handler.js';
 
+// Pixel-art intern SVG (32x32) — amber hoodie, headphones, laptop
+const AZUBI_INTERN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Headphones -->
+  <rect x="8" y="4" width="2" height="6" fill="#555"/>
+  <rect x="22" y="4" width="2" height="6" fill="#555"/>
+  <rect x="8" y="3" width="16" height="2" rx="1" fill="#555"/>
+  <rect x="6" y="6" width="4" height="4" rx="1" fill="#e74c3c"/>
+  <rect x="22" y="6" width="4" height="4" rx="1" fill="#e74c3c"/>
+  <!-- Head -->
+  <rect x="10" y="4" width="12" height="10" rx="2" fill="#fcd5a0"/>
+  <!-- Eyes -->
+  <rect x="13" y="8" width="2" height="2" fill="#333"/>
+  <rect x="18" y="8" width="2" height="2" fill="#333"/>
+  <!-- Mouth -->
+  <rect x="14" y="11" width="4" height="1" rx="0.5" fill="#c0896a"/>
+  <!-- Hoodie body -->
+  <rect x="8" y="14" width="16" height="10" rx="2" fill="#f59e0b"/>
+  <rect x="8" y="14" width="16" height="3" fill="#d97706"/>
+  <!-- Arms -->
+  <rect x="5" y="16" width="4" height="6" rx="1" fill="#f59e0b"/>
+  <rect x="23" y="16" width="4" height="6" rx="1" fill="#f59e0b"/>
+  <!-- Hands -->
+  <rect x="6" y="21" width="3" height="2" rx="1" fill="#fcd5a0"/>
+  <rect x="23" y="21" width="3" height="2" rx="1" fill="#fcd5a0"/>
+  <!-- Laptop -->
+  <rect x="10" y="22" width="12" height="2" rx="0.5" fill="#64748b"/>
+  <rect x="11" y="20" width="10" height="3" rx="0.5" fill="#94a3b8"/>
+  <rect x="12" y="20.5" width="8" height="2" fill="#38bdf8"/>
+  <!-- Legs -->
+  <rect x="11" y="24" width="4" height="4" rx="1" fill="#1e3a5f"/>
+  <rect x="17" y="24" width="4" height="4" rx="1" fill="#1e3a5f"/>
+  <!-- Shoes -->
+  <rect x="10" y="28" width="5" height="2" rx="1" fill="#333"/>
+  <rect x="17" y="28" width="5" height="2" rx="1" fill="#333"/>
+</svg>`;
+
 export function createBugElement(bugId, lx, ly, variant) {
   const el = document.createElement('div');
   el.className = 'bug walking';
@@ -48,17 +84,12 @@ export function createBugElement(bugId, lx, ly, variant) {
       el.classList.add('infinite-loop');
     }
     if (variant.isAzubi) {
+      el.classList.remove('walking');
       el.classList.add('azubi');
-      el.dataset.azubiHp = variant.azubiHp;
-      el.dataset.azubiMaxHp = variant.azubiMaxHp;
-      // Add HP bar
-      const hpBar = document.createElement('div');
-      hpBar.className = 'azubi-hp-bar';
-      const hpFill = document.createElement('div');
-      hpFill.className = 'azubi-hp-fill';
-      hpFill.style.width = '100%';
-      hpBar.appendChild(hpFill);
-      el.appendChild(hpBar);
+      // Replace bug innards with intern character
+      el.innerHTML = `
+        <div class="azubi-character">${AZUBI_INTERN_SVG}</div>
+        <div class="azubi-label">Azubi</div>`;
     }
   }
 

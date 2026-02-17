@@ -1,20 +1,17 @@
 import { baseDescriptor } from './base.ts';
 import { getDescriptor, getType } from './index.ts';
-import { getDifficultyConfig, LOGICAL_W, LOGICAL_H } from '../config.ts';
-import { randomPosition, awardScore, currentLevelConfig } from '../state.ts';
+import { LOGICAL_W, LOGICAL_H } from '../config.ts';
+import { currentLevelConfig } from '../state.ts';
 import { createTimerBag } from '../timer-bag.ts';
 import * as game from '../game.ts';
-import * as powerups from '../powerups.ts';
-import { gameBugsSquashed } from '../metrics.ts';
 import type { BugEntity, GameContext, EntityDescriptor, BugTypePlugin } from '../types.ts';
 
 export const AZUBI_MECHANICS = {
-  clicksToKill: 10,
   spawnInterval: 1200,
-  spawnSpeedupPerHit: 0.80,
-  bonusPoints: 50,
-  escapeDamage: 25,
   escapeTimeMultiplier: 2.5,
+  followSpeed: 60,
+  followInterval: 150,
+  followMinDistance: 30,
 };
 
 // Inline spawn to avoid circular dependency with bugs.ts
@@ -72,12 +69,59 @@ function startAzubiSpawning(bug: BugEntity, ctx: GameContext) {
 export const azubiDescriptor: EntityDescriptor = {
   ...baseDescriptor,
 
-  broadcastFields(bug: BugEntity) {
-    return { isAzubi: true, azubiHp: bug.azubiHp, azubiMaxHp: bug.azubiMaxHp };
+  broadcastFields(_bug: BugEntity) {
+    return { isAzubi: true };
   },
 
   setupTimers(bug: BugEntity, ctx: GameContext) {
     startAzubiSpawning(bug, ctx);
+  },
+
+  createWander(bug: BugEntity, ctx: GameContext) {
+    const { state } = ctx;
+    const bugId = bug.id;
+
+    bug._timers.setInterval('wander', () => {
+      if (!state.bugs[bugId] || state.hammerStunActive) return;
+
+      // Find nearest player
+      const playerIds = Object.keys(state.players);
+      if (playerIds.length === 0) return;
+
+      let nearestPid: string | null = null;
+      let nearestDist = Infinity;
+      for (const pid of playerIds) {
+        const p = state.players[pid];
+        const dx = p.x - bug.x;
+        const dy = p.y - bug.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < nearestDist) {
+          nearestDist = dist;
+          nearestPid = pid;
+        }
+      }
+
+      if (!nearestPid) return;
+      bug.azubiTarget = nearestPid;
+
+      // Don't jitter if already close enough
+      if (nearestDist < AZUBI_MECHANICS.followMinDistance) return;
+
+      const target = state.players[nearestPid];
+      const dx = target.x - bug.x;
+      const dy = target.y - bug.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      // Move toward target at followSpeed units per tick
+      const step = Math.min(AZUBI_MECHANICS.followSpeed, dist);
+      const nx = bug.x + (dx / dist) * step;
+      const ny = bug.y + (dy / dist) * step;
+
+      bug.x = Math.max(20, Math.min(LOGICAL_W - 20, nx));
+      bug.y = Math.max(20, Math.min(LOGICAL_H - 20, ny));
+
+      ctx.events.emit({ type: 'bug-wander', bugId, x: bug.x, y: bug.y });
+    }, AZUBI_MECHANICS.followInterval);
   },
 
   onStun(bug: BugEntity, ctx: GameContext) {
@@ -104,68 +148,18 @@ export const azubiDescriptor: EntityDescriptor = {
   onEscape(bug: BugEntity, ctx: GameContext, onEscapeCheck: () => void) {
     bug._timers.clearAll();
     delete ctx.state.bugs[bug.id];
-    ctx.state.hp -= AZUBI_MECHANICS.escapeDamage;
-    if (ctx.state.hp < 0) ctx.state.hp = 0;
 
     if (ctx.matchLog) {
-      ctx.matchLog.log('escape', { bugId: bug.id, type: 'azubi', activeBugs: Object.keys(ctx.state.bugs).length, hp: ctx.state.hp });
+      ctx.matchLog.log('escape', { bugId: bug.id, type: 'azubi', activeBugs: Object.keys(ctx.state.bugs).length });
     }
 
-    ctx.events.emit({ type: 'azubi-escaped', bugId: bug.id, hp: ctx.state.hp });
+    // Azubi leaves harmlessly — no HP damage
+    ctx.events.emit({ type: 'azubi-escaped', bugId: bug.id });
     onEscapeCheck();
   },
 
-  onClick(bug: BugEntity, ctx: GameContext, pid: string, _msg: any) {
-    const { state } = ctx;
-    const player = state.players[pid];
-    if (!player) return;
-
-    bug.azubiHp = (bug.azubiHp ?? AZUBI_MECHANICS.clicksToKill) - 1;
-
-    if (bug.azubiHp! <= 0) {
-      // Azubi killed
-      bug._timers.clearAll();
-      delete state.bugs[bug.id];
-
-      player.bugsSquashed = (player.bugsSquashed || 0) + 1;
-      gameBugsSquashed.inc();
-      let rawPoints = AZUBI_MECHANICS.bonusPoints;
-      if (powerups.isDuckBuffActive(ctx)) rawPoints *= 2;
-      const points = awardScore(ctx, pid, rawPoints);
-
-      if (ctx.matchLog) {
-        ctx.matchLog.log('squash', { bugId: bug.id, type: 'azubi', by: pid, activeBugs: Object.keys(state.bugs).length, score: state.score });
-      }
-
-      ctx.events.emit({
-        type: 'azubi-killed',
-        bugId: bug.id,
-        playerId: pid,
-        playerColor: player.color,
-        score: state.score,
-        playerScore: player.score,
-        points,
-      });
-
-      if (state.phase === 'boss') game.checkBossGameState(ctx);
-      else game.checkGameState(ctx);
-    } else {
-      // Hit but not dead — speed up spawning
-      bug.azubiSpawnInterval = (bug.azubiSpawnInterval ?? AZUBI_MECHANICS.spawnInterval) * AZUBI_MECHANICS.spawnSpeedupPerHit;
-      // Restart spawn timer with new faster interval
-      bug._timers.clear('azubi-spawn');
-      startAzubiSpawning(bug, ctx);
-
-      ctx.events.emit({
-        type: 'azubi-hit',
-        bugId: bug.id,
-        playerId: pid,
-        playerColor: player.color,
-        azubiHp: bug.azubiHp,
-        azubiMaxHp: bug.azubiMaxHp,
-      });
-    }
-  },
+  // Clicks are absorbed but do nothing — pure annoyance
+  onClick(_bug: BugEntity, _ctx: GameContext, _pid: string, _msg: any) {},
 };
 
 export const azubiPlugin: BugTypePlugin = {
@@ -179,8 +173,6 @@ export const azubiPlugin: BugTypePlugin = {
     startLevelKey: 'azubiStartLevel',
     createVariant: () => ({
       isAzubi: true,
-      azubiHp: AZUBI_MECHANICS.clicksToKill,
-      azubiMaxHp: AZUBI_MECHANICS.clicksToKill,
       azubiSpawnInterval: AZUBI_MECHANICS.spawnInterval,
     }),
     canSpawn: (ctx) => {

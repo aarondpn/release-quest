@@ -275,35 +275,52 @@
         <div class="overview-card special">
           <div class="card-icon">
             <div class="bug azubi">
-              <div class="bug-body">
-                <div class="bug-eyes">&middot;&middot;</div>
-                <div class="bug-legs">
-                  <span></span><span></span><span></span>
-                  <span></span><span></span><span></span>
-                </div>
+              <div class="azubi-character" style="width:48px;height:48px;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="48" height="48">
+                  <rect x="8" y="4" width="2" height="6" fill="#555"/>
+                  <rect x="22" y="4" width="2" height="6" fill="#555"/>
+                  <rect x="8" y="3" width="16" height="2" rx="1" fill="#555"/>
+                  <rect x="6" y="6" width="4" height="4" rx="1" fill="#e74c3c"/>
+                  <rect x="22" y="6" width="4" height="4" rx="1" fill="#e74c3c"/>
+                  <rect x="10" y="4" width="12" height="10" rx="2" fill="#fcd5a0"/>
+                  <rect x="13" y="8" width="2" height="2" fill="#333"/>
+                  <rect x="18" y="8" width="2" height="2" fill="#333"/>
+                  <rect x="14" y="11" width="4" height="1" rx="0.5" fill="#c0896a"/>
+                  <rect x="8" y="14" width="16" height="10" rx="2" fill="#f59e0b"/>
+                  <rect x="8" y="14" width="16" height="3" fill="#d97706"/>
+                  <rect x="5" y="16" width="4" height="6" rx="1" fill="#f59e0b"/>
+                  <rect x="23" y="16" width="4" height="6" rx="1" fill="#f59e0b"/>
+                  <rect x="6" y="21" width="3" height="2" rx="1" fill="#fcd5a0"/>
+                  <rect x="23" y="21" width="3" height="2" rx="1" fill="#fcd5a0"/>
+                  <rect x="10" y="22" width="12" height="2" rx="0.5" fill="#64748b"/>
+                  <rect x="11" y="20" width="10" height="3" rx="0.5" fill="#94a3b8"/>
+                  <rect x="12" y="20.5" width="8" height="2" fill="#38bdf8"/>
+                  <rect x="11" y="24" width="4" height="4" rx="1" fill="#1e3a5f"/>
+                  <rect x="17" y="24" width="4" height="4" rx="1" fill="#1e3a5f"/>
+                  <rect x="10" y="28" width="5" height="2" rx="1" fill="#333"/>
+                  <rect x="17" y="28" width="5" height="2" rx="1" fill="#333"/>
+                </svg>
               </div>
             </div>
           </div>
           <h3 class="card-title">Azubi</h3>
           <div id="azubi-badge" class="card-badge">8% spawn chance (Level 2+)</div>
           <div id="azubi-stats" class="card-stats">
-            <div class="stat">🔨 Requires 10 clicks to kill</div>
-            <div class="stat">🐛 Spawns bugs every 3s (50% normal / 50% feature)</div>
-            <div class="stat">⚡ Spawns faster when hit (panicked!)</div>
-            <div class="stat">💰 50 bonus points for killing</div>
-            <div class="stat">💔 25 HP damage if escaped</div>
+            <div class="stat">👤 Follows nearest player's cursor</div>
+            <div class="stat">🚫 Blocks clicks on bugs underneath</div>
+            <div class="stat">🐛 Spawns bugs every 1.2s near your cursor</div>
             <div class="stat">⏱️ 2.5x escape time</div>
+            <div class="stat">✅ Leaves harmlessly when timer expires</div>
           </div>
           <p class="card-description">
-            The trainee who keeps introducing bugs! This larger orange bug requires
-            <span id="azubi-clicks">10</span> clicks to squash and spawns additional bugs
-            while alive — half normal bugs, half feature bugs. Each hit makes the Azubi
-            panic and spawn bugs <span id="azubi-speedup">15%</span> faster. Kill it quickly
-            to stop the flood, or it'll overwhelm you!
+            The clingy intern who won't leave you alone! This pixel-art character follows
+            your cursor around the arena, blocking your clicks on the bugs underneath.
+            While following you, it spawns additional bugs right near your cursor — half
+            normal bugs, half feature bugs. You can't kill it; just wait it out!
           </p>
           <div class="card-tip">
-            💡 <strong>Pro Tip:</strong> Prioritize the Azubi early — the longer it stays,
-            the more bugs it creates. But watch out for the feature bugs it spawns!
+            💡 <strong>Pro Tip:</strong> In multiplayer, one player can lure the Azubi away
+            while the others squash bugs freely!
           </div>
         </div>
 

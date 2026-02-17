@@ -95,9 +95,8 @@ export interface BugEntity {
   chainLength?: number;
   // Azubi
   isAzubi?: boolean;
-  azubiHp?: number;
-  azubiMaxHp?: number;
   azubiSpawnInterval?: number;
+  azubiTarget?: string;
   // Infinite Loop
   isInfiniteLoop?: boolean;
   loopCenterX?: number;
