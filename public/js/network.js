@@ -740,6 +740,59 @@ export function handleMessageInternal(msg) {
       break;
     }
 
+    // ── Azubi hit (not dead yet) ──
+    case 'azubi-hit': {
+      const bugEl = clientState.bugs[msg.bugId];
+      if (bugEl) {
+        bugEl.dataset.azubiHp = msg.azubiHp;
+        const fill = bugEl.querySelector('.azubi-hp-fill');
+        if (fill) {
+          const pct = (msg.azubiHp / msg.azubiMaxHp) * 100;
+          fill.style.width = pct + '%';
+          // Color: green → yellow → red
+          if (pct > 50) fill.style.background = '#22c55e';
+          else if (pct > 25) fill.style.background = '#eab308';
+          else fill.style.background = '#ef4444';
+        }
+        bugEl.classList.add('azubi-hit-shake');
+        setTimeout(() => bugEl.classList.remove('azubi-hit-shake'), 200);
+      }
+      break;
+    }
+
+    // ── Azubi killed ──
+    case 'azubi-killed': {
+      const bugEl = clientState.bugs[msg.bugId];
+      if (bugEl) {
+        const rect = bugEl.getBoundingClientRect();
+        const arenaRect = dom.arena.getBoundingClientRect();
+        const lx = ((rect.left - arenaRect.left + rect.width / 2) / arenaRect.width) * LOGICAL_W;
+        const ly = ((rect.top - arenaRect.top) / arenaRect.height) * LOGICAL_H;
+        showSquashEffect(lx, ly, msg.playerColor);
+        showParticleBurst(lx, ly, msg.playerColor);
+      }
+      removeBugElement(msg.bugId, true);
+      updateHUD(msg.score);
+      if (msg.playerId && msg.playerScore !== undefined) {
+        if (clientState.players[msg.playerId]) {
+          clientState.players[msg.playerId].score = msg.playerScore;
+        }
+      }
+      updateLiveDashboard();
+      break;
+    }
+
+    // ── Azubi escaped ──
+    case 'azubi-escaped': {
+      removeBugElement(msg.bugId);
+      updateHUD(undefined, undefined, msg.hp);
+      dom.arena.style.borderColor = 'var(--red)';
+      setTimeout(() => dom.arena.style.borderColor = '#2a2a4a', 300);
+      showDamageVignette();
+      shakeArena('medium');
+      break;
+    }
+
     // ── Rubber duck ──
     case 'duck-spawn': {
       createDuckElement(msg.duck);

@@ -47,6 +47,19 @@ export function createBugElement(bugId, lx, ly, variant) {
     if (variant.isInfiniteLoop) {
       el.classList.add('infinite-loop');
     }
+    if (variant.isAzubi) {
+      el.classList.add('azubi');
+      el.dataset.azubiHp = variant.azubiHp;
+      el.dataset.azubiMaxHp = variant.azubiMaxHp;
+      // Add HP bar
+      const hpBar = document.createElement('div');
+      hpBar.className = 'azubi-hp-bar';
+      const hpFill = document.createElement('div');
+      hpFill.className = 'azubi-hp-fill';
+      hpFill.style.width = '100%';
+      hpBar.appendChild(hpFill);
+      el.appendChild(hpBar);
+    }
   }
 
   const pos = logicalToPixel(lx, ly);

@@ -6,13 +6,14 @@ import { memoryLeakPlugin } from './memory-leak.ts';
 import { mergeConflictPlugin } from './merge-conflict.ts';
 import { pipelinePlugin } from './pipeline.ts';
 import { infiniteLoopPlugin } from './infinite-loop.ts';
+import { azubiPlugin } from './azubi.ts';
 import type { BugEntity, BugTypePlugin, EntityDescriptor } from '../types.ts';
 import type { ZodType } from 'zod';
 
 // Order = detection priority (checked first to last)
 const plugins: BugTypePlugin[] = [
   infiniteLoopPlugin, pipelinePlugin, mergeConflictPlugin,
-  memoryLeakPlugin, heisenbugPlugin, featurePlugin,
+  memoryLeakPlugin, heisenbugPlugin, azubiPlugin, featurePlugin,
 ];
 
 const descriptors: Record<string, EntityDescriptor> = {

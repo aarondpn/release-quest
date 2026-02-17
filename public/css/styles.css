@@ -1802,6 +1802,61 @@ header p {
   filter: brightness(1.2);
 }
 
+/* ── Azubi (Trainee) ── */
+.bug.azubi {
+  z-index: 12;
+}
+.bug.azubi .bug-body {
+  background: #f59e0b;
+  box-shadow: 0 0 16px rgba(245,158,11,0.5), 0 0 32px rgba(245,158,11,0.2);
+  transform: scale(1.3);
+}
+.bug.azubi .bug-body::before,
+.bug.azubi .bug-body::after {
+  background: #f59e0b;
+}
+.bug.azubi .bug-legs span {
+  background: #f59e0b;
+}
+/* Hard hat icon */
+.bug.azubi .bug-eyes::after {
+  content: '\26D1';
+  font-size: 12px;
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+/* HP bar */
+.azubi-hp-bar {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 4px;
+  background: rgba(0,0,0,0.5);
+  border-radius: 2px;
+  overflow: hidden;
+  z-index: 15;
+}
+.azubi-hp-fill {
+  height: 100%;
+  background: #22c55e;
+  border-radius: 2px;
+  transition: width 0.2s ease, background 0.2s ease;
+}
+/* Hit shake animation */
+@keyframes azubi-hit-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  50% { transform: translateX(3px); }
+  75% { transform: translateX(-2px); }
+}
+.bug.azubi.azubi-hit-shake {
+  animation: azubi-hit-shake 0.2s ease-out;
+}
+
 /* ── Feature 4: Rubber Duck Debugger ── */
 .rubber-duck {
   position: absolute;

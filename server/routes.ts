@@ -7,6 +7,7 @@ import { MERGE_CONFLICT_MECHANICS } from './entity-types/merge-conflict.ts';
 import { PIPELINE_BUG_MECHANICS } from './entity-types/pipeline.ts';
 import { INFINITE_LOOP_MECHANICS } from './entity-types/infinite-loop.ts';
 import { CODE_REVIEW_MECHANICS } from './entity-types/feature.ts';
+import { AZUBI_MECHANICS } from './entity-types/azubi.ts';
 import * as db from './db.ts';
 import * as auth from './auth.ts';
 import { asyncHandler, NotFoundError, UnauthorizedError, BadRequestError } from './utils.ts';
@@ -63,6 +64,7 @@ router.get('/wiki-config', (req: Request, res: Response) => {
       pipeline: PIPELINE_BUG_MECHANICS,
       infiniteLoop: INFINITE_LOOP_MECHANICS,
       feature: CODE_REVIEW_MECHANICS,
+      azubi: AZUBI_MECHANICS,
       bossHpPerExtraPlayer: 150,
       bossRegenPerExtraPlayer: 1,
     },
