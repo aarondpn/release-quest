@@ -1,13 +1,13 @@
 import { baseDescriptor } from './base.ts';
 import { getDescriptor, getType } from './index.ts';
-import { LOGICAL_W, LOGICAL_H } from '../config.ts';
+import { getDifficultyConfig, LOGICAL_W, LOGICAL_H } from '../config.ts';
 import { currentLevelConfig } from '../state.ts';
 import { createTimerBag } from '../timer-bag.ts';
 import * as game from '../game.ts';
 import type { BugEntity, GameContext, EntityDescriptor, BugTypePlugin } from '../types.ts';
 
 export const AZUBI_MECHANICS = {
-  spawnInterval: 1200,
+  spawnInterval: 2500,
   escapeTimeMultiplier: 2.5,
   followSpeed: 60,
   followInterval: 150,
@@ -28,7 +28,8 @@ function spawnAzubiBug(bug: BugEntity, ctx: GameContext) {
   const y = Math.max(20, Math.min(LOGICAL_H - 20, bug.y + (Math.random() - 0.5) * offset * 2));
 
   const child: BugEntity = { id, x, y, _timers: createTimerBag(), escapeTime: cfg.escapeTime, escapeStartedAt: Date.now() };
-  if (Math.random() < 0.5) child.isFeature = true;
+  const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
+  if (Math.random() < diffConfig.specialBugs.azubiFeatureChance) child.isFeature = true;
 
   state.bugs[id] = child;
 
@@ -171,9 +172,9 @@ export const azubiPlugin: BugTypePlugin = {
     mode: 'single',
     chanceKey: 'azubiChance',
     startLevelKey: 'azubiStartLevel',
-    createVariant: () => ({
+    createVariant: (ctx) => ({
       isAzubi: true,
-      azubiSpawnInterval: AZUBI_MECHANICS.spawnInterval,
+      azubiSpawnInterval: getDifficultyConfig(ctx.state.difficulty, ctx.state.customConfig).specialBugs.azubiSpawnInterval,
     }),
     canSpawn: (ctx) => {
       // Max 1 azubi at a time
