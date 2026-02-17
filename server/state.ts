@@ -79,6 +79,7 @@ export function getPlayerScores(state: GameState): PlayerScoreEntry[] {
     color: p.color,
     icon: p.icon,
     score: p.score,
+    bugsSquashed: p.bugsSquashed,
     isGuest: p.isGuest,
   }));
 }

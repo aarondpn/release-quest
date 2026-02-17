@@ -1,5 +1,6 @@
 import { dom, clientState } from './state.js';
 import { renderIcon } from './avatars.js';
+import { showWalkout } from './walkout.js';
 
 function escapeHtml(s) {
   const d = document.createElement('div');
@@ -42,6 +43,16 @@ export function showStartScreen() {
 }
 
 export function showGameOverScreen(score, level, playerList) {
+  if (playerList && playerList.length >= 2) {
+    showWalkout(playerList, () => {
+      hideAllScreens();
+      document.getElementById('final-score').textContent = score;
+      document.getElementById('final-level').textContent = level;
+      renderScoreboard(document.getElementById('gameover-scoreboard'), playerList);
+      dom.gameoverScreen.classList.remove('hidden');
+    });
+    return;
+  }
   hideAllScreens();
   document.getElementById('final-score').textContent = score;
   document.getElementById('final-level').textContent = level;
@@ -50,6 +61,15 @@ export function showGameOverScreen(score, level, playerList) {
 }
 
 export function showWinScreen(score, playerList) {
+  if (playerList && playerList.length >= 2) {
+    showWalkout(playerList, () => {
+      hideAllScreens();
+      document.getElementById('win-score').textContent = score;
+      renderScoreboard(document.getElementById('win-scoreboard'), playerList);
+      dom.winScreen.classList.remove('hidden');
+    });
+    return;
+  }
   hideAllScreens();
   document.getElementById('win-score').textContent = score;
   renderScoreboard(document.getElementById('win-scoreboard'), playerList);

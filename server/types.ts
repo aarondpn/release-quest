@@ -53,6 +53,7 @@ export interface PlayerScoreEntry {
   color: string;
   icon: string;
   score: number;
+  bugsSquashed: number;
   isGuest: boolean;
 }
 
