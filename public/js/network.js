@@ -516,6 +516,8 @@ export function handleMessageInternal(msg) {
         let dur;
         if (el.classList.contains('infinite-loop')) {
           dur = 50; // match server loopTickMs for tight orbit tracking
+        } else if (el.classList.contains('azubi')) {
+          dur = 150; // match server followInterval for smooth cursor tracking
         } else if (el.classList.contains('pipeline-bug')) {
           dur = 330; // fast tick for snake slither
         } else if (dom.levelEl.textContent === 'BOSS') {
@@ -737,6 +739,12 @@ export function handleMessageInternal(msg) {
       } else {
         removeBugElement(msg.bugId);
       }
+      break;
+    }
+
+    // ── Azubi escaped (harmless — just leaves) ──
+    case 'azubi-escaped': {
+      removeBugElement(msg.bugId);
       break;
     }
 

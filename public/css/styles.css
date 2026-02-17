@@ -1802,6 +1802,46 @@ header p {
   filter: brightness(1.2);
 }
 
+/* ── Azubi (Clingy Intern) ── */
+.bug.azubi {
+  width: 64px;
+  height: 64px;
+  z-index: 15;
+  transition: left 150ms linear, top 150ms linear;
+  cursor: pointer;
+}
+.bug.azubi .bug-body,
+.bug.azubi .bug-legs {
+  display: none;
+}
+.azubi-character {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 0 8px rgba(245,158,11,0.6)) drop-shadow(0 0 16px rgba(245,158,11,0.3));
+  animation: azubi-float 2s ease-in-out infinite;
+}
+.azubi-character svg {
+  width: 48px;
+  height: 48px;
+}
+.azubi-label {
+  text-align: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: #f59e0b;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: -2px;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+@keyframes azubi-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
 /* ── Feature 4: Rubber Duck Debugger ── */
 .rubber-duck {
   position: absolute;

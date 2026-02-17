@@ -141,6 +141,7 @@ function updateDifficultyPlaceholders(difficulty) {
     dom.configPipelineBug.placeholder = Math.round(preset.specialBugs.pipelineBugChance * 100);
     dom.configMemoryLeak.placeholder = Math.round(preset.specialBugs.memoryLeakChance * 100);
     dom.configInfiniteLoop.placeholder = Math.round(preset.specialBugs.infiniteLoopChance * 100);
+    dom.configAzubi.placeholder = Math.round((preset.specialBugs.azubiChance || 0) * 100);
     dom.configDuckDuration.placeholder = preset.powerups.rubberDuckBuffDuration;
     dom.configHammerDuration.placeholder = preset.powerups.hotfixHammerStunDuration;
   }
@@ -244,6 +245,7 @@ dom.createLobbyBtn.addEventListener('click', () => {
       { toggle: dom.togglePipelineBug, input: dom.configPipelineBug, key: 'pipelineBugChance' },
       { toggle: dom.toggleMemoryLeak, input: dom.configMemoryLeak, key: 'memoryLeakChance' },
       { toggle: dom.toggleInfiniteLoop, input: dom.configInfiniteLoop, key: 'infiniteLoopChance' },
+      { toggle: dom.toggleAzubi, input: dom.configAzubi, key: 'azubiChance' },
     ];
     for (const { toggle, input, key } of bugToggleMap) {
       if (!toggle.checked) {
@@ -360,6 +362,7 @@ document.querySelectorAll('.config-section-header').forEach(header => {
   [dom.togglePipelineBug, dom.configPipelineBug],
   [dom.toggleMemoryLeak, dom.configMemoryLeak],
   [dom.toggleInfiniteLoop, dom.configInfiniteLoop],
+  [dom.toggleAzubi, dom.configAzubi],
 ].forEach(([toggle, input]) => {
   toggle.addEventListener('change', () => {
     input.disabled = !toggle.checked;
@@ -373,11 +376,12 @@ const advancedConfigInputs = [
   dom.configBossKillBonus, dom.configBossRegen,
   dom.configHeisenbug, dom.configCodeReview, dom.configMergeConflict,
   dom.configPipelineBug, dom.configMemoryLeak, dom.configInfiniteLoop,
-  dom.configDuckDuration, dom.configHammerDuration,
+  dom.configAzubi, dom.configDuckDuration, dom.configHammerDuration,
 ];
 const advancedBugToggles = [
   dom.toggleHeisenbug, dom.toggleCodeReview, dom.toggleMergeConflict,
   dom.togglePipelineBug, dom.toggleMemoryLeak, dom.toggleInfiniteLoop,
+  dom.toggleAzubi,
 ];
 
 function updateAdvancedWarning() {
@@ -411,11 +415,12 @@ dom.advancedResetBtn.addEventListener('click', () => {
   dom.configPipelineBug.value = '';
   dom.configMemoryLeak.value = '';
   dom.configInfiniteLoop.value = '';
+  dom.configAzubi.value = '';
   dom.configDuckDuration.value = '';
   dom.configHammerDuration.value = '';
   // Reset all bug toggles to enabled
   [dom.toggleHeisenbug, dom.toggleCodeReview, dom.toggleMergeConflict,
-   dom.togglePipelineBug, dom.toggleMemoryLeak, dom.toggleInfiniteLoop].forEach(t => {
+   dom.togglePipelineBug, dom.toggleMemoryLeak, dom.toggleInfiniteLoop, dom.toggleAzubi].forEach(t => {
     t.checked = true;
     t.dispatchEvent(new Event('change'));
   });

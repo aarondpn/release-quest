@@ -93,6 +93,10 @@ export interface BugEntity {
   chainId?: string;
   chainIndex?: number;
   chainLength?: number;
+  // Azubi
+  isAzubi?: boolean;
+  azubiSpawnInterval?: number;
+  azubiTarget?: string;
   // Infinite Loop
   isInfiniteLoop?: boolean;
   loopCenterX?: number;
@@ -322,6 +326,8 @@ export interface DifficultyConfig {
     memoryLeakChance: number;
     infiniteLoopChance: number;
     infiniteLoopStartLevel: number;
+    azubiChance: number;
+    azubiStartLevel: number;
   };
   powerups: {
     rubberDuckIntervalMin: number;

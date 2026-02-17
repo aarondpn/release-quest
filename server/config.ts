@@ -101,6 +101,8 @@ export const DIFFICULTY_PRESETS: Record<string, DifficultyConfig> = {
       memoryLeakChance: 0.08,
       infiniteLoopChance: 0.06,
       infiniteLoopStartLevel: 2,
+      azubiChance: 0.05,
+      azubiStartLevel: 2,
     },
     powerups: {
       rubberDuckIntervalMin: 18000,
@@ -172,6 +174,8 @@ export const DIFFICULTY_PRESETS: Record<string, DifficultyConfig> = {
       memoryLeakChance: 0.12,
       infiniteLoopChance: 0.10,
       infiniteLoopStartLevel: 2,
+      azubiChance: 0.08,
+      azubiStartLevel: 2,
     },
     powerups: {
       rubberDuckIntervalMin: 20000,
@@ -243,6 +247,8 @@ export const DIFFICULTY_PRESETS: Record<string, DifficultyConfig> = {
       memoryLeakChance: 0.15,
       infiniteLoopChance: 0.12,
       infiniteLoopStartLevel: 2,
+      azubiChance: 0.10,
+      azubiStartLevel: 2,
     },
     powerups: {
       rubberDuckIntervalMin: 25000,
