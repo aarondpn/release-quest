@@ -328,6 +328,8 @@ export interface DifficultyConfig {
     infiniteLoopStartLevel: number;
     azubiChance: number;
     azubiStartLevel: number;
+    azubiSpawnInterval: number;
+    azubiFeatureChance: number;
   };
   powerups: {
     rubberDuckIntervalMin: number;

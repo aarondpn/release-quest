@@ -170,7 +170,7 @@ function renderBugTypes(d, m) {
     setStats('azubi-stats', [
       '\uD83D\uDC64 Follows nearest player\u2019s cursor',
       '\uD83D\uDEAB Blocks clicks on bugs underneath (high z-index)',
-      '\uD83D\uDC1B Spawns bugs every ' + sec(m.azubi.spawnInterval) + 's (50% normal / 50% feature)',
+      '\uD83D\uDC1B Spawns bugs every ' + sec(d.specialBugs.azubiSpawnInterval) + 's (' + pct(d.specialBugs.azubiFeatureChance) + ' feature)',
       '\u23F1\uFE0F ' + m.azubi.escapeTimeMultiplier + 'x escape time',
       '\u2705 Leaves harmlessly when escape timer expires',
     ]);

@@ -103,6 +103,8 @@ export const DIFFICULTY_PRESETS: Record<string, DifficultyConfig> = {
       infiniteLoopStartLevel: 2,
       azubiChance: 0.05,
       azubiStartLevel: 2,
+      azubiSpawnInterval: 3000,
+      azubiFeatureChance: 0.30,
     },
     powerups: {
       rubberDuckIntervalMin: 18000,
@@ -176,6 +178,8 @@ export const DIFFICULTY_PRESETS: Record<string, DifficultyConfig> = {
       infiniteLoopStartLevel: 2,
       azubiChance: 0.08,
       azubiStartLevel: 2,
+      azubiSpawnInterval: 2500,
+      azubiFeatureChance: 0.50,
     },
     powerups: {
       rubberDuckIntervalMin: 20000,
@@ -249,6 +253,8 @@ export const DIFFICULTY_PRESETS: Record<string, DifficultyConfig> = {
       infiniteLoopStartLevel: 2,
       azubiChance: 0.10,
       azubiStartLevel: 2,
+      azubiSpawnInterval: 1800,
+      azubiFeatureChance: 0.65,
     },
     powerups: {
       rubberDuckIntervalMin: 25000,
