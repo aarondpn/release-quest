@@ -1,61 +1,71 @@
 import { baseDescriptor } from './base.ts';
+import { getDescriptor, getType } from './index.ts';
 import { getDifficultyConfig, LOGICAL_W, LOGICAL_H } from '../config.ts';
 import { randomPosition, awardScore, currentLevelConfig } from '../state.ts';
+import { createTimerBag } from '../timer-bag.ts';
 import * as game from '../game.ts';
 import * as powerups from '../powerups.ts';
 import { gameBugsSquashed } from '../metrics.ts';
-import type { BugEntity, GameContext, EntityDescriptor, BugTypePlugin, SpawnEntityOptions } from '../types.ts';
+import type { BugEntity, GameContext, EntityDescriptor, BugTypePlugin } from '../types.ts';
 
 export const AZUBI_MECHANICS = {
   clicksToKill: 10,
-  spawnInterval: 1800,
+  spawnInterval: 1200,
   spawnSpeedupPerHit: 0.80,
   bonusPoints: 50,
   escapeDamage: 25,
   escapeTimeMultiplier: 2.5,
 };
 
-// Lazy-cached reference to spawnEntity to avoid circular dependency at module load time
-let _spawnEntity: ((ctx: GameContext, opts: SpawnEntityOptions) => boolean) | null = null;
-async function getSpawnEntity() {
-  if (!_spawnEntity) {
-    const mod = await import('../bugs.ts');
-    _spawnEntity = mod.spawnEntity;
+// Inline spawn to avoid circular dependency with bugs.ts
+function spawnAzubiBug(bug: BugEntity, ctx: GameContext) {
+  const { state, counters } = ctx;
+  const cfg = currentLevelConfig(state);
+
+  // Allow more bugs on screen when azubi is active
+  if (Object.keys(state.bugs).length >= cfg.maxOnScreen + 6) return;
+
+  const id = 'bug_' + (counters.nextBugId++);
+  const offset = 60;
+  const x = Math.max(20, Math.min(LOGICAL_W - 20, bug.x + (Math.random() - 0.5) * offset * 2));
+  const y = Math.max(20, Math.min(LOGICAL_H - 20, bug.y + (Math.random() - 0.5) * offset * 2));
+
+  const child: BugEntity = { id, x, y, _timers: createTimerBag(), escapeTime: cfg.escapeTime, escapeStartedAt: Date.now() };
+  if (Math.random() < 0.5) child.isFeature = true;
+
+  state.bugs[id] = child;
+
+  const descriptor = getDescriptor(child);
+  const phaseCheck = state.phase === 'boss' ? 'boss' as const : 'playing' as const;
+  descriptor.init(child, ctx, { phaseCheck });
+
+  if (ctx.matchLog) {
+    ctx.matchLog.log('spawn', { bugId: id, type: getType(child), source: 'azubi', activeBugs: Object.keys(state.bugs).length });
   }
-  return _spawnEntity;
+
+  const broadcastPayload: Record<string, unknown> = { id, x: child.x, y: child.y };
+  Object.assign(broadcastPayload, descriptor.broadcastFields(child));
+  ctx.events.emit({ type: 'bug-spawned', bug: broadcastPayload });
+
+  descriptor.setupTimers(child, ctx);
+  descriptor.createWander(child, ctx);
+
+  const onEscapeCheck = state.phase === 'boss'
+    ? () => game.checkBossGameState(ctx)
+    : () => game.checkGameState(ctx);
+
+  child._onEscape = () => {
+    if (!state.bugs[id]) return;
+    descriptor.onEscape(child, ctx, onEscapeCheck);
+  };
+  child._timers.setTimeout('escape', child._onEscape, cfg.escapeTime);
 }
-// Eagerly resolve on first import so it's ready by the time any azubi spawns
-getSpawnEntity();
 
 function startAzubiSpawning(bug: BugEntity, ctx: GameContext) {
   const interval = bug.azubiSpawnInterval ?? AZUBI_MECHANICS.spawnInterval;
   bug._timers.setInterval('azubi-spawn', () => {
     if (!ctx.state.bugs[bug.id] || ctx.state.hammerStunActive) return;
-    if (!_spawnEntity) return; // not resolved yet (shouldn't happen)
-
-    const cfg = currentLevelConfig(ctx.state);
-    const isFeature = Math.random() < 0.5;
-    // Spawn near the azubi with some random offset (clamped to arena bounds)
-    const offset = 60;
-    const nx = Math.max(20, Math.min(LOGICAL_W - 20, bug.x + (Math.random() - 0.5) * offset * 2));
-    const ny = Math.max(20, Math.min(LOGICAL_H - 20, bug.y + (Math.random() - 0.5) * offset * 2));
-    const baseVariant: Partial<BugEntity> = { x: nx, y: ny };
-    if (isFeature) baseVariant.isFeature = true;
-    const variant = baseVariant;
-    const phaseCheck = ctx.state.phase === 'boss' ? 'boss' : 'playing';
-    const onEscapeCheck = ctx.state.phase === 'boss'
-      ? () => game.checkBossGameState(ctx)
-      : () => game.checkGameState(ctx);
-
-    _spawnEntity(ctx, {
-      phaseCheck,
-      maxOnScreen: cfg.maxOnScreen + 2, // allow slightly more bugs when azubi is spawning
-      escapeTime: cfg.escapeTime,
-      isMinion: false,
-      onEscapeCheck,
-      variant,
-    });
-    // Don't increment bugsSpawned — these are extra bugs from the azubi
+    spawnAzubiBug(bug, ctx);
   }, interval);
 }
 
