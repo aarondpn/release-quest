@@ -295,7 +295,7 @@
           <p class="card-description">
             Smaller bugs spawned by the Mega Bug during the boss fight. They behave
             like normal bugs but spawn continuously. Spawn rate and max on-screen
-            increase as boss escalates and enrages.
+            increase as the boss progresses through phases.
           </p>
         </div>
 
@@ -342,23 +342,35 @@
           </div>
           <p class="card-description">
             The ultimate challenge! A massive bug that takes many clicks to defeat.
-            Click it repeatedly while managing its minions. Has three phases:
+            Click it repeatedly while managing its minions. Evolves through three distinct phases:
           </p>
           <div id="boss-phases" class="card-phases">
             <div class="phase">
-              <strong>⚡ Escalation Levels</strong>
+              <strong>🏃 Phase 1: The Sprint (100% → 60% HP)</strong>
               <ul>
-                <li>At 90s: Faster minion spawns (3.2s)</li>
-                <li>At 60s: Even faster spawns (2.6s)</li>
-                <li>At 30s: Maximum spawn rate (2.0s) + more minions</li>
+                <li>Standard mechanics — boss wanders, minions spawn</li>
+                <li>Boss fully visible and clickable at all times</li>
+                <li>Regen: 2 HP/s</li>
               </ul>
             </div>
             <div class="phase">
-              <strong>😡 Enrage (Below 50% HP)</strong>
+              <strong>🛡️ Phase 2: The Shield (60% → 25% HP)</strong>
               <ul>
-                <li>Faster movement</li>
-                <li>Minion spawn rate: 2.2 seconds</li>
-                <li>More minions on screen (5+)</li>
+                <li>Boss gains a shield: 5s vulnerable → 3s shielded (repeating)</li>
+                <li>Clicks deal 0 damage during shield</li>
+                <li>Regen doubles while shielded</li>
+                <li>Faster wander and 1.8x minion spawn rate</li>
+              </ul>
+            </div>
+            <div class="phase">
+              <strong>🐛 Phase 3: The Swarm (25% → 0% HP)</strong>
+              <ul>
+                <li>Boss anchors to center and shrinks</li>
+                <li>Regen stops entirely</li>
+                <li>3x minion spawn rate, 2x max on screen</li>
+                <li>Screen wipe every 8s (5 minions in a line)</li>
+                <li>Swarm armor: each minion blocks 18% damage (max 80%)</li>
+                <li>Time reduced by 20% on phase entry</li>
               </ul>
             </div>
           </div>
@@ -414,7 +426,7 @@
           </p>
           <div class="card-tip">
             💡 <strong>Pro Tip:</strong> Use the hammer when the arena is full of bugs
-            or during boss enrage to safely deal damage without worrying about escapes!
+            or during boss shield phase to safely deal damage without worrying about escapes!
           </div>
         </div>
 
@@ -529,9 +541,9 @@
         </div>
 
         <div class="tip-card">
-          <div class="tip-icon">⚡</div>
-          <h4>Enrage Phase</h4>
-          <p>When boss is below 50% HP, minion spawns accelerate. Stay focused!</p>
+          <div class="tip-icon">🛡️</div>
+          <h4>Boss Phases</h4>
+          <p>Stop clicking during the shield phase — save your clicks for when the boss is vulnerable. In Phase 3, clear minions to reduce swarm armor!</p>
         </div>
 
       </div>

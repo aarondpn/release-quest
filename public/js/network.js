@@ -5,7 +5,7 @@ import { updateHUD, updatePlayerCount, hideAllScreens, showStartScreen, showGame
 import { createBugElement, removeBugElement, clearAllBugs, showSquashEffect, removeMergeTether, removePipelineTether, rebuildPipelineTether } from './bugs.js';
 import { createBossElement, updateBossHp, removeBossElement, showBossHitEffect, formatTime, setBossPhase, setBossShield, shrinkBoss, anchorBoss } from './boss.js';
 import { addRemoteCursor, removeRemoteCursor, updateRemoteCursor, clearRemoteCursors } from './players.js';
-import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, showEnrageFlash, showLevelFlash, showEscalationWarning, showBossRegenNumber, showHeisenbugFleeEffect, showFeaturePenaltyEffect, showDuckBuffOverlay, removeDuckBuffOverlay, showMergeResolvedEffect, showPipelineChainResolvedEffect, showPipelineChainResetEffect, showBreakpointHitEffect, showPhaseTransitionFlash, showBlockedText, showScreenWipeFlash } from './vfx.js';
+import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, showLevelFlash, showEscalationWarning, showBossRegenNumber, showHeisenbugFleeEffect, showFeaturePenaltyEffect, showDuckBuffOverlay, removeDuckBuffOverlay, showMergeResolvedEffect, showPipelineChainResolvedEffect, showPipelineChainResetEffect, showBreakpointHitEffect, showPhaseTransitionFlash, showBlockedText, showScreenWipeFlash } from './vfx.js';
 import { showLobbyBrowser, hideLobbyBrowser, renderLobbyList, showLobbyError, buildLobbyIconPicker, joinLobbyWithPassword, joinLobbyByCodeWithPassword } from './lobby-ui.js';
 import { updateAuthUI, hideAuthOverlay, showAuthError } from './auth-ui.js';
 import { isPremium, STANDARD_ICONS } from './avatars.js';

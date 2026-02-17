@@ -50,11 +50,6 @@ export function showDamageVignette() {
   setTimeout(() => v.remove(), 450);
 }
 
-export function showEnrageFlash() {
-  // Legacy — replaced by phase transition flash
-  showPhaseTransitionFlash('ENRAGED');
-}
-
 export function showPhaseTransitionFlash(phaseName) {
   const flash = document.createElement('div');
   flash.className = 'phase-transition-flash';

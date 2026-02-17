@@ -1157,7 +1157,14 @@ header p {
   z-index: 82;
   border-radius: 8px;
   background: rgba(168,85,247,0.2);
-  animation: enrage-flash-anim 0.4s ease-out forwards;
+  animation: escalation-flash-anim 0.4s ease-out forwards;
+}
+
+@keyframes escalation-flash-anim {
+  0% { opacity: 0; }
+  30% { opacity: 1; }
+  60% { opacity: 0.6; }
+  100% { opacity: 0; }
 }
 
 /* Boss animations */
@@ -1306,24 +1313,6 @@ header p {
   text-shadow: 0 0 8px currentColor;
   white-space: nowrap;
   animation: squash-anim 0.5s ease-out forwards;
-}
-
-/* ── Enrage flash (legacy) ── */
-.enrage-flash {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 82;
-  border-radius: 8px;
-  background: rgba(255,60,60,0.25);
-  animation: enrage-flash-anim 0.4s ease-out forwards;
-}
-
-@keyframes enrage-flash-anim {
-  0% { opacity: 0; }
-  30% { opacity: 1; }
-  60% { opacity: 0.6; }
-  100% { opacity: 0; }
 }
 
 /* ── Phase transition flash — CRT glitch reveal ── */

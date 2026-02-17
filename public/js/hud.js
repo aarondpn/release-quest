@@ -245,7 +245,7 @@ const LOBBY_TIPS = [
   'Collect the rubber duck for a score multiplier',
   'The boss regenerates HP over time - click fast!',
   'More players = more bugs. Teamwork matters!',
-  'Boss enrages at 50% HP - bugs get faster!',
+  'Boss evolves through 3 phases - adapt your strategy!',
   'Escaped bugs drain your team\'s HP',
   'The duck gives a 2x score boost to everyone',
 ];

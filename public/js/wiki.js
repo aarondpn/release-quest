@@ -184,22 +184,50 @@ function renderBoss(d, m) {
     '\uD83D\uDD04 Regenerates ' + d.boss.regenPerSecond + ' HP/s (+' + m.bossRegenPerExtraPlayer + ' per extra player)',
   ]);
 
-  // Escalation + Enrage phases
+  // Boss phases
+  var bp = d.boss.bossPhases;
   var escalationHtml = d.boss.escalation.map(function(e) {
     return '<li>At ' + e.timeRemaining + 's: Spawn rate ' + sec(e.spawnRate) + 's, max ' + e.maxOnScreen + ' minions</li>';
   }).join('');
-  var enragePct = Math.round(d.boss.enrageThreshold * 100);
   setHtml('boss-phases', '' +
     '<div class="phase">' +
-      '<strong>\u26A1 Escalation Levels</strong>' +
+      '<strong>\uD83C\uDFC3 Phase 1: The Sprint (100% \u2192 ' + pct(bp.phase2Threshold) + ' HP)</strong>' +
+      '<ul>' +
+        '<li>Standard mechanics \u2014 boss wanders, minions spawn</li>' +
+        '<li>Boss fully visible and clickable at all times</li>' +
+        '<li>Regen: ' + d.boss.regenPerSecond + ' HP/s</li>' +
+      '</ul>' +
+    '</div>' +
+    '<div class="phase">' +
+      '<strong>\uD83D\uDEE1\uFE0F Phase 2: The Shield (' + pct(bp.phase2Threshold) + ' \u2192 ' + pct(bp.phase3Threshold) + ' HP)</strong>' +
+      '<ul>' +
+        '<li>Boss gains a shield: ' + sec(bp.shieldInterval) + 's vulnerable \u2192 ' + sec(bp.shieldDuration) + 's shielded (repeating)</li>' +
+        '<li>Clicks deal 0 damage during shield</li>' +
+        '<li>Regen doubles while shielded</li>' +
+        '<li>Faster wander (' + sec(bp.phase2WanderInterval) + 's interval)</li>' +
+        '<li>Minion spawn rate ' + bp.phase2SpawnRateMultiplier + 'x faster</li>' +
+      '</ul>' +
+    '</div>' +
+    '<div class="phase">' +
+      '<strong>\uD83D\uDC1B Phase 3: The Swarm (' + pct(bp.phase3Threshold) + ' \u2192 0% HP)</strong>' +
+      '<ul>' +
+        '<li>Boss anchors to center and shrinks</li>' +
+        '<li>Regen stops entirely</li>' +
+        '<li>Minion spawn rate ' + bp.phase3SpawnRateMultiplier + 'x faster, ' + bp.phase3MaxOnScreenMultiplier + 'x max on screen</li>' +
+        '<li>Screen wipe every ' + sec(bp.screenWipeInterval) + 's (' + bp.screenWipeBugCount + ' minions in a line)</li>' +
+        '<li>Swarm armor: each minion blocks ' + pct(bp.phase3DamageReductionPerMinion) + ' damage (max ' + pct(bp.phase3MaxDamageReduction) + ')</li>' +
+        '<li>Time reduced by ' + pct(bp.phase3TimeReduction) + ' on phase entry</li>' +
+      '</ul>' +
+    '</div>' +
+    '<div class="phase">' +
+      '<strong>\u26A1 Escalation (time-based)</strong>' +
       '<ul>' + escalationHtml + '</ul>' +
     '</div>' +
     '<div class="phase">' +
-      '<strong>\uD83D\uDE21 Enrage (Below ' + enragePct + '% HP)</strong>' +
+      '<strong>\u23F3 Phase Transitions</strong>' +
       '<ul>' +
-        '<li>Faster movement</li>' +
-        '<li>Minion spawn rate: ' + sec(d.boss.enrageMinionSpawnRate) + ' seconds</li>' +
-        '<li>More minions on screen (' + d.boss.enrageMinionMaxOnScreen + '+)</li>' +
+        '<li>' + sec(bp.transitionInvulnTime) + 's invulnerability during transitions</li>' +
+        '<li>All active minions cleared on phase change</li>' +
       '</ul>' +
     '</div>');
 
