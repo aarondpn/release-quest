@@ -22,6 +22,7 @@ export function showWalkout(playerList, onComplete) {
 
   let running = true;
   let phase = 0;
+  let clickReady = false;
   const timers = [];
   let sparkles = [];
   let confettiPieces = [];
@@ -123,8 +124,10 @@ export function showWalkout(playerList, onComplete) {
 
   document.body.appendChild(overlay);
 
-  // ── Click handler ──
+  // ── Click handler (ignore clicks for 1.5s to prevent accidental dismissal) ──
+  schedule(() => { clickReady = true; }, 1500);
   overlay.addEventListener('click', () => {
+    if (!clickReady) return;
     if (phase >= 10) {
       dismiss();
     } else if (phase >= 1) {
