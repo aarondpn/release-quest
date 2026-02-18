@@ -132,7 +132,8 @@ export function setupWebSocketConnection(
       return;
     }
 
-    wsMessagesReceived.inc({ type: msg.type || 'unknown' });
+    const knownType = typeof msg.type === 'string' && msg.type in handlers ? msg.type : 'unknown';
+    wsMessagesReceived.inc({ type: knownType });
 
     try {
       await handleMessage(ws, msg, pid, playerInfo, wss);

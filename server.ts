@@ -5,7 +5,7 @@ import { WebSocketServer } from 'ws';
 import type { WebSocket } from 'ws';
 
 import logger from './server/logger.ts';
-import { SERVER_CONFIG, COLORS, ICONS, GUEST_NAMES } from './server/config.ts';
+import { SERVER_CONFIG, DEV_MODE, COLORS, ICONS, GUEST_NAMES } from './server/config.ts';
 import * as network from './server/network.ts';
 import * as db from './server/db.ts';
 import * as lobby from './server/lobby.ts';
@@ -104,11 +104,41 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 // ── WebSocket server ──
-const wss = new WebSocketServer({ server: httpServer, maxPayload: 16 * 1024 });
+const wss = new WebSocketServer({
+  server: httpServer,
+  maxPayload: 16 * 1024,
+  verifyClient: (info, cb) => {
+    if (DEV_MODE) return cb(true);
+    const origin = info.origin || info.req.headers.origin || '';
+    const host = info.req.headers.host || '';
+    if (!origin) return cb(true);
+    try {
+      if (new URL(origin).host === host) {
+        cb(true);
+      } else {
+        cb(false, 403, 'Forbidden');
+      }
+    } catch {
+      cb(false, 403, 'Forbidden');
+    }
+  },
+});
 network.init(wss);
 
+// Track connections per IP
+const connectionsPerIp = new Map<string, number>();
+const MAX_CONNECTIONS_PER_IP = 10;
+
 // WebSocket connection handler
-wss.on('connection', (ws: WebSocket) => {
+wss.on('connection', (ws: WebSocket, req) => {
+  const ip = req.socket.remoteAddress || '';
+  const currentCount = connectionsPerIp.get(ip) || 0;
+  if (currentCount >= MAX_CONNECTIONS_PER_IP) {
+    ws.close(1008, 'Too many connections');
+    return;
+  }
+  connectionsPerIp.set(ip, currentCount + 1);
+
   const playerId = 'player_' + (nextPlayerId++);
   const color = COLORS[colorIndex % COLORS.length];
   const icon = ICONS[colorIndex % ICONS.length];
@@ -116,7 +146,15 @@ wss.on('connection', (ws: WebSocket) => {
   const name = GUEST_NAMES[Math.floor(Math.random() * GUEST_NAMES.length)];
 
   wsConnectionOpened();
-  ws.on('close', () => wsConnectionClosed());
+  ws.on('close', () => {
+    const count = connectionsPerIp.get(ip) || 1;
+    if (count <= 1) {
+      connectionsPerIp.delete(ip);
+    } else {
+      connectionsPerIp.set(ip, count - 1);
+    }
+    wsConnectionClosed();
+  });
 
   setupWebSocketConnection(ws, playerId, color, icon, name, playerInfo, wss);
 });

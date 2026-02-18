@@ -35,7 +35,12 @@ export const handleCreateLobby: MessageHandler = ({ ws, msg, pid, wss }) => {
     }
     playerLogger.info({ lobbyName, lobbyCode: result.lobby!.code, difficulty: finalDifficulty, customConfig: !!customConfig }, 'Lobby created');
     initChatForLobby(result.lobby!.id, pid);
-    network.send(ws, { type: 'lobby-created', lobby: result.lobby });
+    const lobbyResponse = { ...result.lobby! } as any;
+    if (lobbyResponse.settings?.password) {
+      lobbyResponse.settings = { ...lobbyResponse.settings };
+      delete lobbyResponse.settings.password;
+    }
+    network.send(ws, { type: 'lobby-created', lobby: lobbyResponse });
     // Broadcast updated lobby list to all unattached clients
     broadcastLobbyList(wss);
   }).catch(() => {

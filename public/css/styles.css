@@ -4470,11 +4470,30 @@ header p {
   position: relative;
   overflow: hidden;
 }
-.lobby-start-btn:hover {
+.lobby-start-btn:hover:not(:disabled) {
   background: var(--teal);
   color: var(--bg);
   box-shadow: 0 0 24px rgba(78,205,196,0.5), 0 0 60px rgba(78,205,196,0.15);
 }
+.lobby-start-btn:disabled,
+#retry-btn:disabled,
+#continue-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  border-color: #3d3d5c;
+  background: var(--surface);
+  color: var(--muted);
+  box-shadow: none;
+}
+.lobby-host-hint {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-align: center;
+  margin-top: 8px;
+}
+.lobby-host-hint.hidden { display: none; }
 .lobby-start-btn::after {
   content: '';
   position: absolute;

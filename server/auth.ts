@@ -62,6 +62,7 @@ export async function login(username: string, password: string): Promise<AuthRes
 
   const user = await db.getUserByUsername(username);
   if (!user) {
+    await bcrypt.compare(password, '$2b$10$0000000000000000000000uDummyHashForTimingEqualization000');
     return { error: 'Invalid username or password' };
   }
 

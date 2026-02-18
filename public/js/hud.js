@@ -50,10 +50,27 @@ export function showStartScreen() {
   startLobbyAnimations();
   updateLobbyRoster();
   updateLobbyRolePicker();
+  updateStartButtonState();
   const warningEl = document.getElementById('lobby-custom-warning');
   if (warningEl) {
     warningEl.classList.toggle('hidden', !clientState.hasCustomSettings);
   }
+}
+
+function isLobbyModerator() {
+  return !clientState.lobbyCreatorId || clientState.lobbyCreatorId === clientState.myId;
+}
+
+export function updateStartButtonState() {
+  const isMod = isLobbyModerator();
+  const btns = [document.getElementById('start-btn'), document.getElementById('retry-btn'), document.getElementById('continue-btn')];
+  for (const btn of btns) {
+    if (!btn) continue;
+    btn.disabled = !isMod;
+    btn.title = isMod ? '' : 'Only the lobby host can start the game';
+  }
+  const hint = document.getElementById('lobby-host-hint');
+  if (hint) hint.classList.toggle('hidden', isMod);
 }
 
 export function showGameOverScreen(score, level, playerList) {
@@ -64,6 +81,7 @@ export function showGameOverScreen(score, level, playerList) {
       document.getElementById('final-level').textContent = level;
       renderScoreboard(document.getElementById('gameover-scoreboard'), playerList);
       dom.gameoverScreen.classList.remove('hidden');
+      updateStartButtonState();
     });
     return;
   }
@@ -72,6 +90,7 @@ export function showGameOverScreen(score, level, playerList) {
   document.getElementById('final-level').textContent = level;
   renderScoreboard(document.getElementById('gameover-scoreboard'), playerList);
   dom.gameoverScreen.classList.remove('hidden');
+  updateStartButtonState();
 }
 
 export function showWinScreen(score, playerList) {
@@ -81,6 +100,7 @@ export function showWinScreen(score, playerList) {
       document.getElementById('win-score').textContent = score;
       renderScoreboard(document.getElementById('win-scoreboard'), playerList);
       dom.winScreen.classList.remove('hidden');
+      updateStartButtonState();
     });
     return;
   }
@@ -88,6 +108,7 @@ export function showWinScreen(score, playerList) {
   document.getElementById('win-score').textContent = score;
   renderScoreboard(document.getElementById('win-scoreboard'), playerList);
   dom.winScreen.classList.remove('hidden');
+  updateStartButtonState();
 }
 
 export function showLevelScreen(levelNum) {

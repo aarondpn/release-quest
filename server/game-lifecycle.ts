@@ -25,6 +25,7 @@ export function createGameLifecycle(): GameLifecycle {
     const allowed = VALID_TRANSITIONS[state.phase];
     if (!allowed || !allowed.includes(to)) {
       logger.error({ from: state.phase, to }, 'Invalid phase transition');
+      return;
     }
     state.phase = to;
   }

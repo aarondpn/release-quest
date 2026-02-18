@@ -13,67 +13,125 @@ const getLeaderboardSchema = z.object({ type: z.literal('get-leaderboard') });
 const getMyStatsSchema = z.object({ type: z.literal('get-my-stats') });
 const getRecordingsSchema = z.object({ type: z.literal('get-recordings') });
 
+const customConfigSchema = z.object({
+  startingHp: z.number().int().min(1).max(150).optional(),
+  hpDamage: z.number().int().min(0).max(50).optional(),
+  bugPoints: z.number().int().min(0).max(100).optional(),
+  scoreMultiplier: z.number().min(0.1).max(10).optional(),
+  levels: z.record(z.string(), z.object({
+    bugsTotal: z.number().int().min(1).max(100).optional(),
+    escapeTime: z.number().int().min(1000).max(30000).optional(),
+    spawnRate: z.number().int().min(500).max(10000).optional(),
+    maxOnScreen: z.number().int().min(1).max(100).optional(),
+  })).optional(),
+  boss: z.object({
+    hp: z.number().int().min(1).max(10000).optional(),
+    clickDamage: z.number().int().min(1).max(100).optional(),
+    clickPoints: z.number().int().min(0).max(100).optional(),
+    killBonus: z.number().int().min(0).max(10000).optional(),
+    wanderInterval: z.number().int().min(500).max(10000).optional(),
+    minionSpawnRate: z.number().int().min(500).max(30000).optional(),
+    minionEscapeTime: z.number().int().min(1000).max(30000).optional(),
+    minionMaxOnScreen: z.number().int().min(1).max(50).optional(),
+    clickCooldownMs: z.number().int().min(0).max(5000).optional(),
+    regenPerSecond: z.number().min(0).max(100).optional(),
+    timeLimit: z.number().int().min(30).max(600).optional(),
+  }).optional(),
+  specialBugs: z.object({
+    heisenbugChance: z.number().min(0).max(1).optional(),
+    codeReviewChance: z.number().min(0).max(1).optional(),
+    codeReviewStartLevel: z.number().int().min(1).max(3).optional(),
+    mergeConflictChance: z.number().min(0).max(1).optional(),
+    pipelineBugChance: z.number().min(0).max(1).optional(),
+    pipelineBugStartLevel: z.number().int().min(1).max(3).optional(),
+    memoryLeakChance: z.number().min(0).max(1).optional(),
+    infiniteLoopChance: z.number().min(0).max(1).optional(),
+    infiniteLoopStartLevel: z.number().int().min(1).max(3).optional(),
+    azubiChance: z.number().min(0).max(1).optional(),
+    azubiStartLevel: z.number().int().min(1).max(3).optional(),
+    azubiSpawnInterval: z.number().int().min(500).max(30000).optional(),
+    azubiFeatureChance: z.number().min(0).max(1).optional(),
+  }).optional(),
+  shop: z.object({
+    duration: z.number().int().min(5000).max(60000).optional(),
+  }).optional(),
+  powerups: z.object({
+    rubberDuckIntervalMin: z.number().int().min(5000).max(120000).optional(),
+    rubberDuckIntervalMax: z.number().int().min(5000).max(120000).optional(),
+    rubberDuckBuffDuration: z.number().int().min(1000).max(30000).optional(),
+    rubberDuckWanderInterval: z.number().int().min(500).max(10000).optional(),
+    rubberDuckDespawnTime: z.number().int().min(1000).max(30000).optional(),
+    rubberDuckPoints: z.number().int().min(0).max(1000).optional(),
+    rubberDuckPointsMultiplier: z.number().min(0.1).max(10).optional(),
+    hotfixHammerIntervalMin: z.number().int().min(5000).max(120000).optional(),
+    hotfixHammerIntervalMax: z.number().int().min(5000).max(120000).optional(),
+    hotfixHammerStunDuration: z.number().int().min(500).max(10000).optional(),
+    hotfixHammerDespawnTime: z.number().int().min(1000).max(30000).optional(),
+    hotfixHammerPoints: z.number().int().min(0).max(1000).optional(),
+  }).optional(),
+}).optional();
+
 // --- Messages with fields (15) ---
 
 const registerSchema = z.object({
   type: z.literal('register'),
-  username: z.string(),
-  password: z.string(),
-  displayName: z.string(),
-  icon: z.string().optional(),
+  username: z.string().max(16),
+  password: z.string().max(64),
+  displayName: z.string().max(32),
+  icon: z.string().max(64).optional(),
 });
 
 const loginSchema = z.object({
   type: z.literal('login'),
-  username: z.string(),
-  password: z.string(),
+  username: z.string().max(16),
+  password: z.string().max(64),
 });
 
 const logoutSchema = z.object({
   type: z.literal('logout'),
-  token: z.string(),
+  token: z.string().max(64),
 });
 
 const resumeSessionSchema = z.object({
   type: z.literal('resume-session'),
-  token: z.string(),
+  token: z.string().max(64),
 });
 
 const resumeGuestSchema = z.object({
   type: z.literal('resume-guest'),
-  token: z.string().optional(),
+  token: z.string().max(64).optional(),
 });
 
 const setNameSchema = z.object({
   type: z.literal('set-name'),
-  name: z.string().optional(),
-  icon: z.string().optional(),
+  name: z.string().max(32).optional(),
+  icon: z.string().max(64).optional(),
 });
 
 const createLobbySchema = z.object({
   type: z.literal('create-lobby'),
-  name: z.string().optional(),
+  name: z.string().max(32).optional(),
   maxPlayers: z.number().optional(),
-  difficulty: z.string().optional(),
-  customConfig: z.record(z.string(), z.unknown()).optional(),
-  password: z.string().optional(),
+  difficulty: z.string().max(16).optional(),
+  customConfig: customConfigSchema,
+  password: z.string().max(64).optional(),
 });
 
 const joinLobbySchema = z.object({
   type: z.literal('join-lobby'),
   lobbyId: z.number(),
-  password: z.string().optional(),
+  password: z.string().max(64).optional(),
 });
 
 const joinLobbyByCodeSchema = z.object({
   type: z.literal('join-lobby-by-code'),
-  code: z.string(),
-  password: z.string().optional(),
+  code: z.string().max(6),
+  password: z.string().max(64).optional(),
 });
 
 const clickBugSchema = z.object({
   type: z.literal('click-bug'),
-  bugId: z.string(),
+  bugId: z.string().max(64),
 });
 
 const shareRecordingSchema = z.object({
@@ -88,25 +146,25 @@ const unshareRecordingSchema = z.object({
 
 const cursorMoveSchema = z.object({
   type: z.literal('cursor-move'),
-  x: z.number(),
-  y: z.number(),
+  x: z.number().min(0).max(800),
+  y: z.number().min(0).max(500),
 });
 
 // --- Plugin message schemas (3) ---
 
 const clickBreakpointSchema = z.object({
   type: z.literal('click-breakpoint'),
-  bugId: z.string(),
+  bugId: z.string().max(64),
 });
 
 const clickMemoryLeakStartSchema = z.object({
   type: z.literal('click-memory-leak-start'),
-  bugId: z.string(),
+  bugId: z.string().max(64),
 });
 
 const clickMemoryLeakCompleteSchema = z.object({
   type: z.literal('click-memory-leak-complete'),
-  bugId: z.string(),
+  bugId: z.string().max(64),
 });
 
 // --- Chat messages ---
@@ -120,14 +178,14 @@ const chatMessageSchema = z.object({
 
 const selectRoleSchema = z.object({
   type: z.literal('select-role'),
-  role: z.string().nullable(),
+  role: z.string().max(32).nullable(),
 });
 
 // --- Shop messages ---
 
 const shopBuySchema = z.object({
   type: z.literal('shop-buy'),
-  itemId: z.string(),
+  itemId: z.string().max(64),
 });
 
 const shopReadySchema = z.object({
@@ -138,7 +196,7 @@ const shopReadySchema = z.object({
 
 const devCommandSchema = z.object({
   type: z.literal('dev-command'),
-  command: z.string(),
+  command: z.string().max(32),
   level: z.number().int().min(1).max(3).optional(),
   value: z.number().optional(),
 });

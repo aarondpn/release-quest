@@ -134,6 +134,8 @@ function bossTick(ctx: GameContext): void {
   }
 }
 
+const CLICK_RADIUS_BOSS = 200;
+
 export function handleBossClick(ctx: GameContext, pid: string): void {
   try {
     const { state } = ctx;
@@ -142,6 +144,10 @@ export function handleBossClick(ctx: GameContext, pid: string): void {
     const bossConfig = diffConfig.boss;
     const player = state.players[pid];
     if (!player) return;
+
+    const dx = player.x - state.boss.x;
+    const dy = player.y - state.boss.y;
+    if (dx * dx + dy * dy > CLICK_RADIUS_BOSS * CLICK_RADIUS_BOSS) return;
 
     const now = Date.now();
     if (state.boss.lastClickBy[pid] && now - state.boss.lastClickBy[pid] < bossConfig.clickCooldownMs) return;

@@ -19,6 +19,12 @@ export const handleDevCommand: MessageHandler<DevCommandMessage> = ({ ws, msg, p
     return;
   }
 
+  const info = playerInfo.get(pid);
+  if (!info?.userId) {
+    sendDevError(ws, 'Authentication required for dev commands');
+    return;
+  }
+
   const ctx = getCtxForPlayer(pid, playerInfo);
   if (!ctx) {
     sendDevError(ws, 'Not in a lobby');
