@@ -1,10 +1,8 @@
 <div align="center">
 
-# RELEASE QUEST
+<img src=".github/banner.svg" alt="Release Quest" width="720"/>
 
-**Multiplayer bug-catching arcade game**
-
-Squash bugs. Survive the swarm. Defeat the boss. Together.
+<br/>
 
 [![CI](https://github.com/aarondpn/release-quest/actions/workflows/ci.yml/badge.svg)](https://github.com/aarondpn/release-quest/actions/workflows/ci.yml)
 [![Node 24+](https://img.shields.io/badge/node-24%2B-brightgreen)](#)
