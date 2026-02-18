@@ -176,30 +176,41 @@ export function showFeaturePenaltyEffect(lx, ly) {
   setTimeout(() => el.remove(), 1200);
 }
 
+// ── Shared powerup indicator container ──
+function getIndicatorContainer() {
+  let c = document.getElementById('powerup-indicators');
+  if (!c) {
+    c = document.createElement('div');
+    c.id = 'powerup-indicators';
+    dom.arena.appendChild(c);
+  }
+  return c;
+}
+
 // ── Duck buff overlay ──
 let _duckBuffInterval = null;
 let _duckBuffTimeout = null;
 
 export function showDuckBuffOverlay(duration) {
   removeDuckBuffOverlay();
+
+  // Full-arena border pulse
   const el = document.createElement('div');
   el.className = 'duck-buff-overlay';
   el.id = 'duck-buff-overlay';
-
-  const label = document.createElement('div');
-  label.className = 'duck-buff-label';
-  label.textContent = '×2 PTS';
-  el.appendChild(label);
-
-  const timer = document.createElement('div');
-  timer.className = 'duck-buff-timer';
-  el.appendChild(timer);
-
   dom.arena.appendChild(el);
+
+  // Compact indicator row in shared stack
+  const row = document.createElement('div');
+  row.className = 'powerup-indicator duck-buff-indicator';
+  row.id = 'duck-buff-indicator';
+  row.innerHTML = '<span class="powerup-indicator-label">×2 PTS</span><span class="powerup-indicator-timer"></span>';
+  getIndicatorContainer().appendChild(row);
 
   // In replay mode skip real-time timers; duck-buff-expired handles removal
   if (clientState.isPlayback) return;
 
+  const timer = row.querySelector('.powerup-indicator-timer');
   const endTime = Date.now() + duration;
   function tick() {
     const remaining = Math.max(0, endTime - Date.now());
@@ -215,6 +226,8 @@ export function removeDuckBuffOverlay() {
   if (_duckBuffTimeout !== null) { clearTimeout(_duckBuffTimeout); _duckBuffTimeout = null; }
   const existing = document.getElementById('duck-buff-overlay');
   if (existing) existing.remove();
+  const indicator = document.getElementById('duck-buff-indicator');
+  if (indicator) indicator.remove();
 }
 
 // ── Hammer stun overlay ──
@@ -223,24 +236,24 @@ let _hammerStunTimeout = null;
 
 export function showHammerStunOverlay(duration) {
   removeHammerStunOverlay();
+
+  // Full-arena border pulse
   const el = document.createElement('div');
   el.className = 'hammer-stun-overlay';
   el.id = 'hammer-stun-overlay';
-
-  const label = document.createElement('div');
-  label.className = 'hammer-stun-label';
-  label.textContent = 'STUNNED';
-  el.appendChild(label);
-
-  const timer = document.createElement('div');
-  timer.className = 'hammer-stun-timer';
-  el.appendChild(timer);
-
   dom.arena.appendChild(el);
+
+  // Compact indicator row in shared stack
+  const row = document.createElement('div');
+  row.className = 'powerup-indicator hammer-stun-indicator';
+  row.id = 'hammer-stun-indicator';
+  row.innerHTML = '<span class="powerup-indicator-label">STUNNED</span><span class="powerup-indicator-timer"></span>';
+  getIndicatorContainer().appendChild(row);
 
   // In replay mode skip real-time timers; hammer-stun-expired handles removal
   if (clientState.isPlayback) return;
 
+  const timer = row.querySelector('.powerup-indicator-timer');
   const endTime = Date.now() + duration;
   function tick() {
     const remaining = Math.max(0, endTime - Date.now());
@@ -256,6 +269,8 @@ export function removeHammerStunOverlay() {
   if (_hammerStunTimeout !== null) { clearTimeout(_hammerStunTimeout); _hammerStunTimeout = null; }
   const existing = document.getElementById('hammer-stun-overlay');
   if (existing) existing.remove();
+  const indicator = document.getElementById('hammer-stun-indicator');
+  if (indicator) indicator.remove();
 }
 
 // ── Pipeline chain resolved effect ──

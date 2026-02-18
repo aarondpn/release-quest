@@ -1876,29 +1876,6 @@ header p {
   animation: duck-buff-pulse 1s ease-in-out infinite;
 }
 
-.duck-buff-label {
-  position: absolute;
-  bottom: 8px;
-  left: 12px;
-  font-family: 'Press Start 2P', monospace;
-  font-size: 13px;
-  color: rgba(255,230,109,0.9);
-  letter-spacing: 1px;
-  text-shadow: 0 0 8px rgba(255,230,109,0.6);
-}
-
-.duck-buff-timer {
-  position: absolute;
-  bottom: 8px;
-  right: 12px;
-  font-family: 'Press Start 2P', monospace;
-  font-size: 13px;
-  color: rgba(255,230,109,0.9);
-  text-shadow: 0 0 8px rgba(255,230,109,0.6);
-  min-width: 48px;
-  text-align: right;
-}
-
 @keyframes duck-buff-pulse {
   0%, 100% { border-color: rgba(255,230,109,0.2); box-shadow: inset 0 0 20px rgba(255,230,109,0.05); }
   50% { border-color: rgba(255,230,109,0.5); box-shadow: inset 0 0 30px rgba(255,230,109,0.1); }
@@ -1915,32 +1892,44 @@ header p {
   animation: hammer-stun-pulse 0.8s ease-in-out infinite;
 }
 
-.hammer-stun-label {
-  position: absolute;
-  bottom: 8px;
-  left: 12px;
-  font-family: 'Press Start 2P', monospace;
-  font-size: 13px;
-  color: rgba(200,120,255,0.9);
-  letter-spacing: 1px;
-  text-shadow: 0 0 8px rgba(200,120,255,0.6);
-}
-
-.hammer-stun-timer {
-  position: absolute;
-  bottom: 8px;
-  right: 12px;
-  font-family: 'Press Start 2P', monospace;
-  font-size: 13px;
-  color: rgba(200,120,255,0.9);
-  text-shadow: 0 0 8px rgba(200,120,255,0.6);
-  min-width: 48px;
-  text-align: right;
-}
-
 @keyframes hammer-stun-pulse {
   0%, 100% { border-color: rgba(200,120,255,0.15); box-shadow: inset 0 0 18px rgba(200,120,255,0.04); }
   50% { border-color: rgba(200,120,255,0.45); box-shadow: inset 0 0 28px rgba(200,120,255,0.08); }
+}
+
+/* ── Shared powerup indicator stack ── */
+#powerup-indicators {
+  position: absolute;
+  bottom: 8px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+  z-index: 25;
+}
+
+.powerup-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+}
+
+.duck-buff-indicator {
+  color: rgba(255,230,109,0.9);
+  text-shadow: 0 0 8px rgba(255,230,109,0.6);
+}
+
+.hammer-stun-indicator {
+  color: rgba(200,120,255,0.9);
+  text-shadow: 0 0 8px rgba(200,120,255,0.6);
+}
+
+.powerup-indicator-timer {
+  min-width: 44px;
+  text-align: right;
 }
 
 /* ── Hotfix Hammer ── */
