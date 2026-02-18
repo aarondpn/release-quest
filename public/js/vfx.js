@@ -195,6 +195,11 @@ export function showDuckBuffOverlay(duration) {
   timer.className = 'duck-buff-timer';
   el.appendChild(timer);
 
+  dom.arena.appendChild(el);
+
+  // In replay mode skip real-time timers; duck-buff-expired handles removal
+  if (clientState.isPlayback) return;
+
   const endTime = Date.now() + duration;
   function tick() {
     const remaining = Math.max(0, endTime - Date.now());
@@ -202,8 +207,6 @@ export function showDuckBuffOverlay(duration) {
   }
   tick();
   _duckBuffInterval = setInterval(tick, 100);
-
-  dom.arena.appendChild(el);
   _duckBuffTimeout = setTimeout(() => removeDuckBuffOverlay(), duration);
 }
 
@@ -233,6 +236,11 @@ export function showHammerStunOverlay(duration) {
   timer.className = 'hammer-stun-timer';
   el.appendChild(timer);
 
+  dom.arena.appendChild(el);
+
+  // In replay mode skip real-time timers; hammer-stun-expired handles removal
+  if (clientState.isPlayback) return;
+
   const endTime = Date.now() + duration;
   function tick() {
     const remaining = Math.max(0, endTime - Date.now());
@@ -240,8 +248,6 @@ export function showHammerStunOverlay(duration) {
   }
   tick();
   _hammerStunInterval = setInterval(tick, 100);
-
-  dom.arena.appendChild(el);
   _hammerStunTimeout = setTimeout(() => removeHammerStunOverlay(), duration);
 }
 
