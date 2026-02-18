@@ -177,6 +177,9 @@ export function showFeaturePenaltyEffect(lx, ly) {
 }
 
 // ── Duck buff overlay ──
+let _duckBuffInterval = null;
+let _duckBuffTimeout = null;
+
 export function showDuckBuffOverlay(duration) {
   removeDuckBuffOverlay();
   const el = document.createElement('div');
@@ -198,18 +201,23 @@ export function showDuckBuffOverlay(duration) {
     timer.textContent = (remaining / 1000).toFixed(1) + 's';
   }
   tick();
-  const interval = setInterval(tick, 100);
+  _duckBuffInterval = setInterval(tick, 100);
 
   dom.arena.appendChild(el);
-  setTimeout(() => { clearInterval(interval); el.remove(); }, duration);
+  _duckBuffTimeout = setTimeout(() => removeDuckBuffOverlay(), duration);
 }
 
 export function removeDuckBuffOverlay() {
+  if (_duckBuffInterval !== null) { clearInterval(_duckBuffInterval); _duckBuffInterval = null; }
+  if (_duckBuffTimeout !== null) { clearTimeout(_duckBuffTimeout); _duckBuffTimeout = null; }
   const existing = document.getElementById('duck-buff-overlay');
   if (existing) existing.remove();
 }
 
 // ── Hammer stun overlay ──
+let _hammerStunInterval = null;
+let _hammerStunTimeout = null;
+
 export function showHammerStunOverlay(duration) {
   removeHammerStunOverlay();
   const el = document.createElement('div');
@@ -231,13 +239,15 @@ export function showHammerStunOverlay(duration) {
     timer.textContent = (remaining / 1000).toFixed(1) + 's';
   }
   tick();
-  const interval = setInterval(tick, 100);
+  _hammerStunInterval = setInterval(tick, 100);
 
   dom.arena.appendChild(el);
-  setTimeout(() => { clearInterval(interval); el.remove(); }, duration);
+  _hammerStunTimeout = setTimeout(() => removeHammerStunOverlay(), duration);
 }
 
 export function removeHammerStunOverlay() {
+  if (_hammerStunInterval !== null) { clearInterval(_hammerStunInterval); _hammerStunInterval = null; }
+  if (_hammerStunTimeout !== null) { clearTimeout(_hammerStunTimeout); _hammerStunTimeout = null; }
   const existing = document.getElementById('hammer-stun-overlay');
   if (existing) existing.remove();
 }
