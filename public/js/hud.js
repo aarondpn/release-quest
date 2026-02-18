@@ -2,6 +2,18 @@ import { dom, clientState } from './state.js';
 import { renderIcon } from './avatars.js';
 import { showWalkout } from './walkout.js';
 
+// sendMessage is injected lazily to avoid circular dependency
+let _hudSendMessage = null;
+export function initHudSend(fn) { _hudSendMessage = fn; }
+
+const ROLE_DEFS = [
+  { id: 'debugger', name: 'Debugger', icon: '🔍', description: '+50% pts on special bugs' },
+  { id: 'qa',       name: 'QA Eng',   icon: '🎯', description: '+40% click hitbox' },
+  { id: 'devops',   name: 'DevOps',   icon: '⚡', description: 'Power-ups last 50% longer' },
+  { id: 'architect',name: 'Architect',icon: '🏗️', description: 'Solo merge conflicts; free pipeline reset' },
+];
+const ROLE_MAP = Object.fromEntries(ROLE_DEFS.map(r => [r.id, r]));
+
 function escapeHtml(s) {
   const d = document.createElement('div');
   d.textContent = s;
@@ -36,6 +48,7 @@ export function showStartScreen() {
   dom.startScreen.classList.remove('hidden');
   startLobbyAnimations();
   updateLobbyRoster();
+  updateLobbyRolePicker();
   const warningEl = document.getElementById('lobby-custom-warning');
   if (warningEl) {
     warningEl.classList.toggle('hidden', !clientState.hasCustomSettings);
@@ -154,6 +167,7 @@ function renderLiveDashboard() {
         '<span class="live-dash-name">' +
           '<span class="live-dash-icon"></span>' +
           '<span class="live-dash-name-text"></span>' +
+          '<span class="live-dash-role"></span>' +
         '</span>' +
         '<span class="live-dash-score"></span>';
       container.appendChild(row);
@@ -165,6 +179,14 @@ function renderLiveDashboard() {
     // Update name & icon
     row.querySelector('.live-dash-icon').innerHTML = renderIcon(p.icon || '', 10);
     row.querySelector('.live-dash-name-text').textContent = escapeHtml(p.name);
+
+    // Update role icon
+    const roleEl = row.querySelector('.live-dash-role');
+    if (roleEl) {
+      const rd = p.role ? ROLE_MAP[p.role] : null;
+      roleEl.textContent = rd ? rd.icon : '';
+      roleEl.title = rd ? rd.name : '';
+    }
 
     // Guest badge
     let guestBadge = row.querySelector('.guest-badge');
@@ -295,14 +317,86 @@ export function updateLobbyRoster() {
   const players = Object.values(clientState.players);
   list.innerHTML = players.map((p, i) => {
     const isMe = p.id === clientState.myId;
-    return '<div class="lobby-player-card' + (isMe ? ' is-me' : '') + '" style="animation-delay:' + (i * 0.08) + 's">' +
+    const roleData = p.role ? ROLE_MAP[p.role] : null;
+    const roleBadge = roleData
+      ? '<span class="lobby-player-role" title="' + roleData.name + ': ' + roleData.description + '">' + roleData.icon + '</span>'
+      : '';
+    return '<div class="lobby-player-card' + (isMe ? ' is-me' : '') + '" data-player-id="' + p.id + '" style="animation-delay:' + (i * 0.08) + 's">' +
       '<span class="lobby-player-icon">' + renderIcon(p.icon || '', 16) + '</span>' +
       '<span class="lobby-player-name">' + escapeHtml(p.name) + '</span>' +
+      roleBadge +
       (p.isGuest ? '<span class="guest-badge">GUEST</span>' : '') +
       '<span class="lobby-player-dot" style="color:' + (p.color || 'var(--teal)') + ';background:' + (p.color || 'var(--teal)') + '"></span>' +
       (isMe ? '<span class="lobby-player-you">YOU</span>' : '') +
     '</div>';
   }).join('');
+}
+
+export function updateLobbyPlayerRoleBadge(pid, role) {
+  const list = document.getElementById('lobby-roster-list');
+  if (!list) return;
+  const card = list.querySelector('[data-player-id="' + pid + '"]');
+  if (!card) return;
+  const roleData = role ? ROLE_MAP[role] : null;
+  let badge = card.querySelector('.lobby-player-role');
+  if (roleData) {
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'lobby-player-role';
+      // Insert after the name span
+      const nameSpan = card.querySelector('.lobby-player-name');
+      if (nameSpan) nameSpan.after(badge);
+      else card.insertBefore(badge, card.children[2] || null);
+    }
+    badge.textContent = roleData.icon;
+    badge.title = roleData.name + ': ' + roleData.description;
+  } else if (badge) {
+    badge.remove();
+  }
+}
+
+/* ── Role picker ── */
+export function updateLobbyRolePicker() {
+  const cards = document.getElementById('lobby-role-cards');
+  if (!cards) return;
+  if (dom.startScreen.classList.contains('hidden')) return;
+
+  const myPlayer = clientState.players[clientState.myId];
+  const myRole = myPlayer?.role || null;
+
+  cards.innerHTML = ROLE_DEFS.map(role => {
+    const selected = myRole === role.id;
+    return '<button class="lobby-role-card' + (selected ? ' selected' : '') + '" data-role="' + role.id + '">' +
+      '<div class="lobby-role-card-header">' +
+        '<span class="lobby-role-card-icon">' + role.icon + '</span>' +
+        '<span class="lobby-role-card-name">' + escapeHtml(role.name) + '</span>' +
+      '</div>' +
+      '<span class="lobby-role-card-desc">' + escapeHtml(role.description) + '</span>' +
+      '<span class="lobby-role-card-check">✓</span>' +
+    '</button>';
+  }).join('');
+
+  cards.querySelectorAll('.lobby-role-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const roleId = card.dataset.role;
+      const currentRole = clientState.players[clientState.myId]?.role || null;
+      const newRole = currentRole === roleId ? null : roleId;
+      if (_hudSendMessage) _hudSendMessage({ type: 'select-role', role: newRole });
+    });
+  });
+
+  // Update hint line
+  const hint = document.getElementById('lobby-role-hint');
+  if (hint) {
+    if (myRole) {
+      const rd = ROLE_MAP[myRole];
+      hint.textContent = rd ? rd.description + '  ·  click to deselect' : '';
+      hint.classList.add('has-role');
+    } else {
+      hint.textContent = 'no role selected — vanilla gameplay';
+      hint.classList.remove('has-role');
+    }
+  }
 }
 
 /* ── Background crawling bugs ── */

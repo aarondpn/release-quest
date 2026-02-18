@@ -3,6 +3,7 @@ import { LOGICAL_W, LOGICAL_H } from '../config.ts';
 import { awardScore } from '../state.ts';
 import * as game from '../game.ts';
 import * as powerups from '../powerups.ts';
+import * as roles from '../roles.ts';
 import { gameBugsSquashed } from '../metrics.ts';
 import { getCtxForPlayer } from '../helpers.ts';
 import { z } from 'zod';
@@ -113,6 +114,7 @@ function handleBreakpointClick(bug: BugEntity, ctx: GameContext, pid: string): v
     player.bugsSquashed = (player.bugsSquashed || 0) + 1;
     gameBugsSquashed.inc();
     let rawPoints = INFINITE_LOOP_MECHANICS.points;
+    rawPoints *= roles.getSpecialBugMultiplier(state, pid);
     if (powerups.isDuckBuffActive(ctx)) rawPoints *= 2;
     const points = awardScore(ctx, pid, rawPoints);
 

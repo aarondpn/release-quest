@@ -2,7 +2,7 @@ import { CURSOR_THROTTLE_MS } from './config.js';
 import { STANDARD_ICONS, PREMIUM_AVATARS, PREMIUM_IDS, isPremium, renderIcon } from './avatars.js';
 import { clientState, dom, initDom } from './state.js';
 import { pixelToLogical } from './coordinates.js';
-import { updateHUD } from './hud.js';
+import { updateHUD, initHudSend } from './hud.js';
 import { connect, sendMessage } from './network.js';
 import { showLobbyBrowser, initLobbySend, updateLobbyProfileBar, toggleLobbyEditor, saveLobbyProfile } from './lobby-ui.js';
 import { initAuthSend, showAuthOverlay, hideAuthOverlay, switchTab, submitLogin, submitRegister, submitLogout } from './auth-ui.js';
@@ -506,6 +506,9 @@ document.getElementById('invite-btn').addEventListener('click', () => {
 
 // Initialize lobby send function (avoids circular dependency)
 initLobbySend(sendMessage);
+
+// Initialize hud send function (for role picker)
+initHudSend(sendMessage);
 
 // Initialize auth send function
 initAuthSend(sendMessage);

@@ -116,6 +116,13 @@ const chatMessageSchema = z.object({
   message: z.string().min(1).max(200),
 });
 
+// --- Role selection ---
+
+const selectRoleSchema = z.object({
+  type: z.literal('select-role'),
+  role: z.string().nullable(),
+});
+
 // --- Dev mode ---
 
 const devCommandSchema = z.object({
@@ -155,6 +162,7 @@ export const staticSchemas: Record<string, ZodType> = {
   'click-memory-leak-complete': clickMemoryLeakCompleteSchema,
   'chat-message': chatMessageSchema,
   'dev-command': devCommandSchema,
+  'select-role': selectRoleSchema,
 };
 
 // --- Inferred types for future handler opt-in ---

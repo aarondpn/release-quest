@@ -3,6 +3,7 @@ import { getDifficultyConfig } from '../config.ts';
 import { randomPosition, awardScore } from '../state.ts';
 import { createTimerBag } from '../timer-bag.ts';
 import * as game from '../game.ts';
+import * as roles from '../roles.ts';
 import { gameBugsSquashed } from '../metrics.ts';
 import type { BugEntity, GameContext, EntityDescriptor, BugTypePlugin, LevelConfigEntry } from '../types.ts';
 
@@ -50,8 +51,10 @@ export const mergeConflictDescriptor: EntityDescriptor = {
     if (!player) return;
     const partner = state.bugs[bug.mergePartner!];
 
-    // Same player can't resolve both sides
-    if (partner && partner.mergeClicked && partner.mergeClickedBy === pid) return;
+    // Same player can't resolve both sides — unless they're an Architect
+    if (partner && partner.mergeClicked && partner.mergeClickedBy === pid) {
+      if (!roles.hasRole(state, pid, 'architect')) return;
+    }
 
     bug.mergeClicked = true;
     bug.mergeClickedBy = pid;
@@ -65,9 +68,12 @@ export const mergeConflictDescriptor: EntityDescriptor = {
       delete state.bugs[partner.id];
 
       const clickers = new Set([pid, partner.mergeClickedBy!]);
+      // Debugger passive: +50% bonus points if any clicker is a Debugger
+      const debuggerBonus = [...clickers].some(c => roles.hasRole(state, c, 'debugger')) ? 1.5 : 1;
+      const bonusPoints = Math.round(MERGE_CONFLICT_MECHANICS.bonusPoints * debuggerBonus);
       for (const clickerId of clickers) {
         if (state.players[clickerId]) {
-          awardScore(ctx, clickerId, MERGE_CONFLICT_MECHANICS.bonusPoints);
+          awardScore(ctx, clickerId, bonusPoints);
           state.players[clickerId].bugsSquashed = (state.players[clickerId].bugsSquashed || 0) + 1;
           gameBugsSquashed.inc();
         }
@@ -185,7 +191,8 @@ export const mergeConflictPlugin: BugTypePlugin = {
     chanceKey: 'mergeConflictChance',
     trySpawn(ctx: GameContext, cfg: LevelConfigEntry): boolean {
       const playerCount = Object.keys(ctx.state.players).length;
-      if (playerCount < MERGE_CONFLICT_MECHANICS.minPlayers) return false;
+      const minPlayers = roles.teamHasRole(ctx.state, 'architect') ? 1 : MERGE_CONFLICT_MECHANICS.minPlayers;
+      if (playerCount < minPlayers) return false;
       if (Object.keys(ctx.state.bugs).length + 2 > cfg.maxOnScreen) return false;
       spawnMergeConflict(ctx, cfg);
       return true;

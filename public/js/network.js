@@ -1,11 +1,11 @@
 import { LOGICAL_W, LOGICAL_H } from './config.js';
 import { dom, clientState } from './state.js';
 import { logicalToPixel } from './coordinates.js';
-import { updateHUD, updatePlayerCount, hideAllScreens, showStartScreen, showGameOverScreen, showWinScreen, showLevelScreen, updateLobbyRoster, updateLiveDashboard, showLiveDashboard, hideLiveDashboard } from './hud.js';
+import { updateHUD, updatePlayerCount, hideAllScreens, showStartScreen, showGameOverScreen, showWinScreen, showLevelScreen, updateLobbyRoster, updateLobbyRolePicker, updateLobbyPlayerRoleBadge, updateLiveDashboard, showLiveDashboard, hideLiveDashboard } from './hud.js';
 import { createBugElement, removeBugElement, clearAllBugs, showSquashEffect, removeMergeTether, removePipelineTether, rebuildPipelineTether } from './bugs.js';
 import { createBossElement, updateBossHp, removeBossElement, showBossHitEffect, formatTime, setBossPhase, setBossShield, shrinkBoss, anchorBoss } from './boss.js';
 import { addRemoteCursor, removeRemoteCursor, updateRemoteCursor, clearRemoteCursors } from './players.js';
-import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, showLevelFlash, showEscalationWarning, showBossRegenNumber, showHeisenbugFleeEffect, showFeaturePenaltyEffect, showDuckBuffOverlay, removeDuckBuffOverlay, showMergeResolvedEffect, showPipelineChainResolvedEffect, showPipelineChainResetEffect, showBreakpointHitEffect, showPhaseTransitionFlash, showBlockedText, showScreenWipeFlash } from './vfx.js';
+import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, showLevelFlash, showEscalationWarning, showBossRegenNumber, showHeisenbugFleeEffect, showFeaturePenaltyEffect, showDuckBuffOverlay, removeDuckBuffOverlay, showHammerStunOverlay, removeHammerStunOverlay, showMergeResolvedEffect, showPipelineChainResolvedEffect, showPipelineChainResetEffect, showBreakpointHitEffect, showPhaseTransitionFlash, showBlockedText, showScreenWipeFlash } from './vfx.js';
 import { showLobbyBrowser, hideLobbyBrowser, renderLobbyList, showLobbyError, buildLobbyIconPicker, joinLobbyWithPassword, joinLobbyByCodeWithPassword } from './lobby-ui.js';
 import { updateAuthUI, hideAuthOverlay, showAuthError } from './auth-ui.js';
 import { isPremium, STANDARD_ICONS } from './avatars.js';
@@ -15,6 +15,11 @@ import { handleMyStats, requestMyStats } from './stats-card-ui.js';
 import { startPlayback } from './playback.js';
 import { showError, ERROR_LEVELS } from './error-handler.js';
 import { handleChatBroadcast, showChat, hideChat, clearChat } from './chat.js';
+
+function updateQaHitbox() {
+  const myPlayer = clientState.players[clientState.myId];
+  document.body.classList.toggle('qa-hitbox-active', myPlayer?.role === 'qa');
+}
 
 // Cursor batching: buffer incoming positions and flush once per frame
 const pendingCursors = {};
@@ -369,6 +374,7 @@ export function handleMessageInternal(msg) {
         });
       }
       updatePlayerCount();
+      updateQaHitbox();
 
       clearAllBugs();
       if (msg.bugs) {
@@ -398,7 +404,7 @@ export function handleMessageInternal(msg) {
       if (msg.phase === 'boss') dom.levelEl.textContent = 'BOSS';
       clientState.currentPhase = msg.phase;
 
-      if (msg.phase === 'lobby') { showStartScreen(); hideLiveDashboard(); }
+      if (msg.phase === 'lobby') { showStartScreen(); updateLobbyRolePicker(); hideLiveDashboard(); }
       else if (msg.phase === 'gameover') { showGameOverScreen(msg.score, msg.level, msg.players || []); hideLiveDashboard(); }
       else if (msg.phase === 'win') { showWinScreen(msg.score, msg.players || []); hideLiveDashboard(); }
       else { hideAllScreens(); showLiveDashboard(); }
@@ -418,6 +424,7 @@ export function handleMessageInternal(msg) {
       removeDuckElement();
       removeHammerElement();
       removeDuckBuffOverlay();
+      removeHammerStunOverlay();
       clearRemoteCursors();
       hideAllScreens();
       hideLiveDashboard();
@@ -451,6 +458,7 @@ export function handleMessageInternal(msg) {
       if (p.id !== clientState.myId) addRemoteCursor(p.id, p.name, p.color, p.icon);
       updatePlayerCount();
       updateLobbyRoster();
+      updateLobbyRolePicker();
       updateLiveDashboard();
       break;
     }
@@ -469,6 +477,16 @@ export function handleMessageInternal(msg) {
       break;
     }
 
+    case 'role-selected': {
+      if (clientState.players[msg.playerId]) {
+        clientState.players[msg.playerId].role = msg.role;
+      }
+      updateQaHitbox();
+      updateLobbyPlayerRoleBadge(msg.playerId, msg.role);
+      if (msg.playerId === clientState.myId) updateLobbyRolePicker();
+      break;
+    }
+
     // ── Game messages ──
 
     case 'game-start': {
@@ -478,10 +496,12 @@ export function handleMessageInternal(msg) {
       removeDuckElement();
       removeHammerElement();
       removeDuckBuffOverlay();
+      removeHammerStunOverlay();
       updateHUD(msg.score, msg.level, msg.hp);
       if (msg.players) {
         msg.players.forEach(p => { if (clientState.players[p.id]) clientState.players[p.id].score = p.score; });
       }
+      updateQaHitbox();
       showLiveDashboard();
       break;
     }
@@ -804,10 +824,12 @@ export function handleMessageInternal(msg) {
       }
       updateLiveDashboard();
       showHammerShockwave(msg.playerColor);
+      showHammerStunOverlay(msg.stunDuration);
       break;
     }
 
     case 'hammer-stun-expired': {
+      removeHammerStunOverlay();
       // Resume bug animations
       for (const bugId in clientState.bugs) {
         const bugEl = clientState.bugs[bugId];
@@ -1008,6 +1030,7 @@ export function handleMessageInternal(msg) {
       removeBossElement();
       removeDuckElement();
       removeDuckBuffOverlay();
+      removeHammerStunOverlay();
       hideLiveDashboard();
       shakeArena('heavy');
       if (msg.players) {
@@ -1142,6 +1165,7 @@ export function handleMessageInternal(msg) {
       removeBossElement();
       removeDuckElement();
       removeDuckBuffOverlay();
+      removeHammerStunOverlay();
       hideLiveDashboard();
       showStartScreen();
       updateHUD(0, 1, 100);

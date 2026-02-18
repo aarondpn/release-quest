@@ -182,12 +182,63 @@ export function showDuckBuffOverlay(duration) {
   const el = document.createElement('div');
   el.className = 'duck-buff-overlay';
   el.id = 'duck-buff-overlay';
+
+  const label = document.createElement('div');
+  label.className = 'duck-buff-label';
+  label.textContent = '×2 PTS';
+  el.appendChild(label);
+
+  const timer = document.createElement('div');
+  timer.className = 'duck-buff-timer';
+  el.appendChild(timer);
+
+  const endTime = Date.now() + duration;
+  function tick() {
+    const remaining = Math.max(0, endTime - Date.now());
+    timer.textContent = (remaining / 1000).toFixed(1) + 's';
+  }
+  tick();
+  const interval = setInterval(tick, 100);
+
   dom.arena.appendChild(el);
-  setTimeout(() => el.remove(), duration);
+  setTimeout(() => { clearInterval(interval); el.remove(); }, duration);
 }
 
 export function removeDuckBuffOverlay() {
   const existing = document.getElementById('duck-buff-overlay');
+  if (existing) existing.remove();
+}
+
+// ── Hammer stun overlay ──
+export function showHammerStunOverlay(duration) {
+  removeHammerStunOverlay();
+  const el = document.createElement('div');
+  el.className = 'hammer-stun-overlay';
+  el.id = 'hammer-stun-overlay';
+
+  const label = document.createElement('div');
+  label.className = 'hammer-stun-label';
+  label.textContent = 'STUNNED';
+  el.appendChild(label);
+
+  const timer = document.createElement('div');
+  timer.className = 'hammer-stun-timer';
+  el.appendChild(timer);
+
+  const endTime = Date.now() + duration;
+  function tick() {
+    const remaining = Math.max(0, endTime - Date.now());
+    timer.textContent = (remaining / 1000).toFixed(1) + 's';
+  }
+  tick();
+  const interval = setInterval(tick, 100);
+
+  dom.arena.appendChild(el);
+  setTimeout(() => { clearInterval(interval); el.remove(); }, duration);
+}
+
+export function removeHammerStunOverlay() {
+  const existing = document.getElementById('hammer-stun-overlay');
   if (existing) existing.remove();
 }
 
