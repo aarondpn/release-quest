@@ -6,7 +6,37 @@ import * as auth from '../auth.ts';
 import * as db from '../db.ts';
 import { getCtxForPlayer } from '../helpers.ts';
 
+const authRateLimitBuckets = new Map<string, number[]>();
+const AUTH_RATE_LIMIT_MAX = 5;
+const AUTH_RATE_LIMIT_WINDOW_MS = 30_000;
+
+function isAuthRateLimited(pid: string): boolean {
+  const now = Date.now();
+  let bucket = authRateLimitBuckets.get(pid);
+  if (!bucket) {
+    bucket = [];
+    authRateLimitBuckets.set(pid, bucket);
+  }
+  while (bucket.length > 0 && bucket[0] <= now - AUTH_RATE_LIMIT_WINDOW_MS) {
+    bucket.shift();
+  }
+  if (bucket.length >= AUTH_RATE_LIMIT_MAX) {
+    return true;
+  }
+  bucket.push(now);
+  return false;
+}
+
+export function cleanupAuthRateLimit(pid: string): void {
+  authRateLimitBuckets.delete(pid);
+}
+
 export const handleRegister: MessageHandler = ({ ws, msg, pid, playerInfo }) => {
+  if (isAuthRateLimited(pid)) {
+    network.send(ws, { type: 'auth-result', action: 'register', success: false, error: 'Too many attempts. Please wait.' });
+    return;
+  }
+
   const username = String(msg.username || '').trim();
   const password = String(msg.password || '');
   const displayName = String(msg.displayName || '').trim().slice(0, 16);
@@ -56,6 +86,11 @@ export const handleRegister: MessageHandler = ({ ws, msg, pid, playerInfo }) => 
 };
 
 export const handleLogin: MessageHandler = ({ ws, msg, pid, playerInfo }) => {
+  if (isAuthRateLimited(pid)) {
+    network.send(ws, { type: 'auth-result', action: 'login', success: false, error: 'Too many attempts. Please wait.' });
+    return;
+  }
+
   const username = String(msg.username || '').trim();
   const password = String(msg.password || '');
 

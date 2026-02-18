@@ -291,6 +291,8 @@ function deepMerge<T>(target: T, source: any): T {
   const output = { ...target } as any;
   
   for (const key in source) {
+    if (!Object.hasOwn(source, key)) continue;
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
     if (source[key] !== undefined && source[key] !== null) {
       if (typeof source[key] === 'object' && !Array.isArray(source[key]) && source[key] !== null) {
         output[key] = deepMerge(output[key] || {}, source[key]);

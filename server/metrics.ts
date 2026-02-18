@@ -134,8 +134,25 @@ export function metricsMiddleware(req: Request, res: Response, next: NextFunctio
 // ── Metrics HTTP server on a dedicated port ──
 const METRICS_PORT = parseInt(process.env.METRICS_PORT || '9091', 10);
 
+const METRICS_AUTH_TOKEN = process.env.METRICS_AUTH_TOKEN || '';
+
 export function startMetricsServer(): void {
-  const server = http.createServer(async (_req, res) => {
+  const server = http.createServer(async (req, res) => {
+    if (req.url !== '/metrics') {
+      res.statusCode = 404;
+      res.end('Not Found');
+      return;
+    }
+
+    if (METRICS_AUTH_TOKEN) {
+      const authHeader = req.headers.authorization || '';
+      if (authHeader !== `Bearer ${METRICS_AUTH_TOKEN}`) {
+        res.statusCode = 401;
+        res.end('Unauthorized');
+        return;
+      }
+    }
+
     try {
       res.setHeader('Content-Type', register.contentType);
       res.end(await register.metrics());

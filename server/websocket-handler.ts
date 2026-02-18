@@ -8,6 +8,33 @@ import { handleLeaveLobby, broadcastLobbyList } from './helpers.ts';
 import { handlers, schemas } from './handlers/index.ts';
 import { wsMessagesReceived, gamePlayersOnline } from './metrics.ts';
 
+const BUCKET_CAPACITY = 100;
+const BUCKET_REFILL_RATE = 100; // tokens per second
+
+interface TokenBucket {
+  tokens: number;
+  lastRefill: number;
+}
+
+const rateLimitBuckets = new Map<WebSocket, TokenBucket>();
+
+function isGlobalRateLimited(ws: WebSocket): boolean {
+  const now = Date.now();
+  let bucket = rateLimitBuckets.get(ws);
+  if (!bucket) {
+    bucket = { tokens: BUCKET_CAPACITY, lastRefill: now };
+    rateLimitBuckets.set(ws, bucket);
+  }
+  const elapsed = (now - bucket.lastRefill) / 1000;
+  bucket.tokens = Math.min(BUCKET_CAPACITY, bucket.tokens + elapsed * BUCKET_REFILL_RATE);
+  bucket.lastRefill = now;
+  if (bucket.tokens < 1) {
+    return true;
+  }
+  bucket.tokens -= 1;
+  return false;
+}
+
 function formatValidationError(messageType: string, error: ZodError) {
   return {
     type: 'validation-error',
@@ -100,6 +127,11 @@ export function setupWebSocketConnection(
     const pid = network.wsToPlayer.get(ws);
     if (!pid) return;
 
+    if (isGlobalRateLimited(ws)) {
+      createPlayerLogger(pid).warn('Global rate limit exceeded, dropping message');
+      return;
+    }
+
     wsMessagesReceived.inc({ type: msg.type || 'unknown' });
 
     try {
@@ -117,6 +149,7 @@ export function setupWebSocketConnection(
   // Close handler
   ws.on('close', async () => {
     try {
+      rateLimitBuckets.delete(ws);
       const pid = network.wsToPlayer.get(ws);
       network.wsToPlayer.delete(ws);
       network.wsToLobby.delete(ws);

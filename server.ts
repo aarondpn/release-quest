@@ -78,6 +78,14 @@ const playerInfo = new Map<string, PlayerInfo>();
 // ── Express app setup ──
 const app = express();
 app.disable('x-powered-by');
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Content-Security-Policy', "default-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; connect-src 'self' ws: wss:; img-src 'self' data:;");
+  next();
+});
 const httpServer = http.createServer(app);
 
 // Metrics middleware (records HTTP request duration/count)
@@ -96,7 +104,7 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 // ── WebSocket server ──
-const wss = new WebSocketServer({ server: httpServer });
+const wss = new WebSocketServer({ server: httpServer, maxPayload: 16 * 1024 });
 network.init(wss);
 
 // WebSocket connection handler

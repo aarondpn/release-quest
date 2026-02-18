@@ -23,6 +23,9 @@
     "ws": "^8.16.0",
     "zod": "^4.3.6"
   },
+  "overrides": {
+    "tar": "^7.5.8"
+  },
   "devDependencies": {
     "@types/bcrypt": "^5.0.0",
     "@types/express": "^5.0.6",
