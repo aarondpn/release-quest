@@ -52,6 +52,7 @@ export interface PlayerData {
   score: number;
   bugsSquashed: number;
   isGuest: boolean;
+  role?: string | null;
 }
 
 export interface PlayerInfo {
@@ -70,6 +71,7 @@ export interface PlayerScoreEntry {
   score: number;
   bugsSquashed: number;
   isGuest: boolean;
+  role?: string | null;
 }
 
 export interface BugEntity {
@@ -129,6 +131,7 @@ export interface PipelineChain {
   length: number;
   headBugId: string;
   snakeAngle: number;
+  architectFreeResetsUsed?: Record<string, boolean>;
 }
 
 export interface BossState {

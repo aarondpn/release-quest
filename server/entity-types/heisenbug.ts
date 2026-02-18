@@ -3,6 +3,7 @@ import { getDifficultyConfig } from '../config.ts';
 import { randomPosition, awardScore } from '../state.ts';
 import * as game from '../game.ts';
 import * as powerups from '../powerups.ts';
+import * as roles from '../roles.ts';
 import { gameBugsSquashed } from '../metrics.ts';
 import type { BugEntity, GameContext, EntityDescriptor, BugTypePlugin } from '../types.ts';
 
@@ -32,6 +33,7 @@ export const heisenbugDescriptor: EntityDescriptor = {
     player.bugsSquashed = (player.bugsSquashed || 0) + 1;
     gameBugsSquashed.inc();
     let rawPoints = diffConfig.bugPoints * HEISENBUG_MECHANICS.pointsMultiplier;
+    rawPoints *= roles.getSpecialBugMultiplier(state, pid);
     if (powerups.isDuckBuffActive(ctx)) rawPoints *= 2;
     const points = awardScore(ctx, pid, rawPoints);
 

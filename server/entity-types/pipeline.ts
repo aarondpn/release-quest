@@ -4,7 +4,8 @@ import { randomPosition, awardScore } from '../state.ts';
 import { createTimerBag } from '../timer-bag.ts';
 import * as game from '../game.ts';
 import * as powerups from '../powerups.ts';
-import { hasAnyPlayerBuff } from '../shop.ts';
+import * as roles from '../roles.ts';
+import { getKevlarDamageMultiplier } from '../shop.ts';
 import { gameBugsSquashed } from '../metrics.ts';
 import type { BugEntity, GameContext, EntityDescriptor, BugTypePlugin, LevelConfigEntry } from '../types.ts';
 
@@ -101,6 +102,7 @@ export const pipelineDescriptor: EntityDescriptor = {
       player.bugsSquashed = (player.bugsSquashed || 0) + 1;
       gameBugsSquashed.inc();
       let rawPoints = PIPELINE_BUG_MECHANICS.pointsPerBug;
+      rawPoints *= roles.getSpecialBugMultiplier(state, pid);
       if (powerups.isDuckBuffActive(ctx)) rawPoints *= 2;
       const points = awardScore(ctx, pid, rawPoints);
 
@@ -118,6 +120,7 @@ export const pipelineDescriptor: EntityDescriptor = {
       if (chain.nextIndex >= chain.length) {
         // Chain complete — bonus!
         let rawBonus = PIPELINE_BUG_MECHANICS.chainBonus;
+        rawBonus *= roles.getSpecialBugMultiplier(state, pid);
         if (powerups.isDuckBuffActive(ctx)) rawBonus *= 2;
         const bonus = awardScore(ctx, pid, rawBonus);
 
@@ -141,7 +144,24 @@ export const pipelineDescriptor: EntityDescriptor = {
       if (state.phase === 'boss') game.checkBossGameState(ctx);
       else game.checkGameState(ctx);
     } else {
-      // Wrong order — reset chain
+      // Wrong order — Architect gets one free reset per chain
+      if (roles.hasRole(state, pid, 'architect')) {
+        if (!chain.architectFreeResetsUsed) chain.architectFreeResetsUsed = {};
+        if (!chain.architectFreeResetsUsed[pid]) {
+          // Use the free reset: absorb this click without resetting
+          chain.architectFreeResetsUsed[pid] = true;
+          ctx.events.emit({
+            type: 'pipeline-chain-reset',
+            chainId: bug.chainId,
+            positions: {},
+            playerId: pid,
+            architectAbsorbed: true,
+          });
+          return;
+        }
+      }
+
+      // Reset chain
       const remaining = chain.bugIds.filter(bid => state.bugs[bid]);
       chain.nextIndex = Math.min(...remaining.map(bid => state.bugs[bid].chainIndex!));
       const startPos = randomPosition();
@@ -267,7 +287,7 @@ function spawnPipelineChain(ctx: GameContext, cfg: LevelConfigEntry, chainLength
     const remaining = bugIds.filter(bid => state.bugs[bid]);
     if (remaining.length === 0) return;
     let damage = diffConfig.hpDamage * remaining.length;
-    if (hasAnyPlayerBuff(ctx, 'kevlar-vest')) damage = Math.ceil(damage * 0.5);
+    damage = Math.ceil(damage * getKevlarDamageMultiplier(ctx));
     for (const bid of remaining) {
       if (state.bugs[bid]) {
         state.bugs[bid]._timers.clearAll();

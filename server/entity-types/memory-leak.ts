@@ -3,7 +3,8 @@ import { getDifficultyConfig } from '../config.ts';
 import { randomPosition, awardScore } from '../state.ts';
 import * as game from '../game.ts';
 import * as powerups from '../powerups.ts';
-import { hasAnyPlayerBuff } from '../shop.ts';
+import * as roles from '../roles.ts';
+import { getKevlarDamageMultiplier } from '../shop.ts';
 import { gameBugsSquashed } from '../metrics.ts';
 import { getCtxForPlayer } from '../helpers.ts';
 import { z } from 'zod';
@@ -56,7 +57,7 @@ export const memoryLeakDescriptor: EntityDescriptor = {
     const diffConfig = getDifficultyConfig(ctx.state.difficulty);
     bug._timers.clearAll();
     let damage = MEMORY_LEAK_MECHANICS.damageByStage[bug.growthStage!] || diffConfig.hpDamage;
-    if (hasAnyPlayerBuff(ctx, 'kevlar-vest')) damage = Math.ceil(damage * 0.5);
+    damage = Math.ceil(damage * getKevlarDamageMultiplier(ctx));
     delete ctx.state.bugs[bug.id];
     ctx.state.hp -= damage;
     if (ctx.state.hp < 0) ctx.state.hp = 0;
@@ -168,6 +169,9 @@ export const memoryLeakDescriptor: EntityDescriptor = {
     delete state.bugs[bug.id];
 
     let rawPoints = MEMORY_LEAK_MECHANICS.pointsByStage[bug.holdStartStage!] || diffConfig.bugPoints;
+    // Debugger passive: +50% points if any holder is a Debugger
+    const hasDebugger = allHolders.some(holderId => roles.hasRole(state, holderId, 'debugger'));
+    if (hasDebugger) rawPoints *= 1.5;
     if (powerups.isDuckBuffActive(ctx)) rawPoints *= 2;
 
     let points = 0;

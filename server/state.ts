@@ -83,6 +83,7 @@ export function getPlayerScores(state: GameState): PlayerScoreEntry[] {
     score: p.score,
     bugsSquashed: p.bugsSquashed,
     isGuest: p.isGuest,
+    role: p.role ?? null,
   }));
 }
 

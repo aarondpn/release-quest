@@ -1,6 +1,7 @@
 import { getDifficultyConfig } from './config.ts';
 import { randomPosition, awardScore } from './state.ts';
 import * as boss from './boss.ts';
+import * as roles from './roles.ts';
 import { getDescriptor } from './entity-types/index.ts';
 import { hasAnyPlayerBuff } from './shop.ts';
 import type { GameContext } from './types.ts';
@@ -11,9 +12,11 @@ export function startDuckSpawning(ctx: GameContext): void {
 
 function scheduleDuckSpawn(ctx: GameContext): void {
   const diffConfig = getDifficultyConfig(ctx.state.difficulty);
-  let delay = diffConfig.powerups.rubberDuckIntervalMin +
-    Math.random() * (diffConfig.powerups.rubberDuckIntervalMax - diffConfig.powerups.rubberDuckIntervalMin);
-  if (hasAnyPlayerBuff(ctx, 'turbo-duck')) delay = Math.round(delay * 0.5);
+  const spawnMultiplier = roles.getTeamPowerupSpawnMultiplier(ctx.state);
+  let delay = (diffConfig.powerups.rubberDuckIntervalMin +
+    Math.random() * (diffConfig.powerups.rubberDuckIntervalMax - diffConfig.powerups.rubberDuckIntervalMin)) * spawnMultiplier;
+  if (hasAnyPlayerBuff(ctx, 'turbo-duck')) delay *= 0.5;
+  delay = Math.round(delay);
   ctx.timers.lobby.setTimeout('duckSpawn', () => spawnDuck(ctx), delay);
 }
 
@@ -71,8 +74,12 @@ export function collectDuck(ctx: GameContext, pid: string): void {
 
   state.rubberDuck = null;
 
+  // DevOps passive: extend buff duration
+  const durationMultiplier = roles.getPowerupDurationMultiplier(state, pid);
+  const buffDuration = Math.round(diffConfig.powerups.rubberDuckBuffDuration * durationMultiplier);
+
   // Start buff
-  state.duckBuff = { expiresAt: Date.now() + diffConfig.powerups.rubberDuckBuffDuration };
+  state.duckBuff = { expiresAt: Date.now() + buffDuration };
 
   ctx.events.emit({
     type: 'duck-collected',
@@ -80,13 +87,13 @@ export function collectDuck(ctx: GameContext, pid: string): void {
     playerColor: player.color,
     score: state.score,
     playerScore: player.score,
-    buffDuration: diffConfig.powerups.rubberDuckBuffDuration,
+    buffDuration,
   });
 
   ctx.timers.lobby.setTimeout('duckBuff', () => {
     state.duckBuff = null;
     ctx.events.emit({ type: 'duck-buff-expired' });
-  }, diffConfig.powerups.rubberDuckBuffDuration);
+  }, buffDuration);
 
   // Schedule next duck
   scheduleDuckSpawn(ctx);
@@ -115,8 +122,9 @@ export function startHammerSpawning(ctx: GameContext): void {
 
 function scheduleHammerSpawn(ctx: GameContext): void {
   const diffConfig = getDifficultyConfig(ctx.state.difficulty);
-  const delay = diffConfig.powerups.hotfixHammerIntervalMin +
-    Math.random() * (diffConfig.powerups.hotfixHammerIntervalMax - diffConfig.powerups.hotfixHammerIntervalMin);
+  const spawnMultiplier = roles.getTeamPowerupSpawnMultiplier(ctx.state);
+  const delay = Math.round((diffConfig.powerups.hotfixHammerIntervalMin +
+    Math.random() * (diffConfig.powerups.hotfixHammerIntervalMax - diffConfig.powerups.hotfixHammerIntervalMin)) * spawnMultiplier);
   ctx.timers.lobby.setTimeout('hammerSpawn', () => spawnHammer(ctx), delay);
 }
 
@@ -163,6 +171,10 @@ export function collectHammer(ctx: GameContext, pid: string): void {
 
   state.hotfixHammer = null;
 
+  // DevOps passive: extend stun duration
+  const durationMultiplier = roles.getPowerupDurationMultiplier(state, pid);
+  const stunDuration = Math.round(diffConfig.powerups.hotfixHammerStunDuration * durationMultiplier);
+
   // Stun all bugs and boss
   state.hammerStunActive = true;
   stunAllBugs(ctx);
@@ -174,7 +186,7 @@ export function collectHammer(ctx: GameContext, pid: string): void {
     playerColor: player.color,
     score: state.score,
     playerScore: player.score,
-    stunDuration: diffConfig.powerups.hotfixHammerStunDuration,
+    stunDuration,
   });
 
   // Resume bugs after stun
@@ -183,7 +195,7 @@ export function collectHammer(ctx: GameContext, pid: string): void {
     resumeAllBugs(ctx);
     resumeBoss(ctx);
     ctx.events.emit({ type: 'hammer-stun-expired' });
-  }, diffConfig.powerups.hotfixHammerStunDuration);
+  }, stunDuration);
 
   // Schedule next hammer
   scheduleHammerSpawn(ctx);

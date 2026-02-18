@@ -269,3 +269,14 @@ export function hasAnyPlayerBuff(ctx: GameContext, itemId: string): boolean {
   }
   return false;
 }
+
+/** Kevlar Vest damage multiplier — scales by fraction of team that owns the buff.
+ *  1 of 4 players → 12.5% reduction, 4 of 4 → full 50% reduction. */
+export function getKevlarDamageMultiplier(ctx: GameContext): number {
+  const playerIds = Object.keys(ctx.state.players);
+  const totalPlayers = playerIds.length;
+  if (totalPlayers === 0) return 1;
+  const kevlarCount = playerIds.filter(pid => hasPlayerBuff(ctx, pid, 'kevlar-vest')).length;
+  if (kevlarCount === 0) return 1;
+  return 1 - (0.5 * kevlarCount / totalPlayers);
+}

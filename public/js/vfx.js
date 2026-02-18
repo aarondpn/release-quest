@@ -176,19 +176,101 @@ export function showFeaturePenaltyEffect(lx, ly) {
   setTimeout(() => el.remove(), 1200);
 }
 
+// ── Shared powerup indicator container ──
+function getIndicatorContainer() {
+  let c = document.getElementById('powerup-indicators');
+  if (!c) {
+    c = document.createElement('div');
+    c.id = 'powerup-indicators';
+    dom.arena.appendChild(c);
+  }
+  return c;
+}
+
 // ── Duck buff overlay ──
+let _duckBuffInterval = null;
+let _duckBuffTimeout = null;
+
 export function showDuckBuffOverlay(duration) {
   removeDuckBuffOverlay();
+
+  // Full-arena border pulse
   const el = document.createElement('div');
   el.className = 'duck-buff-overlay';
   el.id = 'duck-buff-overlay';
   dom.arena.appendChild(el);
-  setTimeout(() => el.remove(), duration);
+
+  // Compact indicator row in shared stack
+  const row = document.createElement('div');
+  row.className = 'powerup-indicator duck-buff-indicator';
+  row.id = 'duck-buff-indicator';
+  row.innerHTML = '<span class="powerup-indicator-label">×2 PTS</span><span class="powerup-indicator-timer"></span>';
+  getIndicatorContainer().appendChild(row);
+
+  // In replay mode skip real-time timers; duck-buff-expired handles removal
+  if (clientState.isPlayback) return;
+
+  const timer = row.querySelector('.powerup-indicator-timer');
+  const endTime = Date.now() + duration;
+  function tick() {
+    const remaining = Math.max(0, endTime - Date.now());
+    timer.textContent = (remaining / 1000).toFixed(1) + 's';
+  }
+  tick();
+  _duckBuffInterval = setInterval(tick, 100);
+  _duckBuffTimeout = setTimeout(() => removeDuckBuffOverlay(), duration);
 }
 
 export function removeDuckBuffOverlay() {
+  if (_duckBuffInterval !== null) { clearInterval(_duckBuffInterval); _duckBuffInterval = null; }
+  if (_duckBuffTimeout !== null) { clearTimeout(_duckBuffTimeout); _duckBuffTimeout = null; }
   const existing = document.getElementById('duck-buff-overlay');
   if (existing) existing.remove();
+  const indicator = document.getElementById('duck-buff-indicator');
+  if (indicator) indicator.remove();
+}
+
+// ── Hammer stun overlay ──
+let _hammerStunInterval = null;
+let _hammerStunTimeout = null;
+
+export function showHammerStunOverlay(duration) {
+  removeHammerStunOverlay();
+
+  // Full-arena border pulse
+  const el = document.createElement('div');
+  el.className = 'hammer-stun-overlay';
+  el.id = 'hammer-stun-overlay';
+  dom.arena.appendChild(el);
+
+  // Compact indicator row in shared stack
+  const row = document.createElement('div');
+  row.className = 'powerup-indicator hammer-stun-indicator';
+  row.id = 'hammer-stun-indicator';
+  row.innerHTML = '<span class="powerup-indicator-label">STUNNED</span><span class="powerup-indicator-timer"></span>';
+  getIndicatorContainer().appendChild(row);
+
+  // In replay mode skip real-time timers; hammer-stun-expired handles removal
+  if (clientState.isPlayback) return;
+
+  const timer = row.querySelector('.powerup-indicator-timer');
+  const endTime = Date.now() + duration;
+  function tick() {
+    const remaining = Math.max(0, endTime - Date.now());
+    timer.textContent = (remaining / 1000).toFixed(1) + 's';
+  }
+  tick();
+  _hammerStunInterval = setInterval(tick, 100);
+  _hammerStunTimeout = setTimeout(() => removeHammerStunOverlay(), duration);
+}
+
+export function removeHammerStunOverlay() {
+  if (_hammerStunInterval !== null) { clearInterval(_hammerStunInterval); _hammerStunInterval = null; }
+  if (_hammerStunTimeout !== null) { clearTimeout(_hammerStunTimeout); _hammerStunTimeout = null; }
+  const existing = document.getElementById('hammer-stun-overlay');
+  if (existing) existing.remove();
+  const indicator = document.getElementById('hammer-stun-indicator');
+  if (indicator) indicator.remove();
 }
 
 // ── Pipeline chain resolved effect ──

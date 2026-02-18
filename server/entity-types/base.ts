@@ -2,7 +2,7 @@ import { getDifficultyConfig } from '../config.ts';
 import { randomPosition, awardScore } from '../state.ts';
 import * as game from '../game.ts';
 import * as powerups from '../powerups.ts';
-import { hasAnyPlayerBuff } from '../shop.ts';
+import { hasAnyPlayerBuff, getKevlarDamageMultiplier } from '../shop.ts';
 import { gameBugsSquashed } from '../metrics.ts';
 import type { BugEntity, GameContext, EntityDescriptor } from '../types.ts';
 
@@ -81,7 +81,7 @@ export const baseDescriptor: EntityDescriptor = {
     bug._timers.clearAll();
     delete ctx.state.bugs[bug.id];
     let damage = diffConfig.hpDamage;
-    if (hasAnyPlayerBuff(ctx, 'kevlar-vest')) damage = Math.ceil(damage * 0.5);
+    damage = Math.ceil(damage * getKevlarDamageMultiplier(ctx));
     ctx.state.hp -= damage;
     if (ctx.state.hp < 0) ctx.state.hp = 0;
     if (ctx.matchLog) {

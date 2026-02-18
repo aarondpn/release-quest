@@ -116,6 +116,13 @@ const chatMessageSchema = z.object({
   message: z.string().min(1).max(200),
 });
 
+// --- Role selection ---
+
+const selectRoleSchema = z.object({
+  type: z.literal('select-role'),
+  role: z.string().nullable(),
+});
+
 // --- Shop messages ---
 
 const shopBuySchema = z.object({
@@ -168,6 +175,7 @@ export const staticSchemas: Record<string, ZodType> = {
   'shop-buy': shopBuySchema,
   'shop-ready': shopReadySchema,
   'dev-command': devCommandSchema,
+  'select-role': selectRoleSchema,
 };
 
 // --- Inferred types for future handler opt-in ---
