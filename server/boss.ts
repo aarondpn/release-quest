@@ -4,6 +4,7 @@ import logger from './logger.ts';
 import * as bugs from './bugs.ts';
 import * as game from './game.ts';
 import * as powerups from './powerups.ts';
+import * as roles from './roles.ts';
 import { getDefaultBossType, getBossType } from './boss-types/index.ts';
 import type { GameContext, BossTypePluginInterface } from './types.ts';
 
@@ -146,8 +147,10 @@ export function handleBossClick(ctx: GameContext, pid: string): void {
     if (state.boss.lastClickBy[pid] && now - state.boss.lastClickBy[pid] < bossConfig.clickCooldownMs) return;
     state.boss.lastClickBy[pid] = now;
 
-    // Duck buff doubles click damage
+    // Debugger passive: +50% boss click damage
     let damage = bossConfig.clickDamage;
+    damage *= roles.getSpecialBugMultiplier(state, pid);
+    // Duck buff doubles click damage
     if (powerups.isDuckBuffActive(ctx)) {
       damage *= diffConfig.powerups.rubberDuckPointsMultiplier;
     }

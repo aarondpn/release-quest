@@ -5485,11 +5485,18 @@ header p {
   opacity: 0.85;
 }
 
-/* QA Engineer expanded hitbox */
-body.qa-hitbox-active .bug::before {
+/* Bigger Cursor buff — ~25% hitbox expansion */
+.arena.cursor-enlarged .bug::before {
   content: '';
   position: absolute;
-  inset: -11px;
+  inset: -6px;
+}
+
+/* QA Engineer — 40% hitbox expansion (overrides Bigger Cursor when both active) */
+body.qa-hitbox-active .arena .bug::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
 }
 
 

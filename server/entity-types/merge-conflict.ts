@@ -4,7 +4,8 @@ import { randomPosition, awardScore } from '../state.ts';
 import { createTimerBag } from '../timer-bag.ts';
 import * as game from '../game.ts';
 import * as roles from '../roles.ts';
-import { hasAnyPlayerBuff } from '../shop.ts';
+import * as powerups from '../powerups.ts';
+import { getKevlarDamageMultiplier } from '../shop.ts';
 import { gameBugsSquashed } from '../metrics.ts';
 import type { BugEntity, GameContext, EntityDescriptor, BugTypePlugin, LevelConfigEntry } from '../types.ts';
 
@@ -31,7 +32,7 @@ export const mergeConflictDescriptor: EntityDescriptor = {
     const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
     const partner = state.bugs[bug.mergePartner!];
     let damage = MERGE_CONFLICT_MECHANICS.doubleDamage ? diffConfig.hpDamage * 2 : diffConfig.hpDamage;
-    if (hasAnyPlayerBuff(ctx, 'kevlar-vest')) damage = Math.ceil(damage * 0.5);
+    damage = Math.ceil(damage * getKevlarDamageMultiplier(ctx));
     bug._timers.clearAll();
     delete state.bugs[bug.id];
     if (partner) {
@@ -72,7 +73,8 @@ export const mergeConflictDescriptor: EntityDescriptor = {
       const clickers = new Set([pid, partner.mergeClickedBy!]);
       // Debugger passive: +50% bonus points if any clicker is a Debugger
       const debuggerBonus = [...clickers].some(c => roles.hasRole(state, c, 'debugger')) ? 1.5 : 1;
-      const bonusPoints = Math.round(MERGE_CONFLICT_MECHANICS.bonusPoints * debuggerBonus);
+      let bonusPoints = Math.round(MERGE_CONFLICT_MECHANICS.bonusPoints * debuggerBonus);
+      if (powerups.isDuckBuffActive(ctx)) bonusPoints *= 2;
       for (const clickerId of clickers) {
         if (state.players[clickerId]) {
           awardScore(ctx, clickerId, bonusPoints);
@@ -167,7 +169,7 @@ function spawnMergeConflict(ctx: GameContext, cfg: LevelConfigEntry): void {
     if (!state.bugs[id1] && !state.bugs[id2]) return;
     const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
     let damage = MERGE_CONFLICT_MECHANICS.doubleDamage ? diffConfig.hpDamage * 2 : diffConfig.hpDamage;
-    if (hasAnyPlayerBuff(ctx, 'kevlar-vest')) damage = Math.ceil(damage * 0.5);
+    damage = Math.ceil(damage * getKevlarDamageMultiplier(ctx));
     if (state.bugs[id1]) { bug1._timers.clearAll(); delete state.bugs[id1]; }
     if (state.bugs[id2]) { bug2._timers.clearAll(); delete state.bugs[id2]; }
     state.hp -= damage;
