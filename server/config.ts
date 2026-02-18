@@ -91,6 +91,10 @@ export const DIFFICULTY_PRESETS: Record<string, DifficultyConfig> = {
         phase3MaxDamageReduction: 0.75,
       },
     },
+    shop: {
+      duration: 20000,
+      items: [],
+    },
     specialBugs: {
       heisenbugChance: 0.10,
       codeReviewChance: 0.08,
@@ -166,6 +170,10 @@ export const DIFFICULTY_PRESETS: Record<string, DifficultyConfig> = {
         phase3MaxDamageReduction: 0.80,
       },
     },
+    shop: {
+      duration: 15000,
+      items: [],
+    },
     specialBugs: {
       heisenbugChance: 0.15,
       codeReviewChance: 0.12,
@@ -240,6 +248,10 @@ export const DIFFICULTY_PRESETS: Record<string, DifficultyConfig> = {
         phase3DamageReductionPerMinion: 0.20,
         phase3MaxDamageReduction: 0.85,
       },
+    },
+    shop: {
+      duration: 12000,
+      items: [],
     },
     specialBugs: {
       heisenbugChance: 0.20,

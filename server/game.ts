@@ -4,6 +4,7 @@ import logger, { createLobbyLogger } from './logger.ts';
 import * as bugs from './bugs.ts';
 import * as boss from './boss.ts';
 import * as powerups from './powerups.ts';
+import * as shop from './shop.ts';
 import * as stats from './stats.ts';
 import { createMatchLog } from './match-logger.ts';
 import { startRecording, stopRecording } from './recording.ts';
@@ -77,6 +78,7 @@ export function startGame(ctx: GameContext): void {
   state.score = 0;
   state.hp = diffConfig.startingHp;
   state.level = 1;
+  state.playerBuffs = {};
   ctx.lifecycle.transition(state, 'playing');
   state.boss = null;
   state.gameStartedAt = Date.now();
@@ -154,45 +156,25 @@ export function checkGameState(ctx: GameContext): void {
 
     if (allSpawned && noneAlive) {
       bugs.clearSpawnTimer(ctx);
-      if (state.level >= MAX_LEVEL) {
-        if (ctx.matchLog) {
-          ctx.matchLog.log('level-complete', { level: state.level, next: 'boss' });
-        }
-        ctx.events.emit({
-          type: 'level-complete',
-          level: state.level,
-          score: state.score,
-        });
-        ctx.timers.lobby.setTimeout('levelTransition', () => {
-          try {
-            boss.startBoss(ctx);
-          } catch (err) {
-            const logCtx = createLobbyLogger(ctx.lobbyId.toString());
-            logCtx.error({ err }, 'Error starting boss');
-          }
-        }, 2000);
-      } else {
-        if (ctx.matchLog) {
-          ctx.matchLog.log('level-complete', { level: state.level, nextLevel: state.level + 1 });
-        }
-        ctx.events.emit({
-          type: 'level-complete',
-          level: state.level,
-          score: state.score,
-        });
-        ctx.timers.lobby.setTimeout('levelTransition', () => {
-          try {
-            if (state.phase !== 'playing' && state.phase !== 'lobby') {
-              if (Object.keys(state.players).length === 0) return;
-            }
-            state.level++;
-            startLevel(ctx);
-          } catch (err) {
-            const logCtx = createLobbyLogger(ctx.lobbyId.toString());
-            logCtx.error({ err }, 'Error starting next level');
-          }
-        }, 2000);
+      if (ctx.matchLog) {
+        const next = state.level >= MAX_LEVEL ? 'boss' : state.level + 1;
+        ctx.matchLog.log('level-complete', { level: state.level, ...(typeof next === 'number' ? { nextLevel: next } : { next }) });
       }
+      ctx.events.emit({
+        type: 'level-complete',
+        level: state.level,
+        score: state.score,
+      });
+      // Brief pause, then open shop
+      ctx.timers.lobby.setTimeout('levelTransition', () => {
+        try {
+          if (Object.keys(state.players).length === 0) return;
+          shop.openShop(ctx);
+        } catch (err) {
+          const logCtx = createLobbyLogger(ctx.lobbyId.toString());
+          logCtx.error({ err }, 'Error opening shop');
+        }
+      }, 1500);
     }
   } catch (err) {
     logger.error({ err, lobbyId: ctx.lobbyId }, 'Error in checkGameState');
@@ -222,4 +204,5 @@ export function resetToLobby(ctx: GameContext): void {
   state.bugsRemaining = 0;
   state.bugsSpawned = 0;
   state.boss = null;
+  state.playerBuffs = {};
 }

@@ -2,8 +2,34 @@ import { getDifficultyConfig } from '../config.ts';
 import { randomPosition, awardScore } from '../state.ts';
 import * as game from '../game.ts';
 import * as powerups from '../powerups.ts';
+import { hasAnyPlayerBuff } from '../shop.ts';
 import { gameBugsSquashed } from '../metrics.ts';
 import type { BugEntity, GameContext, EntityDescriptor } from '../types.ts';
+
+/**
+ * Apply bug-magnet bias: pull the wander target from the bug's current position
+ * toward a player who has the buff.
+ * Without magnet: bug teleports to a random position (normal wander).
+ * With magnet: bug drifts from its current spot toward the cursor, with some randomness.
+ */
+export function applyMagnetBias(ctx: GameContext, pos: { x: number; y: number }, bugX: number, bugY: number): void {
+  const { state } = ctx;
+  if (!hasAnyPlayerBuff(ctx, 'bug-magnet')) return;
+  for (const pid of Object.keys(state.playerBuffs)) {
+    if (state.playerBuffs[pid]?.some(b => b.itemId === 'bug-magnet')) {
+      const player = state.players[pid];
+      if (player) {
+        // Pull from the bug's current position toward the cursor (60% of the way)
+        const pullX = bugX + (player.x - bugX) * 0.6;
+        const pullY = bugY + (player.y - bugY) * 0.6;
+        // 75% pull toward cursor, 25% random to keep some unpredictability
+        pos.x = pullX * 0.75 + pos.x * 0.25;
+        pos.y = pullY * 0.75 + pos.y * 0.25;
+        break;
+      }
+    }
+  }
+}
 
 // ── Base descriptor — shared defaults for all entity types ──
 
@@ -20,6 +46,7 @@ export const baseDescriptor: EntityDescriptor = {
     bug._timers.setInterval('wander', () => {
       if (!state.bugs[bugId] || state.hammerStunActive) return;
       const newPos = randomPosition();
+      applyMagnetBias(ctx, newPos, bug.x, bug.y);
       bug.x = newPos.x;
       bug.y = newPos.y;
       ctx.events.emit({ type: 'bug-wander', bugId, x: newPos.x, y: newPos.y });
@@ -53,7 +80,9 @@ export const baseDescriptor: EntityDescriptor = {
     const diffConfig = getDifficultyConfig(ctx.state.difficulty);
     bug._timers.clearAll();
     delete ctx.state.bugs[bug.id];
-    ctx.state.hp -= diffConfig.hpDamage;
+    let damage = diffConfig.hpDamage;
+    if (hasAnyPlayerBuff(ctx, 'kevlar-vest')) damage = Math.ceil(damage * 0.5);
+    ctx.state.hp -= damage;
     if (ctx.state.hp < 0) ctx.state.hp = 0;
     if (ctx.matchLog) {
       ctx.matchLog.log('escape', { bugId: bug.id, activeBugs: Object.keys(ctx.state.bugs).length, hp: ctx.state.hp });

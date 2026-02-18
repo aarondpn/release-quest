@@ -1,8 +1,9 @@
-import { baseDescriptor } from './base.ts';
+import { baseDescriptor, applyMagnetBias } from './base.ts';
 import { getDifficultyConfig } from '../config.ts';
 import { randomPosition, awardScore } from '../state.ts';
 import * as game from '../game.ts';
 import * as powerups from '../powerups.ts';
+import { hasAnyPlayerBuff } from '../shop.ts';
 import { gameBugsSquashed } from '../metrics.ts';
 import { getCtxForPlayer } from '../helpers.ts';
 import { z } from 'zod';
@@ -31,6 +32,7 @@ export const memoryLeakDescriptor: EntityDescriptor = {
       // Don't move while players are actively defusing
       if (bug.holders && bug.holders.size > 0) return;
       const newPos = randomPosition();
+      applyMagnetBias(ctx, newPos, bug.x, bug.y);
       bug.x = newPos.x;
       bug.y = newPos.y;
       ctx.events.emit({ type: 'bug-wander', bugId, x: newPos.x, y: newPos.y });
@@ -53,7 +55,8 @@ export const memoryLeakDescriptor: EntityDescriptor = {
   onEscape(bug: BugEntity, ctx: GameContext, onEscapeCheck: () => void) {
     const diffConfig = getDifficultyConfig(ctx.state.difficulty);
     bug._timers.clearAll();
-    const damage = MEMORY_LEAK_MECHANICS.damageByStage[bug.growthStage!] || diffConfig.hpDamage;
+    let damage = MEMORY_LEAK_MECHANICS.damageByStage[bug.growthStage!] || diffConfig.hpDamage;
+    if (hasAnyPlayerBuff(ctx, 'kevlar-vest')) damage = Math.ceil(damage * 0.5);
     delete ctx.state.bugs[bug.id];
     ctx.state.hp -= damage;
     if (ctx.state.hp < 0) ctx.state.hp = 0;

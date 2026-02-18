@@ -10,6 +10,7 @@ import { handleClickDuck, handleClickHammer } from './powerups.ts';
 import { handleGetLeaderboard, handleGetMyStats, handleGetRecordings, handleShareRecording, handleUnshareRecording } from './stats.ts';
 import { handleCursorMove } from './cursor.ts';
 import { handleChatMessage } from './chat.ts';
+import { handleShopBuy, handleShopReady } from './shop.ts';
 import { handleDevCommand } from './dev.ts';
 import { getHandlers as getPluginHandlers, getSchemas as getPluginSchemas } from '../entity-types/index.ts';
 import { getBossHandlers, getBossSchemas } from '../boss-types/index.ts';
@@ -38,6 +39,8 @@ const staticHandlers: Record<string, MessageHandler> = {
   'unshare-recording': handleUnshareRecording,
   'cursor-move': handleCursorMove,
   'chat-message': handleChatMessage,
+  'shop-buy': handleShopBuy,
+  'shop-ready': handleShopReady,
   'dev-command': handleDevCommand,
 };
 

@@ -116,6 +116,17 @@ const chatMessageSchema = z.object({
   message: z.string().min(1).max(200),
 });
 
+// --- Shop messages ---
+
+const shopBuySchema = z.object({
+  type: z.literal('shop-buy'),
+  itemId: z.string(),
+});
+
+const shopReadySchema = z.object({
+  type: z.literal('shop-ready'),
+});
+
 // --- Dev mode ---
 
 const devCommandSchema = z.object({
@@ -154,6 +165,8 @@ export const staticSchemas: Record<string, ZodType> = {
   'click-memory-leak-start': clickMemoryLeakStartSchema,
   'click-memory-leak-complete': clickMemoryLeakCompleteSchema,
   'chat-message': chatMessageSchema,
+  'shop-buy': shopBuySchema,
+  'shop-ready': shopReadySchema,
   'dev-command': devCommandSchema,
 };
 

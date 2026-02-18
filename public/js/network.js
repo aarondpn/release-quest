@@ -15,6 +15,7 @@ import { handleMyStats, requestMyStats } from './stats-card-ui.js';
 import { startPlayback } from './playback.js';
 import { showError, ERROR_LEVELS } from './error-handler.js';
 import { handleChatBroadcast, showChat, hideChat, clearChat } from './chat.js';
+import { openShop, handleShopBuyResult, handleShopReady, closeShop, clearAllShopState } from './shop.js';
 
 // Cursor batching: buffer incoming positions and flush once per frame
 const pendingCursors = {};
@@ -401,6 +402,7 @@ export function handleMessageInternal(msg) {
       if (msg.phase === 'lobby') { showStartScreen(); hideLiveDashboard(); }
       else if (msg.phase === 'gameover') { showGameOverScreen(msg.score, msg.level, msg.players || []); hideLiveDashboard(); }
       else if (msg.phase === 'win') { showWinScreen(msg.score, msg.players || []); hideLiveDashboard(); }
+      else if (msg.phase === 'shopping') { hideAllScreens(); showLiveDashboard(); }
       else { hideAllScreens(); showLiveDashboard(); }
       break;
     }
@@ -418,6 +420,7 @@ export function handleMessageInternal(msg) {
       removeDuckElement();
       removeHammerElement();
       removeDuckBuffOverlay();
+      clearAllShopState();
       clearRemoteCursors();
       hideAllScreens();
       hideLiveDashboard();
@@ -478,6 +481,7 @@ export function handleMessageInternal(msg) {
       removeDuckElement();
       removeHammerElement();
       removeDuckBuffOverlay();
+      clearAllShopState();
       updateHUD(msg.score, msg.level, msg.hp);
       if (msg.players) {
         msg.players.forEach(p => { if (clientState.players[p.id]) clientState.players[p.id].score = p.score; });
@@ -1003,6 +1007,33 @@ export function handleMessageInternal(msg) {
       break;
     }
 
+    // ── Shop messages ──
+
+    case 'shop-open': {
+      openShop(msg);
+      break;
+    }
+
+    case 'shop-buy': {
+      handleShopBuyResult(msg);
+      updateHUD(msg.teamScore, undefined, msg.hp);
+      if (clientState.players[msg.playerId]) {
+        clientState.players[msg.playerId].score = msg.playerScore;
+      }
+      updateLiveDashboard();
+      break;
+    }
+
+    case 'shop-ready': {
+      handleShopReady(msg);
+      break;
+    }
+
+    case 'shop-close': {
+      closeShop();
+      break;
+    }
+
     case 'game-over': {
       clearAllBugs();
       removeBossElement();
@@ -1142,6 +1173,7 @@ export function handleMessageInternal(msg) {
       removeBossElement();
       removeDuckElement();
       removeDuckBuffOverlay();
+      clearAllShopState();
       hideLiveDashboard();
       showStartScreen();
       updateHUD(0, 1, 100);

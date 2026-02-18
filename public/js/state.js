@@ -55,6 +55,7 @@ export const dom = {
   winScreen: null,
   levelScreen: null,
   bossScreen: null,
+  shopScreen: null,
   nameEntry: null,
   nameInput: null,
   iconPicker: null,
@@ -167,6 +168,7 @@ export function initDom() {
   dom.winScreen = document.getElementById('win-screen');
   dom.levelScreen = document.getElementById('level-screen');
   dom.bossScreen = document.getElementById('boss-screen');
+  dom.shopScreen = document.getElementById('shop-screen');
   dom.nameEntry = document.getElementById('name-entry');
   dom.nameInput = document.getElementById('name-input');
   dom.iconPicker = document.getElementById('icon-picker');

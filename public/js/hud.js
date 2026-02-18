@@ -28,6 +28,7 @@ export function hideAllScreens() {
   dom.winScreen.classList.add('hidden');
   dom.levelScreen.classList.add('hidden');
   dom.bossScreen.classList.add('hidden');
+  if (dom.shopScreen) dom.shopScreen.classList.add('hidden');
   stopLobbyAnimations();
 }
 

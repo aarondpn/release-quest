@@ -3,7 +3,22 @@
 import type { GameEventBus } from './event-bus.ts';
 import type { ZodType } from 'zod';
 
-export type GamePhase = 'lobby' | 'playing' | 'boss' | 'gameover' | 'win';
+export type GamePhase = 'lobby' | 'playing' | 'shopping' | 'boss' | 'gameover' | 'win';
+
+export interface ActiveBuff {
+  itemId: string;
+  playerId: string;
+  expiresAtPhaseEnd: boolean;
+  source?: string;  // e.g. 'shop', 'powerup', 'boss-drop' — defaults to 'shop'
+}
+
+export interface ShopItemConfig {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  cost: number;
+}
 
 export type CleanupHook = () => void;
 
@@ -187,6 +202,8 @@ export interface GameState {
   hotfixHammer: HotfixHammer | null;
   hammerStunActive: boolean;
   pipelineChains: Record<string, PipelineChain>;
+  playerBuffs: Record<string, ActiveBuff[]>;
+  shopReadyPlayers?: Set<string>;
   gameStartedAt?: number;
   difficulty: string;
   customConfig?: CustomDifficultyConfig;
@@ -330,6 +347,10 @@ export interface DifficultyConfig {
     azubiStartLevel: number;
     azubiSpawnInterval: number;
     azubiFeatureChance: number;
+  };
+  shop: {
+    duration: number;
+    items: ShopItemConfig[];
   };
   powerups: {
     rubberDuckIntervalMin: number;

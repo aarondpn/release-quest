@@ -2,6 +2,7 @@ import { getDifficultyConfig } from './config.ts';
 import { randomPosition, awardScore } from './state.ts';
 import * as boss from './boss.ts';
 import { getDescriptor } from './entity-types/index.ts';
+import { hasAnyPlayerBuff } from './shop.ts';
 import type { GameContext } from './types.ts';
 
 export function startDuckSpawning(ctx: GameContext): void {
@@ -10,8 +11,9 @@ export function startDuckSpawning(ctx: GameContext): void {
 
 function scheduleDuckSpawn(ctx: GameContext): void {
   const diffConfig = getDifficultyConfig(ctx.state.difficulty);
-  const delay = diffConfig.powerups.rubberDuckIntervalMin +
+  let delay = diffConfig.powerups.rubberDuckIntervalMin +
     Math.random() * (diffConfig.powerups.rubberDuckIntervalMax - diffConfig.powerups.rubberDuckIntervalMin);
+  if (hasAnyPlayerBuff(ctx, 'turbo-duck')) delay = Math.round(delay * 0.5);
   ctx.timers.lobby.setTimeout('duckSpawn', () => spawnDuck(ctx), delay);
 }
 
