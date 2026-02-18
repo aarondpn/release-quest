@@ -2,6 +2,7 @@ import { getDifficultyConfig } from './config.ts';
 import { randomPosition, currentLevelConfig } from './state.ts';
 import { createTimerBag } from './timer-bag.ts';
 import { getDescriptor, getType, getPlugins } from './entity-types/index.ts';
+import { hasAnyPlayerBuff } from './shop.ts';
 import * as game from './game.ts';
 import * as bossModule from './boss.ts';
 import type { GameContext, BugEntity, SpawnEntityOptions } from './types.ts';
@@ -44,6 +45,7 @@ function spawnEntity(ctx: GameContext, opts: SpawnEntityOptions): boolean {
   const broadcastPayload: Record<string, unknown> = { id, x: bug.x, y: bug.y };
   if (opts.isMinion) broadcastPayload.isMinion = true;
   Object.assign(broadcastPayload, descriptor.broadcastFields(bug));
+  if (bug.isFeature && hasAnyPlayerBuff(ctx, 'eagle-eye')) broadcastPayload.eagleEye = true;
 
   ctx.events.emit({ type: 'bug-spawned', bug: broadcastPayload });
 

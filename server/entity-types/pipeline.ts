@@ -5,6 +5,7 @@ import { createTimerBag } from '../timer-bag.ts';
 import * as game from '../game.ts';
 import * as powerups from '../powerups.ts';
 import * as roles from '../roles.ts';
+import { hasAnyPlayerBuff } from '../shop.ts';
 import { gameBugsSquashed } from '../metrics.ts';
 import type { BugEntity, GameContext, EntityDescriptor, BugTypePlugin, LevelConfigEntry } from '../types.ts';
 
@@ -285,7 +286,8 @@ function spawnPipelineChain(ctx: GameContext, cfg: LevelConfigEntry, chainLength
     if (hBug) hBug._timers.clear('chainWander');
     const remaining = bugIds.filter(bid => state.bugs[bid]);
     if (remaining.length === 0) return;
-    const damage = diffConfig.hpDamage * remaining.length;
+    let damage = diffConfig.hpDamage * remaining.length;
+    if (hasAnyPlayerBuff(ctx, 'kevlar-vest')) damage = Math.ceil(damage * 0.5);
     for (const bid of remaining) {
       if (state.bugs[bid]) {
         state.bugs[bid]._timers.clearAll();

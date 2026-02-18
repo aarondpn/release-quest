@@ -39,6 +39,10 @@ function createLobbyMemory(lobbyId: number, difficulty: string, customConfig?: C
     state.hotfixHammer = null;
     state.hammerStunActive = false;
   });
+  lifecycle.onCleanup(() => {
+    state.playerBuffs = {};
+    state.shopReadyPlayers = undefined;
+  });
   // matchLog is mutable on the mem object, so close via a closure over mem reference
   const mem: LobbyMemory = {
     state,
@@ -118,6 +122,7 @@ export async function leaveLobby(lobbyId: number, playerId: string): Promise<voi
   const mem = lobbies.get(lobbyId);
   if (mem) {
     delete mem.state.players[playerId];
+    delete mem.state.playerBuffs[playerId];
 
     // Auto-delete empty lobbies — check both in-memory and DB
     const inMemoryEmpty = Object.keys(mem.state.players).length === 0;

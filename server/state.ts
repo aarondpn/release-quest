@@ -20,6 +20,7 @@ export function createGameState(difficulty: string = 'medium', customConfig?: Cu
     hotfixHammer: null,
     hammerStunActive: false,
     pipelineChains: {},
+    playerBuffs: {},
     difficulty,
     customConfig,
   };

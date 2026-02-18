@@ -3,7 +3,8 @@ import type { GamePhase, GameState, GameLifecycle, CleanupHook } from './types.t
 
 const VALID_TRANSITIONS: Record<GamePhase, GamePhase[]> = {
   lobby:    ['playing'],
-  playing:  ['boss', 'gameover', 'lobby'],
+  playing:  ['shopping', 'boss', 'gameover', 'lobby'],
+  shopping: ['playing', 'boss', 'lobby'],
   boss:     ['gameover', 'win', 'lobby'],
   gameover: ['playing', 'lobby'],
   win:      ['playing', 'lobby'],

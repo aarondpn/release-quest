@@ -368,6 +368,7 @@
       <span class="hud-value" id="player-count">0</span>
     </div>
     <button class="hud-leave-btn hidden" id="hud-leave-btn">EXIT</button>
+    <div class="hud-buffs hidden" id="hud-buffs"></div>
   </div>
 
   <div class="arena-wrap">
@@ -455,6 +456,24 @@
       <div class="screen-overlay hidden" id="level-screen">
         <div class="screen-title">LEVEL <span id="level-screen-num">2</span></div>
         <div class="screen-sub">Get ready...</div>
+      </div>
+
+      <!-- Shop overlay -->
+      <div class="screen-overlay hidden" id="shop-screen">
+        <div class="shop-cabinet">
+          <div class="shop-header">
+            <div class="shop-title-row">
+              <div class="shop-title">SUPPLY DEPOT</div>
+              <div class="shop-score"><span class="shop-score-label">PTS</span> <span id="shop-player-score">0</span></div>
+            </div>
+            <div class="shop-timer-bar"><div class="shop-timer-fill" id="shop-timer-fill"></div></div>
+          </div>
+          <div class="shop-items" id="shop-items"></div>
+          <div class="shop-footer">
+            <div class="shop-feed" id="shop-feed"></div>
+            <button class="btn shop-ready-btn" id="shop-ready-btn">READY</button>
+          </div>
+        </div>
       </div>
 
       <!-- Boss warning -->

@@ -66,6 +66,10 @@ export function createBugElement(bugId, lx, ly, variant) {
       setTimeout(() => {
         if (el.parentNode) el.classList.add('feature-bug');
       }, 600);
+      // Eagle Eye buff: immediately reveal feature bugs with red glow
+      if (variant.eagleEye) {
+        el.classList.add('eagle-eye-glow');
+      }
     }
     if (variant.mergeConflict) {
       if (variant.mergeSide === 'left') {

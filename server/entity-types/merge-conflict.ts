@@ -1,9 +1,10 @@
-import { baseDescriptor } from './base.ts';
+import { baseDescriptor, applyMagnetBias } from './base.ts';
 import { getDifficultyConfig } from '../config.ts';
 import { randomPosition, awardScore } from '../state.ts';
 import { createTimerBag } from '../timer-bag.ts';
 import * as game from '../game.ts';
 import * as roles from '../roles.ts';
+import { hasAnyPlayerBuff } from '../shop.ts';
 import { gameBugsSquashed } from '../metrics.ts';
 import type { BugEntity, GameContext, EntityDescriptor, BugTypePlugin, LevelConfigEntry } from '../types.ts';
 
@@ -29,7 +30,8 @@ export const mergeConflictDescriptor: EntityDescriptor = {
     const { state } = ctx;
     const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
     const partner = state.bugs[bug.mergePartner!];
-    const damage = MERGE_CONFLICT_MECHANICS.doubleDamage ? diffConfig.hpDamage * 2 : diffConfig.hpDamage;
+    let damage = MERGE_CONFLICT_MECHANICS.doubleDamage ? diffConfig.hpDamage * 2 : diffConfig.hpDamage;
+    if (hasAnyPlayerBuff(ctx, 'kevlar-vest')) damage = Math.ceil(damage * 0.5);
     bug._timers.clearAll();
     delete state.bugs[bug.id];
     if (partner) {
@@ -148,6 +150,7 @@ function spawnMergeConflict(ctx: GameContext, cfg: LevelConfigEntry): void {
   bug1._timers.setInterval('wander', () => {
     if (state.phase !== 'playing' || !state.bugs[id1]) return;
     const np = randomPosition();
+    applyMagnetBias(ctx, np, bug1.x, bug1.y);
     bug1.x = np.x; bug1.y = np.y;
     ctx.events.emit({ type: 'bug-wander', bugId: id1, x: np.x, y: np.y });
   }, escapeTime * 0.45);
@@ -155,6 +158,7 @@ function spawnMergeConflict(ctx: GameContext, cfg: LevelConfigEntry): void {
   bug2._timers.setInterval('wander', () => {
     if (state.phase !== 'playing' || !state.bugs[id2]) return;
     const np = randomPosition();
+    applyMagnetBias(ctx, np, bug2.x, bug2.y);
     bug2.x = np.x; bug2.y = np.y;
     ctx.events.emit({ type: 'bug-wander', bugId: id2, x: np.x, y: np.y });
   }, escapeTime * 0.45);
@@ -162,7 +166,8 @@ function spawnMergeConflict(ctx: GameContext, cfg: LevelConfigEntry): void {
   const escapeHandler = () => {
     if (!state.bugs[id1] && !state.bugs[id2]) return;
     const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
-    const damage = MERGE_CONFLICT_MECHANICS.doubleDamage ? diffConfig.hpDamage * 2 : diffConfig.hpDamage;
+    let damage = MERGE_CONFLICT_MECHANICS.doubleDamage ? diffConfig.hpDamage * 2 : diffConfig.hpDamage;
+    if (hasAnyPlayerBuff(ctx, 'kevlar-vest')) damage = Math.ceil(damage * 0.5);
     if (state.bugs[id1]) { bug1._timers.clearAll(); delete state.bugs[id1]; }
     if (state.bugs[id2]) { bug2._timers.clearAll(); delete state.bugs[id2]; }
     state.hp -= damage;
