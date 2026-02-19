@@ -12,6 +12,8 @@ const clickHammerSchema = z.object({ type: z.literal('click-hammer') });
 const getLeaderboardSchema = z.object({ type: z.literal('get-leaderboard') });
 const getMyStatsSchema = z.object({ type: z.literal('get-my-stats') });
 const getRecordingsSchema = z.object({ type: z.literal('get-recordings') });
+const getQuestsSchema = z.object({ type: z.literal('get-quests') });
+const getBalanceSchema = z.object({ type: z.literal('get-balance') });
 
 const customConfigSchema = z.object({
   startingHp: z.number().int().min(1).max(150).optional(),
@@ -234,6 +236,8 @@ export const staticSchemas: Record<string, ZodType> = {
   'shop-ready': shopReadySchema,
   'dev-command': devCommandSchema,
   'select-role': selectRoleSchema,
+  'get-quests': getQuestsSchema,
+  'get-balance': getBalanceSchema,
 };
 
 // --- Inferred types for future handler opt-in ---

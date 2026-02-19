@@ -377,6 +377,42 @@ export type DeepPartial<T> = T extends object ? {
 
 export type CustomDifficultyConfig = DeepPartial<DifficultyConfig>;
 
+// Quest types
+
+export type QuestMetric = 'bugs_squashed' | 'games_played' | 'games_won' | 'single_game_score' | 'total_score';
+
+export interface QuestDefinition {
+  key: string;
+  type: 'daily' | 'weekly';
+  title: string;
+  description: string;
+  icon: string;
+  target: number;
+  rewardMin: number;
+  rewardMax: number;
+  metric: QuestMetric;
+}
+
+export interface UserQuestRow {
+  id: number;
+  user_id: number;
+  quest_key: string;
+  quest_type: string;
+  progress: number;
+  target: number;
+  reward: number;
+  completed: boolean;
+  claimed: boolean;
+  assigned_at: Date;
+  period_start: Date;
+  period_end: Date;
+}
+
+export interface CurrencyBalance {
+  balance: number;
+  totalEarned: number;
+}
+
 // DB row types
 
 export interface DbLobbyRow {

@@ -24,7 +24,10 @@ export function showLobbyBrowser() {
   if (dom.leaderboardTab) dom.leaderboardTab.classList.remove('active');
   if (dom.replaysTab) dom.replaysTab.classList.remove('active');
   updateLobbyProfileBar();
-  if (_sendMessage) _sendMessage({ type: 'list-lobbies' });
+  if (_sendMessage) {
+    _sendMessage({ type: 'list-lobbies' });
+    _sendMessage({ type: 'get-quests' });
+  }
 }
 
 export function hideLobbyBrowser() {

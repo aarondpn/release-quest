@@ -2380,7 +2380,7 @@ header p {
   align-items: center;
   background: var(--bg);
   z-index: 450;
-  gap: 24px;
+  gap: 16px;
   text-align: center;
   padding: 20px;
   overflow-y: auto;
@@ -5917,4 +5917,470 @@ body.qa-hitbox-active .arena .bug::before {
   .shop-items { grid-template-columns: repeat(2, 1fr); }
   .shop-title { font-size: 10px; letter-spacing: 2px; }
   .shop-cabinet { max-width: 100%; }
+}
+
+/* ── Byte Coin SVG ── */
+
+.byte-coin-svg {
+  flex-shrink: 0;
+  image-rendering: pixelated;
+}
+
+/* ── Profile Coin Balance ── */
+
+.lobby-profile-coins {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  color: var(--yellow);
+  margin-left: 4px;
+  position: relative;
+}
+.lobby-profile-coins.hidden { display: none; }
+
+.coin-balance {
+  font-family: 'Press Start 2P', monospace;
+  background: linear-gradient(90deg, var(--yellow) 40%, #fff8c4 50%, var(--yellow) 60%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: coin-shimmer 3s ease-in-out infinite;
+}
+
+@keyframes coin-shimmer {
+  0%, 100% { background-position: 200% 0; }
+  50% { background-position: -200% 0; }
+}
+
+/* ── Quest Tracker Widget ── */
+
+.quest-tracker {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  background:
+    linear-gradient(135deg, rgba(26,26,46,0.92) 0%, rgba(15,14,23,0.95) 100%);
+  border: 1px solid rgba(78, 205, 196, 0.12);
+  border-radius: 8px;
+  padding: 10px 12px 8px;
+  animation: lb-entrance 0.45s ease-out 0.12s both;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle inner edge glow */
+.quest-tracker::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(78,205,196,0.04) 0%, transparent 40%);
+  pointer-events: none;
+}
+
+.quest-tracker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  position: relative;
+}
+
+.quest-tracker-coins {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--yellow);
+  font-family: 'Press Start 2P', monospace;
+}
+
+.quest-tracker-coins #qt-balance {
+  background: linear-gradient(90deg, var(--yellow) 40%, #fff8c4 50%, var(--yellow) 60%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: coin-shimmer 3s ease-in-out infinite;
+}
+
+.qt-coin-icon {
+  filter: drop-shadow(0 0 3px rgba(255,230,109,0.4));
+}
+
+.quest-tracker-timer {
+  font-size: 7px;
+  color: var(--red);
+  font-family: 'Press Start 2P', monospace;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  animation: timer-urgency 2s ease-in-out infinite;
+}
+
+.qt-timer-icon { font-size: 8px; }
+
+@keyframes timer-urgency {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+/* ── Quest Sections ── */
+
+.quest-section {
+  position: relative;
+}
+
+.quest-section + .quest-section {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255,255,255,0.03);
+}
+
+.quest-section-header {
+  font-size: 5px;
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+  font-family: 'Press Start 2P', monospace;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quest-section-header::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.06) 0%, transparent 100%);
+}
+
+.quest-section-header.daily-header {
+  color: var(--yellow);
+  opacity: 0.8;
+}
+
+.quest-section-header.weekly-header {
+  color: var(--purple);
+  opacity: 0.8;
+}
+
+/* ── Quest Rows ── */
+
+.quest-row {
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+  position: relative;
+}
+
+.quest-icon {
+  font-size: 13px;
+  text-align: center;
+  line-height: 1;
+}
+
+.quest-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.quest-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.quest-title {
+  font-size: 7px;
+  color: #d0d0e0;
+  font-family: 'Press Start 2P', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.quest-desc {
+  font-size: 5px;
+  color: var(--muted);
+  opacity: 0.5;
+  font-family: 'Press Start 2P', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quest-reward-badge {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 7px;
+  color: var(--yellow);
+  font-family: 'Press Start 2P', monospace;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.quest-reward-badge .byte-coin-svg {
+  opacity: 0.7;
+}
+
+/* ── Progress Bar ── */
+
+.quest-progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quest-progress-bar {
+  flex: 1;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.quest-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+  background: linear-gradient(90deg, #e6b800, var(--yellow));
+}
+
+/* Moving stripe pattern on active progress */
+.quest-progress-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 3px,
+    rgba(255,255,255,0.08) 3px,
+    rgba(255,255,255,0.08) 6px
+  );
+  animation: progress-stripe 1s linear infinite;
+}
+
+@keyframes progress-stripe {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(8.49px); }
+}
+
+.quest-progress-fill.quest-progress-complete {
+  background: linear-gradient(90deg, #3ab5a8, var(--teal));
+}
+
+.quest-progress-fill.quest-progress-complete::after {
+  display: none;
+}
+
+.quest-progress-text {
+  font-size: 5px;
+  color: var(--muted);
+  font-family: 'Press Start 2P', monospace;
+  flex-shrink: 0;
+  min-width: 32px;
+  text-align: right;
+  opacity: 0.6;
+}
+
+/* ── Near-Completion Glow (>=80%) ── */
+
+.quest-almost {
+  background: rgba(255, 230, 109, 0.04);
+  animation: quest-hot-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes quest-hot-pulse {
+  0%, 100% {
+    background: rgba(255, 230, 109, 0.03);
+    box-shadow: none;
+  }
+  50% {
+    background: rgba(255, 230, 109, 0.08);
+    box-shadow: inset 0 0 12px rgba(255, 230, 109, 0.06);
+  }
+}
+
+.quest-almost .quest-progress-bar {
+  box-shadow: 0 0 6px rgba(255, 230, 109, 0.3);
+}
+
+.quest-almost .quest-progress-fill {
+  background: linear-gradient(90deg, #ffcc00, #ffe66d, #ffdd44);
+  box-shadow: 0 0 8px rgba(255, 230, 109, 0.6);
+}
+
+.quest-almost .quest-title {
+  color: var(--yellow);
+}
+
+.quest-almost .quest-reward-badge {
+  animation: reward-bounce 0.8s ease-in-out infinite;
+}
+
+@keyframes reward-bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+/* ── Completed Quest ── */
+
+.quest-done {
+  opacity: 0.45;
+}
+
+.quest-done .quest-title {
+  text-decoration: line-through;
+  color: var(--teal);
+}
+
+.quest-done .quest-progress-text {
+  color: var(--teal);
+  opacity: 1;
+  font-size: 7px;
+}
+
+.quest-done .quest-reward-badge {
+  color: var(--teal);
+  opacity: 0.5;
+}
+
+/* ── Guest Locked View ── */
+
+.quest-tracker-locked {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 0 4px;
+  font-size: 7px;
+  color: var(--muted);
+  font-family: 'Press Start 2P', monospace;
+  letter-spacing: 0.5px;
+  opacity: 0.6;
+}
+.quest-tracker-locked.hidden { display: none; }
+
+.qt-lock-icon {
+  opacity: 0.5;
+}
+
+/* ── Quest Completion Toast ── */
+
+.quest-toast {
+  position: fixed;
+  bottom: -80px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  background:
+    linear-gradient(135deg, rgba(26,26,46,0.97) 0%, rgba(45,27,48,0.97) 100%);
+  border: 1px solid var(--yellow);
+  border-radius: 8px;
+  box-shadow:
+    0 0 20px rgba(255, 230, 109, 0.25),
+    0 0 60px rgba(255, 230, 109, 0.08),
+    0 8px 24px rgba(0, 0, 0, 0.6);
+  z-index: 10000;
+  font-family: 'Press Start 2P', monospace;
+  transition: bottom 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+}
+
+/* Scanning light effect on toast */
+.quest-toast::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,230,109,0.08), transparent);
+  animation: toast-scan 2s ease-in-out 0.5s;
+}
+
+@keyframes toast-scan {
+  0% { left: -60%; }
+  100% { left: 120%; }
+}
+
+.quest-toast-show {
+  bottom: 24px;
+}
+
+.quest-toast-hide {
+  animation: quest-toast-out 0.35s ease-in forwards;
+}
+
+@keyframes quest-toast-out {
+  to { bottom: -80px; opacity: 0; transform: scale(0.95); }
+}
+
+.quest-toast-icon {
+  font-size: 18px;
+  filter: drop-shadow(0 0 4px rgba(255,230,109,0.4));
+}
+
+.quest-toast-text {
+  font-size: 8px;
+  color: var(--yellow);
+  letter-spacing: 1.5px;
+  text-shadow: 0 0 10px rgba(255,230,109,0.3);
+}
+
+.quest-toast-reward {
+  font-size: 10px;
+  color: var(--yellow);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  text-shadow: 0 0 8px rgba(255,230,109,0.4);
+}
+
+.quest-toast-reward .byte-coin-svg {
+  filter: drop-shadow(0 0 3px rgba(255,230,109,0.5));
+  animation: toast-coin-spin 0.6s ease-out;
+}
+
+@keyframes toast-coin-spin {
+  0% { transform: rotateY(0deg) scale(0.5); opacity: 0; }
+  50% { transform: rotateY(180deg) scale(1.2); }
+  100% { transform: rotateY(360deg) scale(1); opacity: 1; }
+}
+
+/* ── Quest Tracker Responsive ── */
+@media (max-width: 600px) {
+  .quest-tracker {
+    max-width: 100%;
+    padding: 8px;
+    border-radius: 6px;
+  }
+  .quest-tracker-coins { font-size: 9px; }
+  .quest-tracker-timer { font-size: 6px; }
+  .quest-title { font-size: 6px; }
+  .quest-reward-badge { font-size: 6px; }
+  .quest-progress-text { font-size: 5px; min-width: 24px; }
+  .quest-icon { font-size: 11px; }
+  .quest-row { grid-template-columns: 16px 1fr auto; gap: 4px; }
+  .quest-toast { right: 10px; padding: 10px 14px; }
+  .quest-toast-text { font-size: 7px; }
+  .quest-toast-reward { font-size: 8px; }
 }

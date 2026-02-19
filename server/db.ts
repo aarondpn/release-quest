@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import pg from 'pg';
 import { DATABASE_CONFIG } from './config.ts';
-import type { DbLobbyRow, DbUserRow, DbSessionRow, DbGuestSessionRow, LeaderboardEntry, RecordingMetadata, RecordingEvent, RecordingRow, RecordingPlayerRow, RecordingEventRow, RecordingMouseMoveRow, MouseMoveEvent } from './types.ts';
+import type { DbLobbyRow, DbUserRow, DbSessionRow, DbGuestSessionRow, LeaderboardEntry, RecordingMetadata, RecordingEvent, RecordingRow, RecordingPlayerRow, RecordingEventRow, RecordingMouseMoveRow, MouseMoveEvent, UserQuestRow, CurrencyBalance } from './types.ts';
 
 const { Pool } = pg;
 const pool = new Pool(DATABASE_CONFIG);
@@ -136,6 +136,37 @@ export async function initialize(): Promise<void> {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '30 days')
     )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_currency (
+      user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      balance INTEGER NOT NULL DEFAULT 0,
+      total_earned INTEGER NOT NULL DEFAULT 0,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_quests (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      quest_key VARCHAR(64) NOT NULL,
+      quest_type VARCHAR(16) NOT NULL,
+      progress INTEGER NOT NULL DEFAULT 0,
+      target INTEGER NOT NULL,
+      reward INTEGER NOT NULL,
+      completed BOOLEAN NOT NULL DEFAULT FALSE,
+      claimed BOOLEAN NOT NULL DEFAULT FALSE,
+      assigned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      period_start DATE NOT NULL,
+      period_end DATE NOT NULL
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_user_quests_active
+    ON user_quests (user_id, quest_type, period_end)
   `);
 
   // Clean expired sessions
@@ -576,6 +607,78 @@ export async function getReplayEventsCount(): Promise<number> {
 export async function getReplayMouseEventsCount(): Promise<number> {
   const result = await pool.query(`SELECT COUNT(*)::int AS count FROM recording_mouse_moves`);
   return result.rows[0]?.count || 0;
+}
+
+// Currency queries
+
+export async function getCurrencyBalance(userId: number): Promise<CurrencyBalance> {
+  const result = await pool.query(
+    `SELECT balance, total_earned FROM user_currency WHERE user_id = $1`,
+    [userId]
+  );
+  if (result.rows.length === 0) return { balance: 0, totalEarned: 0 };
+  return { balance: result.rows[0].balance as number, totalEarned: result.rows[0].total_earned as number };
+}
+
+export async function addCurrency(userId: number, amount: number): Promise<number> {
+  const result = await pool.query(`
+    INSERT INTO user_currency (user_id, balance, total_earned, updated_at)
+    VALUES ($1, $2, $2, NOW())
+    ON CONFLICT (user_id) DO UPDATE SET
+      balance = user_currency.balance + $2,
+      total_earned = user_currency.total_earned + $2,
+      updated_at = NOW()
+    RETURNING balance
+  `, [userId, amount]);
+  return result.rows[0].balance as number;
+}
+
+// Quest queries
+
+export async function getActiveQuests(userId: number): Promise<UserQuestRow[]> {
+  const result = await pool.query(
+    `SELECT * FROM user_quests WHERE user_id = $1 AND period_end >= CURRENT_DATE ORDER BY quest_type, id`,
+    [userId]
+  );
+  return result.rows as UserQuestRow[];
+}
+
+export async function assignQuests(userId: number, quests: { questKey: string; questType: string; target: number; reward: number; periodStart: Date; periodEnd: Date }[]): Promise<UserQuestRow[]> {
+  if (quests.length === 0) return [];
+  const values: unknown[] = [];
+  const placeholders: string[] = [];
+  let idx = 1;
+  for (const q of quests) {
+    placeholders.push(`($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3}, $${idx + 4}, $${idx + 5}, $${idx + 6})`);
+    values.push(userId, q.questKey, q.questType, q.target, q.reward, q.periodStart, q.periodEnd);
+    idx += 7;
+  }
+  const result = await pool.query(
+    `INSERT INTO user_quests (user_id, quest_key, quest_type, target, reward, period_start, period_end) VALUES ${placeholders.join(', ')} RETURNING *`,
+    values
+  );
+  return result.rows as UserQuestRow[];
+}
+
+export async function updateQuestProgress(questId: number, progress: number, completed: boolean): Promise<void> {
+  await pool.query(
+    `UPDATE user_quests SET progress = $1, completed = $2 WHERE id = $3`,
+    [progress, completed, questId]
+  );
+}
+
+export async function markQuestClaimed(questId: number): Promise<void> {
+  await pool.query(
+    `UPDATE user_quests SET claimed = true WHERE id = $1`,
+    [questId]
+  );
+}
+
+export async function cleanupExpiredQuests(): Promise<number> {
+  const result = await pool.query(
+    `DELETE FROM user_quests WHERE period_end < CURRENT_DATE - INTERVAL '7 days'`
+  );
+  return result.rowCount ?? 0;
 }
 
 export async function close(): Promise<void> {

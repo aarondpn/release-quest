@@ -70,6 +70,13 @@ export function broadcastToLobby(lobbyId: number, msg: Record<string, unknown>, 
   }
 }
 
+export function getWsForPlayer(playerId: string): WebSocket | undefined {
+  for (const [ws, pid] of wsToPlayer) {
+    if (pid === playerId) return ws;
+  }
+  return undefined;
+}
+
 export function send(ws: WebSocket, msg: Record<string, unknown>): void {
   try {
     if (ws.readyState === 1) {

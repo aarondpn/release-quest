@@ -31,6 +31,10 @@ export const clientState = {
   hasCustomSettings: false,
   // Chat state
   lobbyCreatorId: null,
+  // Quests
+  questData: null,
+  byteCoinsBalance: 0,
+  questTimerInterval: null,
   // Dev mode
   devMode: false,
   // Playback state
@@ -154,6 +158,13 @@ export const dom = {
   chatToggleBtn: null,
   chatHandle: null,
   chatBadge: null,
+  questTracker: null,
+  questTrackerList: null,
+  questTrackerLocked: null,
+  questTrackerTimer: null,
+  qtBalance: null,
+  profileCoinBalance: null,
+  profileCoins: null,
 };
 
 export function initDom() {
@@ -267,4 +278,11 @@ export function initDom() {
   dom.chatToggleBtn = document.getElementById('chat-toggle-btn');
   dom.chatHandle = document.getElementById('chat-handle');
   dom.chatBadge = document.getElementById('chat-badge');
+  dom.questTracker = document.getElementById('quest-tracker');
+  dom.questTrackerList = document.getElementById('quest-tracker-list');
+  dom.questTrackerLocked = document.getElementById('quest-tracker-locked');
+  dom.questTrackerTimer = document.getElementById('qt-timer');
+  dom.qtBalance = document.getElementById('qt-balance');
+  dom.profileCoinBalance = document.getElementById('profile-coin-balance');
+  dom.profileCoins = document.getElementById('lobby-profile-coins');
 }

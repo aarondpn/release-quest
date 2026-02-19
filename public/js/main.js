@@ -12,6 +12,7 @@ import { initStatsCardSend, showStatsCardTab, hideStatsCardTab, initThemePicker,
 import { stopPlayback, togglePause, cycleSpeed } from './playback.js';
 import { showError, ERROR_LEVELS } from './error-handler.js';
 import { initChatSend, initChat } from './chat.js';
+import { initQuestsSend, requestQuests } from './quests-ui.js';
 
 initDom();
 
@@ -526,6 +527,9 @@ initThemePicker();
 // Initialize chat
 initChatSend(sendMessage);
 initChat();
+
+// Initialize quests
+initQuestsSend(sendMessage);
 
 
 // ── Auth handlers ──

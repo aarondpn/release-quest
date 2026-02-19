@@ -16,6 +16,7 @@ import { startPlayback } from './playback.js';
 import { showError, ERROR_LEVELS } from './error-handler.js';
 import { handleChatBroadcast, showChat, hideChat, clearChat } from './chat.js';
 import { openShop, handleShopBuyResult, handleShopReady, closeShop, clearAllShopState } from './shop.js';
+import { handleQuestsData, handleQuestProgress, handleBalanceData, requestQuests, resetQuestState } from './quests-ui.js';
 
 function updateQaHitbox() {
   const myPlayer = clientState.players[clientState.myId];
@@ -165,6 +166,7 @@ export function handleMessageInternal(msg) {
           document.getElementById('hud-leave-btn').classList.add('hidden');
           // Create a new guest session after logout
           sendMessage({ type: 'resume-guest' });
+          resetQuestState();
           updateAuthUI();
           if (typeof window._buildIconPicker === 'function') window._buildIconPicker();
           buildLobbyIconPicker();
@@ -205,6 +207,9 @@ export function handleMessageInternal(msg) {
           if (clientState.hasJoined && (msg.action === 'login' || msg.action === 'register')) {
             sendMessage({ type: 'set-name', name: clientState.myName, icon: clientState.myIcon });
           }
+
+          // Request quests on login
+          requestQuests();
 
           // Refresh stats/replays if currently visible
           if (dom.statsCardPanel && !dom.statsCardPanel.classList.contains('hidden')) {
@@ -1249,6 +1254,21 @@ export function handleMessageInternal(msg) {
     case 'dev-error': {
       console.warn('[DEV]', msg.message);
       showError(`[DEV] ${msg.message}`, ERROR_LEVELS.WARNING);
+      break;
+    }
+
+    case 'quests-data': {
+      handleQuestsData(msg);
+      break;
+    }
+
+    case 'quest-progress': {
+      handleQuestProgress(msg);
+      break;
+    }
+
+    case 'balance-data': {
+      handleBalanceData(msg);
       break;
     }
   }

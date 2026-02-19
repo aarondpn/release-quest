@@ -174,12 +174,14 @@ async function start(): Promise<void> {
     lobby.sweepEmptyLobbies().then(() => broadcastLobbyList(wss)).catch(() => {});
   }, 30_000);
 
-  // Expire shared replay links and guest sessions older than 30 days (check hourly)
+  // Expire shared replay links, guest sessions, and expired quests (check hourly)
   db.expireOldShares().then(n => { if (n > 0) logger.info({ count: n }, 'Expired old shared replays'); }).catch(() => {});
   db.expireGuestSessions().then(n => { if (n > 0) logger.info({ count: n }, 'Expired old guest sessions'); }).catch(() => {});
+  db.cleanupExpiredQuests().then(n => { if (n > 0) logger.info({ count: n }, 'Cleaned up expired quests'); }).catch(() => {});
   setInterval(() => {
     db.expireOldShares().then(n => { if (n > 0) logger.info({ count: n }, 'Expired old shared replays'); }).catch(() => {});
     db.expireGuestSessions().then(n => { if (n > 0) logger.info({ count: n }, 'Expired old guest sessions'); }).catch(() => {});
+    db.cleanupExpiredQuests().then(n => { if (n > 0) logger.info({ count: n }, 'Cleaned up expired quests'); }).catch(() => {});
   }, 3_600_000);
 
   startMetricsServer();
