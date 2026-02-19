@@ -66,6 +66,11 @@ export function updateStartButtonState() {
   const btns = [document.getElementById('start-btn'), document.getElementById('retry-btn'), document.getElementById('continue-btn')];
   for (const btn of btns) {
     if (!btn) continue;
+    if (clientState.isSpectating) {
+      btn.style.display = 'none';
+      continue;
+    }
+    btn.style.display = '';
     btn.disabled = !isMod;
     btn.title = isMod ? '' : 'Only the lobby host can start the game';
   }
