@@ -461,7 +461,7 @@ export function handleMessageInternal(msg) {
       if (msg.phase === 'boss') dom.levelEl.textContent = 'BOSS';
       clientState.currentPhase = msg.phase;
 
-      if (msg.phase === 'lobby') { showStartScreen(); hideLiveDashboard(); }
+      if (msg.phase === 'lobby') { showStartScreen(); document.getElementById('start-btn').classList.add('hidden'); hideLiveDashboard(); }
       else if (msg.phase === 'gameover') { showGameOverScreen(msg.score, msg.level, msg.players || []); hideLiveDashboard(); }
       else if (msg.phase === 'win') { showWinScreen(msg.score, msg.players || []); hideLiveDashboard(); }
       else if (msg.phase === 'shopping') { hideAllScreens(); showLiveDashboard(); }
