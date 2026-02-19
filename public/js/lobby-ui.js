@@ -47,6 +47,7 @@ export function renderLobbyList(lobbies) {
     const statusLabel = l.started ? 'In Game' : 'Waiting';
     const difficultyLabel = difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
     const lockIcon = l.hasPassword ? '<span class="lobby-list-lock" title="Password protected">\u{1F512}</span>' : '';
+    const spectatorCount = l.spectatorCount || 0;
     return '<div class="lobby-list-item">' +
       '<div class="lobby-list-info">' +
         '<span class="lobby-list-name">' + lockIcon + escapeHtml(l.name) + '</span>' +
@@ -56,6 +57,7 @@ export function renderLobbyList(lobbies) {
           '<span class="lobby-list-detail">' + difficultyLabel + '</span>' +
           '<span class="lobby-list-sep"></span>' +
           '<span class="lobby-list-detail">' + l.player_count + '/' + l.max_players + '</span>' +
+          (spectatorCount > 0 ? '<span class="lobby-list-sep"></span><span class="lobby-list-detail lobby-list-spectators" title="Spectators watching">\uD83D\uDC41 ' + spectatorCount + '</span>' : '') +
           (l.hasCustomSettings ? '<span class="lobby-list-sep"></span><span class="lobby-list-custom" title="Custom settings — unranked">CUSTOM</span>' : '') +
         '</span>' +
         '<span class="lobby-list-code">#' + l.code + '</span>' +
@@ -65,6 +67,7 @@ export function renderLobbyList(lobbies) {
           (full ? ' disabled' : '') + '>' +
           (full ? 'FULL' : 'JOIN') +
         '</button>' +
+        '<button class="btn btn-small btn-spectate lobby-spectate-btn" data-lobby-id="' + l.id + '" data-has-password="' + (l.hasPassword ? '1' : '') + '">WATCH</button>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -72,18 +75,32 @@ export function renderLobbyList(lobbies) {
   // Attach join handlers
   dom.lobbyList.querySelectorAll('.lobby-join-area').forEach(area => {
     const btn = area.querySelector('.lobby-join-btn');
-    if (!btn || btn.disabled) return;
-    const lobbyId = parseInt(area.dataset.lobbyId, 10);
-    const hasPassword = area.dataset.hasPassword === '1';
+    if (btn && !btn.disabled) {
+      const lobbyId = parseInt(area.dataset.lobbyId, 10);
+      const hasPassword = area.dataset.hasPassword === '1';
 
-    btn.addEventListener('click', () => {
-      if (hasPassword) {
-        // Show inline password prompt
-        showInlinePasswordPrompt(area, lobbyId);
-      } else {
-        if (_sendMessage) _sendMessage({ type: 'join-lobby', lobbyId });
-      }
-    });
+      btn.addEventListener('click', () => {
+        if (hasPassword) {
+          showInlinePasswordPrompt(area, lobbyId);
+        } else {
+          if (_sendMessage) _sendMessage({ type: 'join-lobby', lobbyId });
+        }
+      });
+    }
+
+    const spectateBtn = area.querySelector('.lobby-spectate-btn');
+    if (spectateBtn) {
+      const lobbyId = parseInt(spectateBtn.dataset.lobbyId, 10);
+      const hasPassword = spectateBtn.dataset.hasPassword === '1';
+
+      spectateBtn.addEventListener('click', () => {
+        if (hasPassword) {
+          showInlineSpectatePasswordPrompt(area, lobbyId);
+        } else {
+          if (_sendMessage) _sendMessage({ type: 'join-spectate', lobbyId });
+        }
+      });
+    }
   });
 }
 
@@ -112,6 +129,34 @@ function showInlinePasswordPrompt(area, lobbyId) {
   });
   cancelBtn.addEventListener('click', () => {
     // Re-render the lobby list to restore the join button
+    renderLobbyList(clientState.lobbies);
+  });
+}
+
+function showInlineSpectatePasswordPrompt(area, lobbyId) {
+  const joinArea = area;
+  joinArea.innerHTML =
+    '<div class="lobby-password-prompt">' +
+      '<input class="lobby-password-join-input" type="password" placeholder="Password" maxlength="32" autocomplete="off">' +
+      '<button class="btn btn-small lobby-password-confirm-btn">GO</button>' +
+      '<button class="btn btn-small btn-cancel lobby-password-cancel-btn">\u2715</button>' +
+    '</div>';
+  const input = joinArea.querySelector('.lobby-password-join-input');
+  const confirmBtn = joinArea.querySelector('.lobby-password-confirm-btn');
+  const cancelBtn = joinArea.querySelector('.lobby-password-cancel-btn');
+  input.focus();
+
+  function submitPassword() {
+    const password = input.value;
+    if (_sendMessage) _sendMessage({ type: 'join-spectate', lobbyId, password });
+  }
+
+  confirmBtn.addEventListener('click', submitPassword);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submitPassword();
+    if (e.key === 'Escape') cancelBtn.click();
+  });
+  cancelBtn.addEventListener('click', () => {
     renderLobbyList(clientState.lobbies);
   });
 }

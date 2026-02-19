@@ -68,7 +68,7 @@ export function augmentLobbies(lobbies: any[]): any[] {
     const hasPassword = !!(l.settings as any)?.password;
     // Strip password from settings before sending to clients
     const { password: _pw, ...safeSettings } = (l.settings as any) || {};
-    return { ...l, settings: safeSettings, started: mem ? mem.state.phase !== 'lobby' : false, hasCustomSettings, hasPassword };
+    return { ...l, settings: safeSettings, started: mem ? mem.state.phase !== 'lobby' : false, hasCustomSettings, hasPassword, spectatorCount: lobby.getSpectators(l.id).size };
   });
 }
 

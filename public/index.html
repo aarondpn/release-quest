@@ -386,8 +386,17 @@
       <span class="hud-label">PLAYERS</span>
       <span class="hud-value" id="player-count">0</span>
     </div>
+    <div class="hud-item hidden" id="hud-spectators-item">
+      <span class="hud-label">WATCHING</span>
+      <span class="hud-value" id="spectator-count">0</span>
+    </div>
     <button class="hud-leave-btn hidden" id="hud-leave-btn">EXIT</button>
     <div class="hud-buffs hidden" id="hud-buffs"></div>
+  </div>
+
+  <div class="spectator-banner hidden" id="spectator-banner">
+    <span class="spectator-banner-label">&#x1F441; SPECTATING</span>
+    <button class="btn btn-small btn-leave spectator-leave-btn" id="spectate-leave-btn">LEAVE</button>
   </div>
 
   <div class="arena-wrap">

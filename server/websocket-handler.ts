@@ -132,6 +132,10 @@ export function setupWebSocketConnection(
       return;
     }
 
+    // Block game interactions for spectators
+    const SPECTATOR_BLOCKED = new Set(['click-bug', 'click-boss', 'click-duck', 'click-hammer', 'start-game', 'shop-buy', 'shop-ready', 'select-role', 'chat-message', 'create-lobby', 'join-lobby', 'join-lobby-by-code']);
+    if (lobby.isSpectator(pid) && SPECTATOR_BLOCKED.has(msg.type)) return;
+
     const knownType = typeof msg.type === 'string' && msg.type in handlers ? msg.type : 'unknown';
     wsMessagesReceived.inc({ type: knownType });
 
@@ -156,6 +160,22 @@ export function setupWebSocketConnection(
       network.wsToLobby.delete(ws);
 
       if (pid) {
+        // Handle spectator disconnect
+        const spectatorLobbyId = lobby.getSpectatorLobby(pid);
+        if (spectatorLobbyId) {
+          lobby.removeSpectator(spectatorLobbyId, pid);
+          network.removeClientFromLobby(spectatorLobbyId, ws);
+          const specSet = lobby.getSpectators(spectatorLobbyId);
+          network.broadcastToLobby(spectatorLobbyId, {
+            type: 'spectator-count',
+            count: specSet.size,
+            spectators: [...specSet].map(id => {
+              const sInfo = playerInfo.get(id);
+              return { id, name: sInfo?.name || 'Unknown', icon: sInfo?.icon || '👁' };
+            }),
+          });
+        }
+
         const currentLobbyId = lobby.getLobbyForPlayer(pid);
         if (currentLobbyId) {
           const disconnectLogger = createPlayerLogger(pid, { lobbyId: currentLobbyId });
