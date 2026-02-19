@@ -473,6 +473,10 @@ function leaveLobby() {
       stopPlayback();
       return;
     }
+    if (clientState.isSpectating) {
+      sendMessage({ type: 'leave-spectate' });
+      return;
+    }
     sendMessage({ type: 'leave-lobby' });
   } catch (err) {
     console.error('Error leaving lobby:', err);
