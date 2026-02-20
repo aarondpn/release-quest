@@ -3,7 +3,7 @@ import type { MessageHandler } from './types.ts';
 import { staticSchemas } from './schemas.ts';
 import { handleRegister, handleLogin, handleLogout, handleResumeSession, handleResumeGuest } from './auth.ts';
 import { handleSetName } from './profile.ts';
-import { handleListLobbies, handleCreateLobby, handleJoinLobby, handleJoinLobbyByCode, handleLeaveLobby } from './lobby.ts';
+import { handleListLobbies, handleCreateLobby, handleJoinLobby, handleJoinLobbyByCode, handleLeaveLobby, handleJoinSpectate, handleLeaveSpectate } from './lobby.ts';
 import { handleStartGame } from './game.ts';
 import { handleClickBug, handleClickBoss } from './bugs.ts';
 import { handleClickDuck, handleClickHammer } from './powerups.ts';
@@ -29,6 +29,8 @@ const staticHandlers: Record<string, MessageHandler> = {
   'join-lobby': handleJoinLobby,
   'join-lobby-by-code': handleJoinLobbyByCode,
   'leave-lobby': handleLeaveLobby,
+  'join-spectate': handleJoinSpectate,
+  'leave-spectate': handleLeaveSpectate,
   'start-game': handleStartGame,
   'click-bug': handleClickBug,
   'click-boss': handleClickBoss,

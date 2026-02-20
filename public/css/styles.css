@@ -3163,6 +3163,55 @@ header p {
 }
 .hud-leave-btn.hidden { display: none; }
 
+/* ── Spectator HUD item ── */
+#hud-spectators-item.hidden { display: none; }
+
+/* ── Spectator banner ── */
+.spectator-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+  padding: 6px 16px;
+  background: rgba(139, 92, 246, 0.15);
+  border-bottom: 1px solid rgba(139, 92, 246, 0.4);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #a78bfa;
+  letter-spacing: 1px;
+}
+.spectator-banner.hidden { display: none; }
+.spectator-banner-label { flex: 1; text-align: center; }
+.spectator-leave-btn {
+  font-size: 6px;
+  padding: 5px 10px;
+  border-color: #a78bfa;
+  color: #a78bfa;
+  background: rgba(139, 92, 246, 0.1);
+}
+.spectator-leave-btn:hover {
+  background: #a78bfa;
+  color: var(--bg);
+}
+
+/* ── Spectate button in lobby list ── */
+.btn-spectate {
+  font-size: 6px;
+  padding: 5px 10px;
+  border-color: #a78bfa;
+  color: #a78bfa;
+  background: rgba(139, 92, 246, 0.08);
+}
+.btn-spectate:hover {
+  background: #a78bfa;
+  color: var(--bg);
+}
+
+/* ── Spectator count in lobby list ── */
+.lobby-list-spectators {
+  color: #a78bfa;
+}
+
 /* ── Play button ── */
 .btn-play {
   font-size: 16px;

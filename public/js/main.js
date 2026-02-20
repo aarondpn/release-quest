@@ -431,6 +431,7 @@ dom.advancedResetBtn.addEventListener('click', () => {
 // Cursor broadcasting
 dom.arena.addEventListener('mousemove', (e) => {
   try {
+    if (clientState.isSpectating) return;
     const now = Date.now();
     if (now - clientState.lastCursorSend < CURSOR_THROTTLE_MS) return;
     clientState.lastCursorSend = now;
@@ -472,6 +473,10 @@ function leaveLobby() {
       stopPlayback();
       return;
     }
+    if (clientState.isSpectating) {
+      sendMessage({ type: 'leave-spectate' });
+      return;
+    }
     sendMessage({ type: 'leave-lobby' });
   } catch (err) {
     console.error('Error leaving lobby:', err);
@@ -483,6 +488,18 @@ document.getElementById('leave-btn-start').addEventListener('click', leaveLobby)
 document.getElementById('leave-btn-gameover').addEventListener('click', leaveLobby);
 document.getElementById('leave-btn-win').addEventListener('click', leaveLobby);
 document.getElementById('hud-leave-btn').addEventListener('click', leaveLobby);
+
+// ── Spectate leave handler ──
+const spectateLeaveBtn = document.getElementById('spectate-leave-btn');
+if (spectateLeaveBtn) {
+  spectateLeaveBtn.addEventListener('click', () => {
+    try {
+      sendMessage({ type: 'leave-spectate' });
+    } catch (err) {
+      console.error('Error leaving spectate:', err);
+    }
+  });
+}
 
 // ── Invite button handler ──
 document.getElementById('invite-btn').addEventListener('click', () => {

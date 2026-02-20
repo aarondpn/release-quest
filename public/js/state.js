@@ -37,6 +37,8 @@ export const clientState = {
   questTimerInterval: null,
   // Dev mode
   devMode: false,
+  // Spectator state
+  isSpectating: false,
   // Playback state
   isPlayback: false,
   playbackTimers: [],
@@ -150,6 +152,8 @@ export const dom = {
   lobbyProfileGuestView: null,
   lobbyProfileLoggedInView: null,
   lobbyProfileAuthName: null,
+  spectatorCount: null,
+  spectatorBanner: null,
   onlineCountEl: null,
   chatPanel: null,
   chatMessages: null,
@@ -270,6 +274,8 @@ export function initDom() {
   dom.lobbyProfileGuestView = document.querySelector('.lobby-profile-guest-view');
   dom.lobbyProfileLoggedInView = document.querySelector('.lobby-profile-logged-in-view');
   dom.lobbyProfileAuthName = document.getElementById('lobby-profile-auth-name');
+  dom.spectatorCount = document.getElementById('spectator-count');
+  dom.spectatorBanner = document.getElementById('spectator-banner');
   dom.onlineCountEl = document.getElementById('online-count');
   dom.chatPanel = document.getElementById('chat-panel');
   dom.chatMessages = document.getElementById('chat-messages');

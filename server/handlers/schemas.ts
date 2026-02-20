@@ -131,6 +131,14 @@ const joinLobbyByCodeSchema = z.object({
   password: z.string().max(64).optional(),
 });
 
+const joinSpectateSchema = z.object({
+  type: z.literal('join-spectate'),
+  lobbyId: z.number(),
+  password: z.string().max(64).optional(),
+});
+
+const leaveSpectateSchema = z.object({ type: z.literal('leave-spectate') });
+
 const clickBugSchema = z.object({
   type: z.literal('click-bug'),
   bugId: z.string().max(64),
@@ -217,6 +225,8 @@ export const staticSchemas: Record<string, ZodType> = {
   'join-lobby': joinLobbySchema,
   'join-lobby-by-code': joinLobbyByCodeSchema,
   'leave-lobby': leaveLobbSchema,
+  'join-spectate': joinSpectateSchema,
+  'leave-spectate': leaveSpectateSchema,
   'start-game': startGameSchema,
   'click-bug': clickBugSchema,
   'click-boss': clickBossSchema,

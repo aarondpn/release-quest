@@ -224,6 +224,113 @@ export const handleJoinLobbyByCode: MessageHandler = async ({ ws, msg, pid, play
   }
 };
 
+export const handleJoinSpectate: MessageHandler = async ({ ws, msg, pid, playerInfo }) => {
+  const lobbyId = parseInt(msg.lobbyId, 10);
+  if (!lobbyId) {
+    network.send(ws, { type: 'lobby-error', message: 'Invalid lobby ID' });
+    return;
+  }
+
+  // Reject if already a player in any lobby
+  if (lobby.getLobbyForPlayer(pid)) {
+    network.send(ws, { type: 'lobby-error', message: 'Leave your current lobby before spectating' });
+    return;
+  }
+
+  // If already spectating this same lobby, reject
+  if (lobby.getSpectatorLobby(pid) === lobbyId) {
+    network.send(ws, { type: 'lobby-error', message: 'Already spectating this lobby' });
+    return;
+  }
+
+  // Auto-leave any other spectated lobby first
+  const currentSpectatingId = lobby.getSpectatorLobby(pid);
+  if (currentSpectatingId) {
+    lobby.removeSpectator(currentSpectatingId, pid);
+    network.wsToLobby.delete(ws);
+    network.removeClientFromLobby(currentSpectatingId, ws);
+  }
+
+  const targetLobby = await db.getLobby(lobbyId);
+  if (!targetLobby) {
+    network.send(ws, { type: 'lobby-error', message: 'Lobby not found' });
+    return;
+  }
+  if (targetLobby.status !== 'active') {
+    network.send(ws, { type: 'lobby-error', message: 'Lobby is no longer active' });
+    return;
+  }
+
+  const lobbyPassword = (targetLobby.settings as any)?.password;
+  if (lobbyPassword) {
+    if (!msg.password) {
+      network.send(ws, { type: 'lobby-error', message: 'This lobby requires a password', needsPassword: true, lobbyId });
+      return;
+    }
+    if (msg.password !== lobbyPassword) {
+      network.send(ws, { type: 'lobby-error', message: 'Incorrect password', needsPassword: true, lobbyId });
+      return;
+    }
+  }
+
+  const mem = lobby.getLobbyState(lobbyId);
+  if (!mem) {
+    network.send(ws, { type: 'lobby-error', message: 'Lobby not found' });
+    return;
+  }
+
+  lobby.addSpectator(lobbyId, pid);
+  network.wsToLobby.set(ws, lobbyId);
+  network.addClientToLobby(lobbyId, ws);
+
+  const lobbyLogger = createLobbyLogger(lobbyId.toString());
+  lobbyLogger.info({ playerId: pid }, 'Spectator joined lobby');
+
+  const { password: _pw, ...safeSettings } = (targetLobby.settings as any) || {};
+  network.send(ws, {
+    type: 'spectator-joined',
+    lobbyId,
+    lobbyName: targetLobby.name,
+    lobbyCode: targetLobby.code,
+    hasCustomSettings: !!(safeSettings?.customConfig && Object.keys(safeSettings.customConfig).length > 0),
+    ...getStateSnapshot(mem.state),
+  });
+
+  const specSet = lobby.getSpectators(lobbyId);
+  network.broadcastToLobby(lobbyId, {
+    type: 'spectator-count',
+    count: specSet.size,
+    spectators: [...specSet].map(id => {
+      const sInfo = playerInfo.get(id);
+      return { id, name: sInfo?.name || 'Unknown', icon: sInfo?.icon || '👁' };
+    }),
+  });
+};
+
+export const handleLeaveSpectate: MessageHandler = ({ ws, pid, playerInfo }) => {
+  const lobbyId = lobby.getSpectatorLobby(pid);
+  if (!lobbyId) return;
+
+  lobby.removeSpectator(lobbyId, pid);
+  network.wsToLobby.delete(ws);
+  network.removeClientFromLobby(lobbyId, ws);
+
+  network.send(ws, { type: 'lobby-left' });
+
+  const specSet = lobby.getSpectators(lobbyId);
+  network.broadcastToLobby(lobbyId, {
+    type: 'spectator-count',
+    count: specSet.size,
+    spectators: [...specSet].map(id => {
+      const sInfo = playerInfo.get(id);
+      return { id, name: sInfo?.name || 'Unknown', icon: sInfo?.icon || '👁' };
+    }),
+  });
+
+  const lobbyLogger = createLobbyLogger(lobbyId.toString());
+  lobbyLogger.info({ playerId: pid }, 'Spectator left lobby');
+};
+
 export const handleLeaveLobby: MessageHandler = async ({ ws, pid, playerInfo, wss }) => {
   const currentLobbyId = lobby.getLobbyForPlayer(pid);
   if (currentLobbyId) {

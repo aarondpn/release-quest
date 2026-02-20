@@ -6,7 +6,7 @@ import * as db from './db.ts';
 import { gameLobbiesActive } from './metrics.ts';
 import { createEventBus } from './event-bus.ts';
 import { createGameLifecycle } from './game-lifecycle.ts';
-import { broadcastToLobby } from './network.ts';
+import { broadcastToLobby, send, getWsForPlayer, removeClientFromLobby, wsToLobby } from './network.ts';
 import { stopRecording } from './recording.ts';
 import { cleanupChatForLobby } from './handlers/chat.ts';
 import type { LobbyMemory, PlayerData, DbLobbyRow, CustomDifficultyConfig, GameTimers } from './types.ts';
@@ -65,6 +65,41 @@ export const lobbies = new Map<number, LobbyMemory>();
 
 // Reverse lookup: playerId -> lobbyId
 export const playerToLobby = new Map<string, number>();
+
+// Spectator tracking: lobbyId -> Set of spectator playerIds
+export const lobbySpectators = new Map<number, Set<string>>();
+
+// Reverse lookup: spectatorId -> lobbyId
+export const spectatorToLobby = new Map<string, number>();
+
+export function addSpectator(lobbyId: number, pid: string): void {
+  if (!lobbySpectators.has(lobbyId)) {
+    lobbySpectators.set(lobbyId, new Set());
+  }
+  lobbySpectators.get(lobbyId)!.add(pid);
+  spectatorToLobby.set(pid, lobbyId);
+}
+
+export function removeSpectator(lobbyId: number, pid: string): void {
+  const set = lobbySpectators.get(lobbyId);
+  if (set) {
+    set.delete(pid);
+    if (set.size === 0) lobbySpectators.delete(lobbyId);
+  }
+  spectatorToLobby.delete(pid);
+}
+
+export function isSpectator(pid: string): boolean {
+  return spectatorToLobby.has(pid);
+}
+
+export function getSpectators(lobbyId: number): Set<string> {
+  return lobbySpectators.get(lobbyId) ?? new Set();
+}
+
+export function getSpectatorLobby(pid: string): number | null {
+  return spectatorToLobby.get(pid) ?? null;
+}
 
 export async function createLobby(name: string, maxPlayers: number | undefined, difficulty: string = 'medium', customConfig?: CustomDifficultyConfig, password?: string): Promise<{ lobby?: DbLobbyRow; error?: string }> {
   const lobbyCount = await db.getActiveLobbyCount();
@@ -142,6 +177,21 @@ export async function leaveLobby(lobbyId: number, playerId: string): Promise<voi
 }
 
 export async function destroyLobby(lobbyId: number): Promise<void> {
+  // Kick all spectators before cleanup
+  const spectators = lobbySpectators.get(lobbyId);
+  if (spectators) {
+    for (const pid of spectators) {
+      spectatorToLobby.delete(pid);
+      const ws = getWsForPlayer(pid);
+      if (ws) {
+        send(ws, { type: 'spectator-kicked', reason: 'lobby-closed' });
+        wsToLobby.delete(ws);
+        removeClientFromLobby(lobbyId, ws);
+      }
+    }
+    lobbySpectators.delete(lobbyId);
+  }
+
   const mem = lobbies.get(lobbyId);
   if (mem) {
     mem.lifecycle.destroy();

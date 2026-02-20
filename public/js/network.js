@@ -420,11 +420,97 @@ export function handleMessageInternal(msg) {
       break;
     }
 
+    case 'spectator-joined': {
+      clientState.isSpectating = true;
+      clientState.currentLobbyId = msg.lobbyId;
+      clientState.currentLobbyCode = msg.lobbyCode || null;
+      clientState.hasCustomSettings = msg.hasCustomSettings || false;
+      hideLobbyBrowser();
+      showChat();
+
+      clientState.players = {};
+      if (msg.players) {
+        msg.players.forEach(p => {
+          clientState.players[p.id] = p;
+          addRemoteCursor(p.id, p.name, p.color, p.icon);
+        });
+      }
+      updatePlayerCount();
+
+      clearAllBugs();
+      if (msg.bugs) {
+        msg.bugs.forEach(b => createBugElement(b.id, b.x, b.y, b));
+      }
+
+      removeDuckElement();
+      if (msg.rubberDuck) createDuckElement(msg.rubberDuck);
+
+      removeHammerElement();
+      if (msg.hotfixHammer) createHammerElement(msg.hotfixHammer);
+
+      removeBossElement();
+      if (msg.boss) {
+        createBossElement(msg.boss.x, msg.boss.y, msg.boss.hp, msg.boss.maxHp, msg.boss.timeRemaining, msg.boss);
+        clientState.bossPhase = msg.boss.phase || 1;
+        clientState.bossPhaseName = msg.boss.phaseName || 'The Sprint';
+        clientState.bossShieldActive = msg.boss.shieldActive || false;
+        clientState.bossType = msg.boss.bossType || null;
+      }
+
+      updateHUD(msg.score, msg.level, msg.hp);
+      if (msg.phase === 'boss') dom.levelEl.textContent = 'BOSS';
+      clientState.currentPhase = msg.phase;
+
+      if (msg.phase === 'lobby') { showStartScreen(); hideLiveDashboard(); }
+      else if (msg.phase === 'gameover') { showGameOverScreen(msg.score, msg.level, msg.players || []); hideLiveDashboard(); }
+      else if (msg.phase === 'win') { showWinScreen(msg.score, msg.players || []); hideLiveDashboard(); }
+      else if (msg.phase === 'shopping') { hideAllScreens(); showLiveDashboard(); }
+      else { hideAllScreens(); showLiveDashboard(); }
+
+      if (dom.spectatorBanner) dom.spectatorBanner.classList.remove('hidden');
+      if (dom.spectatorCount) dom.spectatorCount.textContent = '0';
+      break;
+    }
+
+    case 'spectator-count': {
+      if (dom.spectatorCount) dom.spectatorCount.textContent = msg.count;
+      const hudItem = document.getElementById('hud-spectators-item');
+      if (hudItem) hudItem.classList.toggle('hidden', msg.count === 0);
+      break;
+    }
+
+    case 'spectator-kicked': {
+      clientState.isSpectating = false;
+      clientState.currentLobbyId = null;
+      clientState.currentLobbyCode = null;
+      if (dom.spectatorBanner) dom.spectatorBanner.classList.add('hidden');
+      clearChat();
+      hideChat();
+      clientState.players = {};
+      clearAllBugs();
+      removeBossElement();
+      removeDuckElement();
+      removeHammerElement();
+      removeDuckBuffOverlay();
+      removeHammerStunOverlay();
+      clearAllShopState();
+      clearRemoteCursors();
+      hideAllScreens();
+      hideLiveDashboard();
+      updateHUD(0, 1, 100);
+      updatePlayerCount();
+      showLobbyBrowser();
+      showError('Lobby closed', ERROR_LEVELS.WARNING);
+      break;
+    }
+
     case 'lobby-left': {
+      clientState.isSpectating = false;
       clientState.currentLobbyId = null;
       clientState.currentLobbyCode = null;
       clientState.lobbyCreatorId = null;
       clientState.hasCustomSettings = false;
+      if (dom.spectatorBanner) dom.spectatorBanner.classList.add('hidden');
       clearChat();
       hideChat();
       clientState.players = {};

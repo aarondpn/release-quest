@@ -66,6 +66,11 @@ export function updateStartButtonState() {
   const btns = [document.getElementById('start-btn'), document.getElementById('retry-btn'), document.getElementById('continue-btn')];
   for (const btn of btns) {
     if (!btn) continue;
+    if (clientState.isSpectating) {
+      btn.style.display = 'none';
+      continue;
+    }
+    btn.style.display = '';
     btn.disabled = !isMod;
     btn.title = isMod ? '' : 'Only the lobby host can start the game';
   }
@@ -379,9 +384,15 @@ export function updateLobbyPlayerRoleBadge(pid, role) {
 
 /* ── Role picker ── */
 export function updateLobbyRolePicker() {
+  const section = document.getElementById('lobby-role-section');
   const cards = document.getElementById('lobby-role-cards');
   if (!cards) return;
   if (dom.startScreen.classList.contains('hidden')) return;
+  if (clientState.isSpectating) {
+    if (section) section.style.display = 'none';
+    return;
+  }
+  if (section) section.style.display = '';
 
   const myPlayer = clientState.players[clientState.myId];
   const myRole = myPlayer?.role || null;
