@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import type { DifficultyConfig, CustomDifficultyConfig } from './types.ts';
+import type { DifficultyConfig, CustomDifficultyConfig, CosmeticShopItem } from './types.ts';
 
 export const DEV_MODE = process.env.DEV_MODE === 'true';
 
@@ -41,8 +41,72 @@ export const LOGICAL_W = 800;
 export const LOGICAL_H = 500;
 export const COLORS = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#a855f7', '#ff9ff3', '#54a0ff', '#5f27cd', '#01a3a4'];
 export const ICONS = ['\u{1F431}', '\u{1F436}', '\u{1F430}', '\u{1F98A}', '\u{1F438}', '\u{1F427}', '\u{1F43C}', '\u{1F428}'];
-export const PREMIUM_ICON_IDS = ['av:knight', 'av:ninja', 'av:mage', 'av:cyborg', 'av:phoenix', 'av:samurai', 'av:reaper', 'av:dragon'];
-export const ALL_ICONS = [...ICONS, ...PREMIUM_ICON_IDS];
+export const PREMIUM_ICON_IDS = ['av:knight', 'av:ninja', 'av:mage'];
+
+
+export const COSMETIC_SHOP_CATALOG: CosmeticShopItem[] = [
+  { id: 'shop:robot', name: 'Pixel Robot', category: 'avatar', price: 100, description: 'A friendly 8-bit robot companion', rarity: 'common' },
+  { id: 'shop:alien', name: 'Neon Alien', category: 'avatar', price: 100, description: 'Visitor from a neon galaxy', rarity: 'common' },
+  { id: 'shop:witch', name: 'Glitch Witch', category: 'avatar', price: 150, description: 'Casts spells in binary', rarity: 'common' },
+  { id: 'shop:pirate', name: 'Data Pirate', category: 'avatar', price: 150, description: 'Plunders data on the high seas', rarity: 'common' },
+  { id: 'shop:cyborg', name: 'Neon Cyborg', category: 'avatar', price: 250, description: 'Half human, half machine', rarity: 'rare' },
+  { id: 'shop:phoenix_bird', name: 'Pixel Phoenix', category: 'avatar', price: 250, description: 'Rises from the ashes of failed builds', rarity: 'rare' },
+  { id: 'shop:samurai', name: 'Neon Samurai', category: 'avatar', price: 300, description: 'Slices through spaghetti code', rarity: 'rare' },
+  { id: 'shop:astronaut', name: 'Space Dev', category: 'avatar', price: 250, description: 'Debugging in zero gravity', rarity: 'rare' },
+  { id: 'shop:vampire', name: 'Byte Vampire', category: 'avatar', price: 250, description: 'Drains memory at midnight', rarity: 'rare' },
+  { id: 'shop:reaper', name: 'Code Reaper', category: 'avatar', price: 400, description: 'Harvests deprecated functions', rarity: 'epic' },
+  { id: 'shop:dragon', name: 'Bit Dragon', category: 'avatar', price: 450, description: 'Breathes fire on tech debt', rarity: 'epic' },
+  { id: 'shop:demon', name: 'Core Dump Demon', category: 'avatar', price: 400, description: 'Rises from crashed processes', rarity: 'epic' },
+  { id: 'shop:angel', name: 'Refactor Angel', category: 'avatar', price: 400, description: 'Blesses code with clean patterns', rarity: 'epic' },
+  { id: 'shop:kraken', name: 'Dependency Kraken', category: 'avatar', price: 500, description: 'Lurks deep in node_modules', rarity: 'epic' },
+  { id: 'shop:phoenix_gold', name: 'Golden Phoenix', category: 'avatar', price: 750, description: 'Reborn from ashes of production', rarity: 'epic' },
+];
+
+export const COSMETIC_SHOP_MAP = new Map(COSMETIC_SHOP_CATALOG.map(item => [item.id, item]));
+export const SHOP_ICON_IDS = COSMETIC_SHOP_CATALOG.map(item => item.id);
+export const ALL_ICONS = [...ICONS, ...PREMIUM_ICON_IDS, ...SHOP_ICON_IDS];
+
+const ROTATION_SIZE = 4;
+
+export function getWeekBoundaries(): { weekStart: Date; weekEnd: Date; weekNumber: number } {
+  const now = new Date();
+  const dayOfWeek = now.getUTCDay(); // 0=Sun, 1=Mon, ...
+  const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diffToMonday));
+  const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+  // Week number: weeks since epoch Monday (Jan 5 1970)
+  const epochMonday = Date.UTC(1970, 0, 5);
+  const weekNumber = Math.floor((weekStart.getTime() - epochMonday) / (7 * 24 * 60 * 60 * 1000));
+  return { weekStart, weekEnd, weekNumber };
+}
+
+function mulberry32(seed: number): () => number {
+  let s = seed | 0;
+  return () => {
+    s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+let _cachedRotation: { items: CosmeticShopItem[]; rotationEndUtc: string } | null = null;
+let _cachedRotationWeek = -1;
+
+export function getWeeklyRotation(): { items: CosmeticShopItem[]; rotationEndUtc: string } {
+  const { weekEnd, weekNumber } = getWeekBoundaries();
+  if (_cachedRotation && _cachedRotationWeek === weekNumber) return _cachedRotation;
+  const rng = mulberry32(weekNumber);
+  // Fisher-Yates shuffle on the full catalog
+  const pool = [...COSMETIC_SHOP_CATALOG];
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  _cachedRotation = { items: pool.slice(0, ROTATION_SIZE), rotationEndUtc: weekEnd.toISOString() };
+  _cachedRotationWeek = weekNumber;
+  return _cachedRotation;
+}
 
 // Difficulty presets
 export const DIFFICULTY_PRESETS: Record<string, DifficultyConfig> = {

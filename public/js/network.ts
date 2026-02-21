@@ -8,7 +8,7 @@ import { addRemoteCursor, removeRemoteCursor, updateRemoteCursor, clearRemoteCur
 import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, showLevelFlash, showEscalationWarning, showBossRegenNumber, showHeisenbugFleeEffect, showFeaturePenaltyEffect, showDuckBuffOverlay, removeDuckBuffOverlay, showHammerStunOverlay, removeHammerStunOverlay, showMergeResolvedEffect, showPipelineChainResolvedEffect, showPipelineChainResetEffect, showBreakpointHitEffect, showPhaseTransitionFlash, showBlockedText, showScreenWipeFlash } from './vfx.ts';
 import { showLobbyBrowser, hideLobbyBrowser, renderLobbyList, showLobbyError, buildLobbyIconPicker, joinLobbyByCodeWithPassword } from './lobby-ui.ts';
 import { updateAuthUI, hideAuthOverlay, showAuthError } from './auth-ui.ts';
-import { isPremium, STANDARD_ICONS } from './avatars.ts';
+import { isPremium, isShopAvatar, STANDARD_ICONS } from './avatars.ts';
 import { renderLeaderboard } from './leaderboard-ui.ts';
 import { renderRecordingsList, handleRecordingShared, handleRecordingUnshared, requestRecordings } from './replays-ui.ts';
 import { handleMyStats, requestMyStats } from './stats-card-ui.ts';
@@ -17,6 +17,7 @@ import { showError, ERROR_LEVELS } from './error-handler.ts';
 import { handleChatBroadcast, showChat, hideChat, clearChat } from './chat.ts';
 import { openShop, handleShopBuyResult, handleShopReady, closeShop, clearAllShopState } from './shop.ts';
 import { handleQuestsData, handleQuestProgress, handleBalanceData, requestQuests, resetQuestState } from './quests-ui.ts';
+import { handleShopCatalog, handleShopPurchaseResult, requestShopCatalog } from './cosmetic-shop-ui.ts';
 import type { SendMessageFn } from './client-types.ts';
 
 function updateQaHitbox(): void {
@@ -141,7 +142,8 @@ export function handleMessageInternal(msg: Record<string, any>): void {
           if (msg.icon) {
             clientState.myIcon = msg.icon;
             clientState.selectedIcon = msg.icon;
-          } else if (isPremium(clientState.selectedIcon)) {
+          } else if (isPremium(clientState.selectedIcon) || isShopAvatar(clientState.selectedIcon)) {
+            // Fallback: reset premium/shop icon to standard
             clientState.selectedIcon = STANDARD_ICONS[0];
             clientState.myIcon = STANDARD_ICONS[0];
           }
@@ -198,6 +200,10 @@ export function handleMessageInternal(msg: Record<string, any>): void {
 
           requestQuests();
 
+          // Request shop catalog so owned items are loaded for icon picker
+          requestShopCatalog();
+
+          // Refresh stats/replays if currently visible
           if (dom.statsCardPanel && !dom.statsCardPanel.classList.contains('hidden')) {
             requestMyStats();
           }
@@ -233,6 +239,7 @@ export function handleMessageInternal(msg: Record<string, any>): void {
     case 'guest-session': {
       if (msg.success && msg.token) {
         localStorage.setItem('rq_guest_token', msg.token);
+        // Restore name/icon from guest session (icon is server-assigned, not user-chosen)
         if (msg.name) {
           clientState.myName = msg.name;
           dom.nameInput!.value = msg.name;
@@ -240,9 +247,6 @@ export function handleMessageInternal(msg: Record<string, any>): void {
         if (msg.icon) {
           clientState.myIcon = msg.icon;
           clientState.selectedIcon = msg.icon;
-          dom.iconPicker!.querySelectorAll<HTMLElement>('.icon-option').forEach(o => {
-            o.classList.toggle('selected', o.dataset.icon === msg.icon);
-          });
         }
         if (msg.resumed && !clientState.hasJoined && localStorage.getItem('rq_guest_joined')) {
           if (typeof window._submitJoin === 'function') window._submitJoin();
@@ -1278,6 +1282,19 @@ export function handleMessageInternal(msg: Record<string, any>): void {
 
     case 'balance-data': {
       handleBalanceData(msg);
+      break;
+    }
+
+    case 'shop-catalog': {
+      handleShopCatalog(msg);
+      // Rebuild icon pickers now that owned-items data is available
+      if (typeof window._buildIconPicker === 'function') window._buildIconPicker();
+      buildLobbyIconPicker();
+      break;
+    }
+
+    case 'shop-purchase-result': {
+      handleShopPurchaseResult(msg);
       break;
     }
   }

@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import pg from 'pg';
 import { DATABASE_CONFIG } from './config.ts';
-import type { DbLobbyRow, DbUserRow, DbSessionRow, DbGuestSessionRow, LeaderboardEntry, RecordingMetadata, RecordingEvent, RecordingRow, RecordingPlayerRow, RecordingEventRow, RecordingMouseMoveRow, MouseMoveEvent, UserQuestRow, CurrencyBalance } from './types.ts';
+import type { DbLobbyRow, DbUserRow, DbSessionRow, DbGuestSessionRow, LeaderboardEntry, RecordingMetadata, RecordingEvent, RecordingRow, RecordingPlayerRow, RecordingEventRow, RecordingMouseMoveRow, MouseMoveEvent, UserQuestRow, CurrencyBalance, InventoryItem } from './types.ts';
 
 const { Pool } = pg;
 const pool = new Pool(DATABASE_CONFIG);
@@ -40,8 +40,24 @@ export async function initialize(): Promise<void> {
     )
   `);
 
-  // Widen icon column for premium avatar IDs (e.g. "av:knight")
-  await pool.query(`ALTER TABLE users ALTER COLUMN icon TYPE VARCHAR(16)`);
+  // Widen icon column for avatar IDs (e.g. "av:knight", "shop:phoenix_gold")
+  await pool.query(`ALTER TABLE users ALTER COLUMN icon TYPE VARCHAR(64)`);
+
+  // Track which shop rotation the user last viewed
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS shop_seen_rotation VARCHAR(32)`);
+
+  // Migrate legacy premium icons that moved to the shop
+  await pool.query(`
+    UPDATE users SET icon = CASE icon
+      WHEN 'av:cyborg' THEN 'shop:cyborg'
+      WHEN 'av:phoenix' THEN 'shop:phoenix_bird'
+      WHEN 'av:samurai' THEN 'shop:samurai'
+      WHEN 'av:reaper' THEN 'shop:reaper'
+      WHEN 'av:dragon' THEN 'shop:dragon'
+      ELSE icon
+    END
+    WHERE icon IN ('av:cyborg', 'av:phoenix', 'av:samurai', 'av:reaper', 'av:dragon')
+  `);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS sessions (
@@ -96,8 +112,8 @@ export async function initialize(): Promise<void> {
     )
   `);
 
-  // Widen recording_players icon column for premium avatar IDs
-  await pool.query(`ALTER TABLE recording_players ALTER COLUMN icon TYPE VARCHAR(16)`);
+  // Widen recording_players icon column for avatar IDs
+  await pool.query(`ALTER TABLE recording_players ALTER COLUMN icon TYPE VARCHAR(64)`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS recording_events (
@@ -167,6 +183,17 @@ export async function initialize(): Promise<void> {
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_user_quests_active
     ON user_quests (user_id, quest_type, period_end)
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_inventory (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      item_id VARCHAR(64) NOT NULL,
+      category VARCHAR(32) NOT NULL DEFAULT 'avatar',
+      purchased_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(user_id, item_id)
+    )
   `);
 
   // Clean expired sessions
@@ -679,6 +706,83 @@ export async function cleanupExpiredQuests(): Promise<number> {
     `DELETE FROM user_quests WHERE period_end < CURRENT_DATE - INTERVAL '7 days'`
   );
   return result.rowCount ?? 0;
+}
+
+// Inventory queries
+
+export async function getUserInventory(userId: number): Promise<InventoryItem[]> {
+  const result = await pool.query(
+    `SELECT item_id, category, purchased_at FROM user_inventory WHERE user_id = $1 ORDER BY purchased_at`,
+    [userId]
+  );
+  return result.rows as InventoryItem[];
+}
+
+export async function userOwnsItem(userId: number, itemId: string): Promise<boolean> {
+  const result = await pool.query(
+    `SELECT 1 FROM user_inventory WHERE user_id = $1 AND item_id = $2`,
+    [userId, itemId]
+  );
+  return result.rows.length > 0;
+}
+
+export async function purchaseItem(userId: number, itemId: string, category: string, cost: number): Promise<{ success: boolean; newBalance?: number; error?: string }> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const balResult = await client.query(
+      `SELECT balance FROM user_currency WHERE user_id = $1 FOR UPDATE`,
+      [userId]
+    );
+    const balance = balResult.rows.length > 0 ? (balResult.rows[0].balance as number) : 0;
+    if (balance < cost) {
+      await client.query('ROLLBACK');
+      return { success: false, error: 'Insufficient balance' };
+    }
+    // Check not already owned
+    const ownCheck = await client.query(
+      `SELECT 1 FROM user_inventory WHERE user_id = $1 AND item_id = $2`,
+      [userId, itemId]
+    );
+    if (ownCheck.rows.length > 0) {
+      await client.query('ROLLBACK');
+      return { success: false, error: 'Already owned' };
+    }
+    await client.query(
+      `UPDATE user_currency SET balance = balance - $1, updated_at = NOW() WHERE user_id = $2`,
+      [cost, userId]
+    );
+    await client.query(
+      `INSERT INTO user_inventory (user_id, item_id, category) VALUES ($1, $2, $3)`,
+      [userId, itemId, category]
+    );
+    const newBalResult = await client.query(
+      `SELECT balance FROM user_currency WHERE user_id = $1`,
+      [userId]
+    );
+    await client.query('COMMIT');
+    return { success: true, newBalance: newBalResult.rows[0].balance as number };
+  } catch {
+    await client.query('ROLLBACK');
+    return { success: false, error: 'Purchase failed' };
+  } finally {
+    client.release();
+  }
+}
+
+export async function getShopSeenRotation(userId: number): Promise<string | null> {
+  const result = await pool.query(
+    `SELECT shop_seen_rotation FROM users WHERE id = $1`,
+    [userId]
+  );
+  return result.rows[0]?.shop_seen_rotation ?? null;
+}
+
+export async function setShopSeenRotation(userId: number, rotation: string): Promise<void> {
+  await pool.query(
+    `UPDATE users SET shop_seen_rotation = $1 WHERE id = $2`,
+    [rotation, userId]
+  );
 }
 
 export async function close(): Promise<void> {

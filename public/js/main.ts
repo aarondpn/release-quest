@@ -1,5 +1,6 @@
 import { CURSOR_THROTTLE_MS } from './config.ts';
-import { STANDARD_ICONS, PREMIUM_AVATARS, PREMIUM_IDS, isPremium, renderIcon } from './avatars.ts';
+import { STANDARD_ICONS, buildIconPickerContent } from './avatars.ts';
+import { getOwnedShopItems, getShopItemPrice, isShopCatalogLoaded } from './cosmetic-shop-ui.ts';
 import { clientState, dom, initDom } from './state.ts';
 import { pixelToLogical } from './coordinates.ts';
 import { updateHUD, initHudSend } from './hud.ts';
@@ -8,11 +9,12 @@ import { showLobbyBrowser, initLobbySend, updateLobbyProfileBar, toggleLobbyEdit
 import { initAuthSend, showAuthOverlay, hideAuthOverlay, switchTab, submitLogin, submitRegister, submitLogout } from './auth-ui.ts';
 import { initLeaderboardSend, showLeaderboardTab, showLobbiesTab } from './leaderboard-ui.ts';
 import { initReplaysSend, showReplaysTab } from './replays-ui.ts';
-import { initStatsCardSend, showStatsCardTab, hideStatsCardTab, initThemePicker, downloadStatsCardPng } from './stats-card-ui.ts';
+import { initStatsCardSend, showStatsCardTab, initThemePicker, downloadStatsCardPng } from './stats-card-ui.ts';
 import { stopPlayback, togglePause, cycleSpeed } from './playback.ts';
 import { showError, ERROR_LEVELS } from './error-handler.ts';
 import { initChatSend, initChat } from './chat.ts';
 import { initQuestsSend, requestQuests } from './quests-ui.ts';
+import { initShopSend, showShopTab, hideShopPanel } from './cosmetic-shop-ui.ts';
 import type { DifficultyPreset } from './client-types.ts';
 
 initDom();
@@ -54,63 +56,30 @@ fetch('/api/difficulty-presets')
 // Icon picker setup
 export function buildIconPicker(): void {
   dom.iconPicker!.innerHTML = '';
-  const current = clientState.selectedIcon;
   const isAuth = clientState.isLoggedIn;
 
-  const stdLabel = document.createElement('div');
-  stdLabel.className = 'icon-picker-label';
-  stdLabel.textContent = 'PICK YOUR HUNTER';
-  dom.iconPicker!.appendChild(stdLabel);
+  const nameEntrySub = document.getElementById('name-entry-sub');
 
-  STANDARD_ICONS.forEach(icon => {
-    const el = document.createElement('div');
-    el.className = 'icon-option' + (current === icon ? ' selected' : '');
-    el.dataset.icon = icon;
-    el.textContent = icon;
-    el.addEventListener('click', () => {
-      dom.iconPicker!.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
-      el.classList.add('selected');
-      clientState.selectedIcon = icon;
-    });
-    dom.iconPicker!.appendChild(el);
-  });
-
-  const premLabel = document.createElement('div');
-  premLabel.className = 'icon-picker-label icon-picker-premium-label';
-  premLabel.textContent = 'MEMBERS ONLY';
-  dom.iconPicker!.appendChild(premLabel);
-
-  PREMIUM_IDS.forEach(id => {
-    const av = PREMIUM_AVATARS[id];
-    const el = document.createElement('div');
-    const locked = !isAuth;
-    el.className = 'icon-option icon-option-premium' + (current === id ? ' selected' : '') + (locked ? ' locked' : '');
-    el.dataset.icon = id;
-    el.innerHTML = '<img src="' + av.svg + '" width="28" height="28" alt="' + av.name + '" style="image-rendering:pixelated">';
-    if (locked) {
-      const lock = document.createElement('div');
-      lock.className = 'icon-lock-overlay';
-      lock.textContent = '\u{1F512}';
-      el.appendChild(lock);
-    }
-    el.addEventListener('click', () => {
-      if (locked) {
-        el.classList.add('locked-shake');
-        el.addEventListener('animationend', () => el.classList.remove('locked-shake'), { once: true });
-        return;
-      }
-      dom.iconPicker!.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
-      el.classList.add('selected');
-      clientState.selectedIcon = id;
-    });
-    dom.iconPicker!.appendChild(el);
-  });
-
-  if (isPremium(current) && !isAuth) {
-    clientState.selectedIcon = STANDARD_ICONS[0];
-    const first = dom.iconPicker!.querySelector<HTMLElement>('.icon-option[data-icon="' + STANDARD_ICONS[0] + '"]');
-    if (first) first.classList.add('selected');
+  // Guests get a random server-assigned icon — no picker
+  if (!isAuth) {
+    if (!clientState.selectedIcon) clientState.selectedIcon = STANDARD_ICONS[0];
+    dom.iconPicker!.classList.add('hidden');
+    if (nameEntrySub) nameEntrySub.textContent = 'Choose your name';
+    return;
   }
+
+  dom.iconPicker!.classList.remove('hidden');
+  if (nameEntrySub) nameEntrySub.textContent = 'Choose your name & icon';
+
+  const resolved = buildIconPickerContent(
+    dom.iconPicker!,
+    clientState.selectedIcon,
+    getOwnedShopItems(),
+    getShopItemPrice,
+    id => { clientState.selectedIcon = id; },
+    isShopCatalogLoaded(),
+  );
+  if (resolved !== clientState.selectedIcon) clientState.selectedIcon = resolved;
 }
 buildIconPicker();
 if (!clientState.selectedIcon) clientState.selectedIcon = STANDARD_ICONS[0];
@@ -496,6 +465,9 @@ initChatSend(sendMessage);
 initChat();
 initQuestsSend(sendMessage);
 
+// Initialize cosmetic shop
+initShopSend(sendMessage);
+
 // ── Auth handlers ──
 dom.authShowLoginBtn!.addEventListener('click', showAuthOverlay);
 dom.authLogoutBtn!.addEventListener('click', submitLogout);
@@ -527,10 +499,13 @@ dom.lobbiesTab!.addEventListener('click', showLobbiesTab);
 dom.leaderboardTab!.addEventListener('click', showLeaderboardTab);
 
 // ── Replays tab handler ──
-if (dom.replaysTab) dom.replaysTab.addEventListener('click', () => { hideStatsCardTab(); showReplaysTab(); });
+if (dom.replaysTab) dom.replaysTab.addEventListener('click', () => { hideShopPanel(); showReplaysTab(); });
 
 // ── Stats card tab handler ──
-if (dom.statsCardTab) dom.statsCardTab.addEventListener('click', showStatsCardTab);
+if (dom.statsCardTab) dom.statsCardTab.addEventListener('click', () => { hideShopPanel(); showStatsCardTab(); });
+
+// ── Shop tab handler ──
+if (dom.shopTab) dom.shopTab.addEventListener('click', showShopTab);
 if (dom.statsCardDownloadBtn) dom.statsCardDownloadBtn.addEventListener('click', downloadStatsCardPng);
 
 // ── Playback controls ──

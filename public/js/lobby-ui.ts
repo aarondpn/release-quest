@@ -1,12 +1,8 @@
-import { dom, clientState } from './state.ts';
-import { STANDARD_ICONS, PREMIUM_AVATARS, PREMIUM_IDS, isPremium, renderIcon } from './avatars.ts';
+import { dom, clientState, activateLobbyTab } from './state.ts';
+import { STANDARD_ICONS, renderIcon, buildIconPickerContent } from './avatars.ts';
+import { getOwnedShopItems, getShopItemPrice, isShopCatalogLoaded } from './cosmetic-shop-ui.ts';
+import { escapeHtml } from './utils.ts';
 import type { SendMessageFn, LobbyListEntry } from './client-types.ts';
-
-function escapeHtml(s: string): string {
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
-}
 
 let _sendMessage: SendMessageFn | null = null;
 export function initLobbySend(fn: SendMessageFn): void { _sendMessage = fn; }
@@ -15,12 +11,7 @@ export function showLobbyBrowser(): void {
   dom.lobbyBrowser!.classList.remove('hidden');
   dom.lobbyError!.classList.add('hidden');
   if (dom.lobbyProfileEditor) dom.lobbyProfileEditor.classList.add('collapsed');
-  if (dom.lobbyListPanel) dom.lobbyListPanel.classList.remove('hidden');
-  if (dom.leaderboardPanel) dom.leaderboardPanel.classList.add('hidden');
-  if (dom.replaysPanel) dom.replaysPanel.classList.add('hidden');
-  if (dom.lobbiesTab) dom.lobbiesTab.classList.add('active');
-  if (dom.leaderboardTab) dom.leaderboardTab.classList.remove('active');
-  if (dom.replaysTab) dom.replaysTab.classList.remove('active');
+  activateLobbyTab(dom.lobbyListPanel, dom.lobbiesTab);
   updateLobbyProfileBar();
   if (_sendMessage) {
     _sendMessage({ type: 'list-lobbies' });
@@ -193,64 +184,27 @@ let _lobbyEditorSelectedIcon: string | null = null;
 export function buildLobbyIconPicker(): void {
   if (!dom.lobbyEditorIconPicker) return;
   dom.lobbyEditorIconPicker.innerHTML = '';
-  const current = clientState.selectedIcon;
-  _lobbyEditorSelectedIcon = current;
+  _lobbyEditorSelectedIcon = clientState.selectedIcon;
   const isAuth = clientState.isLoggedIn;
 
-  const stdLabel = document.createElement('div');
-  stdLabel.className = 'icon-picker-label';
-  stdLabel.textContent = 'PICK YOUR HUNTER';
-  dom.lobbyEditorIconPicker.appendChild(stdLabel);
-
-  STANDARD_ICONS.forEach(icon => {
-    const el = document.createElement('div');
-    el.className = 'icon-option' + (current === icon ? ' selected' : '');
-    el.dataset.icon = icon;
-    el.textContent = icon;
-    el.addEventListener('click', () => {
-      dom.lobbyEditorIconPicker!.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
-      el.classList.add('selected');
-      _lobbyEditorSelectedIcon = icon;
-    });
-    dom.lobbyEditorIconPicker!.appendChild(el);
-  });
-
-  const premLabel = document.createElement('div');
-  premLabel.className = 'icon-picker-label icon-picker-premium-label';
-  premLabel.textContent = 'MEMBERS ONLY';
-  dom.lobbyEditorIconPicker.appendChild(premLabel);
-
-  PREMIUM_IDS.forEach(id => {
-    const av = PREMIUM_AVATARS[id];
-    const el = document.createElement('div');
-    const locked = !isAuth;
-    el.className = 'icon-option icon-option-premium' + (current === id ? ' selected' : '') + (locked ? ' locked' : '');
-    el.dataset.icon = id;
-    el.innerHTML = '<img src="' + av.svg + '" width="28" height="28" alt="' + av.name + '" style="image-rendering:pixelated">';
-    if (locked) {
-      const lock = document.createElement('div');
-      lock.className = 'icon-lock-overlay';
-      lock.textContent = '\u{1F512}';
-      el.appendChild(lock);
-    }
-    el.addEventListener('click', () => {
-      if (locked) {
-        el.classList.add('locked-shake');
-        el.addEventListener('animationend', () => el.classList.remove('locked-shake'), { once: true });
-        return;
-      }
-      dom.lobbyEditorIconPicker!.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
-      el.classList.add('selected');
-      _lobbyEditorSelectedIcon = id;
-    });
-    dom.lobbyEditorIconPicker!.appendChild(el);
-  });
-
-  if (isPremium(current) && !isAuth) {
-    _lobbyEditorSelectedIcon = STANDARD_ICONS[0];
-    const first = dom.lobbyEditorIconPicker.querySelector<HTMLElement>('.icon-option[data-icon="' + STANDARD_ICONS[0] + '"]');
-    if (first) first.classList.add('selected');
+  // Guests get a random server-assigned icon — no picker
+  if (!isAuth) {
+    _lobbyEditorSelectedIcon = clientState.selectedIcon || STANDARD_ICONS[0];
+    dom.lobbyEditorIconPicker.classList.add('hidden');
+    return;
   }
+
+  dom.lobbyEditorIconPicker.classList.remove('hidden');
+
+  const resolved = buildIconPickerContent(
+    dom.lobbyEditorIconPicker,
+    clientState.selectedIcon,
+    getOwnedShopItems(),
+    getShopItemPrice,
+    id => { _lobbyEditorSelectedIcon = id; },
+    isShopCatalogLoaded(),
+  );
+  if (resolved !== _lobbyEditorSelectedIcon) _lobbyEditorSelectedIcon = resolved;
 }
 
 export function toggleLobbyEditor(): void {

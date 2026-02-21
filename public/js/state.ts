@@ -171,6 +171,11 @@ export const dom: DomRefs = {
   qtBalance: null,
   profileCoinBalance: null,
   profileCoins: null,
+  shopPanel: null,
+  shopTab: null,
+  shopGrid: null,
+  shopBalanceAmount: null,
+  shopGuestLock: null,
 };
 
 export function initDom(): void {
@@ -293,4 +298,22 @@ export function initDom(): void {
   dom.qtBalance = document.getElementById('qt-balance');
   dom.profileCoinBalance = document.getElementById('profile-coin-balance');
   dom.profileCoins = document.getElementById('lobby-profile-coins');
+  dom.shopPanel = document.getElementById('shop-panel');
+  dom.shopTab = document.getElementById('shop-tab');
+  dom.shopGrid = document.getElementById('shop-grid');
+  dom.shopBalanceAmount = document.getElementById('shop-balance-amount');
+  dom.shopGuestLock = document.getElementById('shop-guest-lock');
+}
+
+/**
+ * Switch between lobby browser tabs (lobbies, leaderboard, replays, stats card, shop).
+ * Hides all panels, deactivates all tabs, then shows/activates the given panel and tab.
+ */
+export function activateLobbyTab(activePanel: HTMLElement | null, activeTab: HTMLElement | null): void {
+  const panels = [dom.lobbyListPanel, dom.leaderboardPanel, dom.replaysPanel, dom.statsCardPanel, dom.shopPanel];
+  const tabs = [dom.lobbiesTab, dom.leaderboardTab, dom.replaysTab, dom.statsCardTab, dom.shopTab];
+  for (const p of panels) if (p) p.classList.add('hidden');
+  for (const t of tabs) if (t) t.classList.remove('active');
+  if (activePanel) activePanel.classList.remove('hidden');
+  if (activeTab) activeTab.classList.add('active');
 }

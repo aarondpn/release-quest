@@ -6,6 +6,7 @@ import * as network from './network.ts';
 import * as lobby from './lobby.ts';
 import { handleLeaveLobby, broadcastLobbyList } from './helpers.ts';
 import { handlers, schemas } from './handlers/index.ts';
+import { cleanupPurchaseRateLimit } from './handlers/cosmetic-shop.ts';
 import { wsMessagesReceived, gamePlayersOnline } from './metrics.ts';
 
 const BUCKET_CAPACITY = 100;
@@ -183,6 +184,7 @@ export function setupWebSocketConnection(
           await handleLeaveLobby(ws, pid, currentLobbyId, playerInfo);
           broadcastLobbyList(wss);
         }
+        cleanupPurchaseRateLimit(pid);
         playerInfo.delete(pid);
         const playerLogger = createPlayerLogger(pid);
         playerLogger.info({ onlineCount: wss.clients.size }, 'Player disconnected');

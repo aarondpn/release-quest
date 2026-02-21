@@ -1,6 +1,7 @@
 import { dom, clientState } from './state.ts';
 import { sendMessage } from './network.ts';
 import { hideAllScreens, showLiveDashboard } from './hud.ts';
+import { escapeHtml } from './utils.ts';
 import type { ActiveBuff, ShopItem } from './client-types.ts';
 
 let shopTimerRaf: number | null = null;
@@ -84,11 +85,6 @@ function getItemSvg(itemId: string): string | null {
   return SHOP_ITEM_SVGS[itemId] || null;
 }
 
-function escapeHtml(s: string): string {
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
-}
 
 export function openShop(msg: Record<string, any>): void {
   hideAllScreens();

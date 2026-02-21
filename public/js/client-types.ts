@@ -351,6 +351,11 @@ export interface DomRefs {
   qtBalance: HTMLElement | null;
   profileCoinBalance: HTMLElement | null;
   profileCoins: HTMLElement | null;
+  shopPanel: HTMLElement | null;
+  shopTab: HTMLElement | null;
+  shopGrid: HTMLElement | null;
+  shopBalanceAmount: HTMLElement | null;
+  shopGuestLock: HTMLElement | null;
 }
 
 export interface LeaderboardEntry {

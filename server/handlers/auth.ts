@@ -1,5 +1,5 @@
 import type { HandlerContext, MessageHandler } from './types.ts';
-import { ALL_ICONS, ICONS, GUEST_NAMES } from '../config.ts';
+import { ALL_ICONS, ICONS, PREMIUM_ICON_IDS, GUEST_NAMES } from '../config.ts';
 import { createPlayerLogger } from '../logger.ts';
 import * as network from '../network.ts';
 import * as auth from '../auth.ts';
@@ -40,7 +40,8 @@ export const handleRegister: MessageHandler = ({ ws, msg, pid, playerInfo }) => 
   const username = String(msg.username || '').trim();
   const password = String(msg.password || '');
   const displayName = String(msg.displayName || '').trim().slice(0, 16);
-  const regIcon: string | undefined = msg.icon && ALL_ICONS.includes(msg.icon) ? msg.icon : undefined;
+  // New registrations can only use standard + premium icons (no shop icons — nothing purchased yet)
+  const regIcon: string | undefined = msg.icon && (ICONS.includes(msg.icon) || PREMIUM_ICON_IDS.includes(msg.icon)) ? msg.icon : undefined;
 
   const playerLogger = createPlayerLogger(pid);
 

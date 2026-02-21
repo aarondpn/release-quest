@@ -14,6 +14,7 @@ import { handleShopBuy, handleShopReady } from './shop.ts';
 import { handleDevCommand } from './dev.ts';
 import { handleSelectRole } from './role.ts';
 import { handleGetQuests, handleGetBalance } from './quests.ts';
+import { handleGetShopCatalog, handleShopPurchase, handleShopSeen } from './cosmetic-shop.ts';
 import { getHandlers as getPluginHandlers, getSchemas as getPluginSchemas } from '../entity-types/index.ts';
 import { getBossHandlers, getBossSchemas } from '../boss-types/index.ts';
 
@@ -49,6 +50,9 @@ const staticHandlers: Record<string, MessageHandler> = {
   'select-role': handleSelectRole,
   'get-quests': handleGetQuests,
   'get-balance': handleGetBalance,
+  'get-shop-catalog': handleGetShopCatalog,
+  'shop-purchase': handleShopPurchase,
+  'shop-seen': handleShopSeen,
 };
 
 export const handlers: Record<string, MessageHandler> = {
