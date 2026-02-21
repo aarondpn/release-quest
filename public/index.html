@@ -27,7 +27,7 @@
 <div class="name-entry hidden" id="name-entry">
   <div class="name-entry-title" data-text="BUG HUNTER">BUG HUNTER</div>
   <div class="name-entry-tagline">MULTIPLAYER BUG HUNT</div>
-  <div class="name-entry-sub">Choose your name &amp; icon</div>
+  <div class="name-entry-sub" id="name-entry-sub">Choose your name</div>
   <input class="name-input" id="name-input" type="text" placeholder="Your name..." maxlength="16" autocomplete="off" spellcheck="false">
   <div class="icon-picker" id="icon-picker">
     <div class="icon-picker-label">Pick your hunter</div>
@@ -143,6 +143,7 @@
     <button class="lobby-tab" id="leaderboard-tab">LEADERBOARD</button>
     <button class="lobby-tab" id="replays-tab">REPLAYS</button>
     <button class="lobby-tab" id="stats-card-tab">STATS CARD</button>
+    <button class="lobby-tab" id="shop-tab">SHOP</button>
     <a href="/overview.html" class="lobby-tab lobby-tab-link" target="_blank">📚 WIKI</a>
   </div>
 
@@ -353,6 +354,24 @@
       <div class="stats-card-empty">Loading stats...</div>
     </div>
     <button class="btn btn-small stats-card-download-btn" id="stats-card-download-btn" disabled>DOWNLOAD PNG</button>
+  </div>
+
+  <div id="shop-panel" class="hidden">
+    <div class="shop-cosmetic-header">
+      <span class="shop-cosmetic-title">COSMETIC SHOP</span>
+      <span class="shop-cosmetic-balance">
+        <svg class="byte-coin-svg" width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="4" y="1" width="8" height="14" rx="1" fill="#ffe66d"/><rect x="3" y="2" width="1" height="12" fill="#ffe66d"/><rect x="12" y="2" width="1" height="12" fill="#ffe66d"/><rect x="6" y="3" width="4" height="2" fill="#ffd700"/><rect x="6" y="7" width="4" height="2" fill="#ffd700"/><rect x="6" y="11" width="4" height="2" fill="#ffd700"/><rect x="5" y="1" width="6" height="1" fill="#fff8c4" opacity="0.6"/></svg>
+        <span id="shop-balance-amount">0</span>
+      </span>
+    </div>
+    <div class="shop-categories">
+      <button class="shop-category-btn active" data-category="avatar">AVATARS</button>
+    </div>
+    <div class="shop-cosmetic-grid" id="shop-grid"></div>
+    <div class="shop-guest-lock hidden" id="shop-guest-lock">
+      <svg class="qt-lock-icon" width="12" height="14" viewBox="0 0 12 14" fill="none"><rect x="1" y="6" width="10" height="7" rx="1" fill="#a7a9be"/><rect x="3" y="2" width="6" height="5" rx="3" fill="none" stroke="#a7a9be" stroke-width="1.5"/><rect x="5" y="8" width="2" height="3" rx="0.5" fill="#0f0e17"/></svg>
+      LOG IN TO ACCESS THE SHOP
+    </div>
   </div>
 
   <div class="lobby-error hidden" id="lobby-error"></div>

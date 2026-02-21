@@ -170,10 +170,12 @@ export function showReplaysTab(): void {
   if (dom.lobbyListPanel) dom.lobbyListPanel.classList.add('hidden');
   if (dom.leaderboardPanel) dom.leaderboardPanel.classList.add('hidden');
   if (dom.statsCardPanel) dom.statsCardPanel.classList.add('hidden');
+  if (dom.shopPanel) dom.shopPanel.classList.add('hidden');
   if (dom.replaysPanel) dom.replaysPanel.classList.remove('hidden');
   if (dom.lobbiesTab) dom.lobbiesTab.classList.remove('active');
   if (dom.leaderboardTab) dom.leaderboardTab.classList.remove('active');
   if (dom.statsCardTab) dom.statsCardTab.classList.remove('active');
+  if (dom.shopTab) dom.shopTab.classList.remove('active');
   if (dom.replaysTab) dom.replaysTab.classList.add('active');
   requestRecordings();
 }

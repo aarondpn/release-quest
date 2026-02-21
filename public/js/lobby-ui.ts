@@ -1,5 +1,6 @@
 import { dom, clientState } from './state.ts';
-import { STANDARD_ICONS, PREMIUM_AVATARS, PREMIUM_IDS, isPremium, renderIcon } from './avatars.ts';
+import { STANDARD_ICONS, PREMIUM_AVATARS, PREMIUM_IDS, isPremium, isShopAvatar, renderIcon, SHOP_AVATARS, SHOP_IDS, LEGACY_ICON_MAP } from './avatars.ts';
+import { getOwnedShopItems } from './cosmetic-shop-ui.ts';
 import type { SendMessageFn, LobbyListEntry } from './client-types.ts';
 
 function escapeHtml(s: string): string {
@@ -18,9 +19,13 @@ export function showLobbyBrowser(): void {
   if (dom.lobbyListPanel) dom.lobbyListPanel.classList.remove('hidden');
   if (dom.leaderboardPanel) dom.leaderboardPanel.classList.add('hidden');
   if (dom.replaysPanel) dom.replaysPanel.classList.add('hidden');
+  if (dom.statsCardPanel) dom.statsCardPanel.classList.add('hidden');
+  if (dom.shopPanel) dom.shopPanel.classList.add('hidden');
   if (dom.lobbiesTab) dom.lobbiesTab.classList.add('active');
   if (dom.leaderboardTab) dom.leaderboardTab.classList.remove('active');
   if (dom.replaysTab) dom.replaysTab.classList.remove('active');
+  if (dom.statsCardTab) dom.statsCardTab.classList.remove('active');
+  if (dom.shopTab) dom.shopTab.classList.remove('active');
   updateLobbyProfileBar();
   if (_sendMessage) {
     _sendMessage({ type: 'list-lobbies' });
@@ -197,6 +202,16 @@ export function buildLobbyIconPicker(): void {
   _lobbyEditorSelectedIcon = current;
   const isAuth = clientState.isLoggedIn;
 
+  // Guests get a random server-assigned icon — no picker
+  if (!isAuth) {
+    _lobbyEditorSelectedIcon = clientState.selectedIcon || STANDARD_ICONS[0];
+    dom.lobbyEditorIconPicker.classList.add('hidden');
+    return;
+  }
+
+  dom.lobbyEditorIconPicker.classList.remove('hidden');
+
+  // Standard section
   const stdLabel = document.createElement('div');
   stdLabel.className = 'icon-picker-label';
   stdLabel.textContent = 'PICK YOUR HUNTER';
@@ -223,22 +238,10 @@ export function buildLobbyIconPicker(): void {
   PREMIUM_IDS.forEach(id => {
     const av = PREMIUM_AVATARS[id];
     const el = document.createElement('div');
-    const locked = !isAuth;
-    el.className = 'icon-option icon-option-premium' + (current === id ? ' selected' : '') + (locked ? ' locked' : '');
+    el.className = 'icon-option icon-option-premium' + (current === id ? ' selected' : '');
     el.dataset.icon = id;
     el.innerHTML = '<img src="' + av.svg + '" width="28" height="28" alt="' + av.name + '" style="image-rendering:pixelated">';
-    if (locked) {
-      const lock = document.createElement('div');
-      lock.className = 'icon-lock-overlay';
-      lock.textContent = '\u{1F512}';
-      el.appendChild(lock);
-    }
     el.addEventListener('click', () => {
-      if (locked) {
-        el.classList.add('locked-shake');
-        el.addEventListener('animationend', () => el.classList.remove('locked-shake'), { once: true });
-        return;
-      }
       dom.lobbyEditorIconPicker!.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
       el.classList.add('selected');
       _lobbyEditorSelectedIcon = id;
@@ -246,10 +249,57 @@ export function buildLobbyIconPicker(): void {
     dom.lobbyEditorIconPicker!.appendChild(el);
   });
 
-  if (isPremium(current) && !isAuth) {
+  // Shop section
+  if (SHOP_IDS.length > 0) {
+    const shopLabel = document.createElement('div');
+    shopLabel.className = 'icon-picker-label icon-picker-shop-label';
+    shopLabel.innerHTML = '<svg class="byte-coin-svg" width="10" height="10" viewBox="0 0 16 16" fill="none"><rect x="4" y="1" width="8" height="14" rx="1" fill="#ffe66d"/><rect x="3" y="2" width="1" height="12" fill="#ffe66d"/><rect x="12" y="2" width="1" height="12" fill="#ffe66d"/><rect x="6" y="3" width="4" height="2" fill="#ffd700"/><rect x="6" y="7" width="4" height="2" fill="#ffd700"/><rect x="6" y="11" width="4" height="2" fill="#ffd700"/><rect x="5" y="1" width="6" height="1" fill="#fff8c4" opacity="0.6"/></svg> SHOP EXCLUSIVES';
+    dom.lobbyEditorIconPicker.appendChild(shopLabel);
+
+    const owned = getOwnedShopItems();
+    SHOP_IDS.forEach(id => {
+      const av = SHOP_AVATARS[id];
+      const isOwned = owned.has(id);
+      const el = document.createElement('div');
+      el.className = 'icon-option icon-option-shop icon-option-rarity-' + av.rarity +
+        (current === id ? ' selected' : '') +
+        (!isOwned ? ' locked' : '');
+      el.dataset.icon = id;
+      el.innerHTML = '<img src="' + av.svg + '" width="28" height="28" alt="' + av.name + '" style="image-rendering:pixelated">';
+      if (!isOwned) {
+        const lock = document.createElement('div');
+        lock.className = 'icon-lock-overlay icon-lock-coin';
+        const prices: Record<string, number> = { 'shop:robot': 50, 'shop:alien': 50, 'shop:witch': 75, 'shop:pirate': 75, 'shop:cyborg': 100, 'shop:phoenix_bird': 100, 'shop:samurai': 125, 'shop:astronaut': 100, 'shop:vampire': 100, 'shop:reaper': 150, 'shop:dragon': 175, 'shop:demon': 150, 'shop:angel': 150, 'shop:kraken': 200, 'shop:phoenix_gold': 250 };
+        lock.innerHTML = '<svg class="byte-coin-svg" width="8" height="8" viewBox="0 0 16 16" fill="none"><rect x="4" y="1" width="8" height="14" rx="1" fill="#ffe66d"/><rect x="3" y="2" width="1" height="12" fill="#ffe66d"/><rect x="12" y="2" width="1" height="12" fill="#ffe66d"/><rect x="6" y="3" width="4" height="2" fill="#ffd700"/><rect x="6" y="7" width="4" height="2" fill="#ffd700"/><rect x="6" y="11" width="4" height="2" fill="#ffd700"/></svg>' + (prices[id] || '?');
+        el.appendChild(lock);
+      }
+      el.addEventListener('click', () => {
+        if (!isOwned) {
+          el.classList.add('locked-shake');
+          el.addEventListener('animationend', () => el.classList.remove('locked-shake'), { once: true });
+          return;
+        }
+        dom.lobbyEditorIconPicker!.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
+        el.classList.add('selected');
+        _lobbyEditorSelectedIcon = id;
+      });
+      dom.lobbyEditorIconPicker!.appendChild(el);
+    });
+  }
+
+  // If selected icon is a legacy premium that moved to shop, reset
+  if (isPremium(current) && current && LEGACY_ICON_MAP[current as keyof typeof LEGACY_ICON_MAP]) {
     _lobbyEditorSelectedIcon = STANDARD_ICONS[0];
     const first = dom.lobbyEditorIconPicker.querySelector<HTMLElement>('.icon-option[data-icon="' + STANDARD_ICONS[0] + '"]');
     if (first) first.classList.add('selected');
+  }
+  if (isShopAvatar(current)) {
+    const owned = getOwnedShopItems();
+    if (!owned.has(current!)) {
+      _lobbyEditorSelectedIcon = STANDARD_ICONS[0];
+      const first = dom.lobbyEditorIconPicker.querySelector<HTMLElement>('.icon-option[data-icon="' + STANDARD_ICONS[0] + '"]');
+      if (first) first.classList.add('selected');
+    }
   }
 }
 

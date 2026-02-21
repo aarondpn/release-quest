@@ -6433,3 +6433,331 @@ body.qa-hitbox-active .arena .bug::before {
   .quest-toast-text { font-size: 7px; }
   .quest-toast-reward { font-size: 8px; }
 }
+
+/* ── Cosmetic Shop ── */
+
+#shop-panel.hidden { display: none; }
+#shop-panel {
+  max-width: 540px;
+  margin: 0 auto;
+  padding: 10px 0 4px;
+}
+
+.shop-cosmetic-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 8px;
+}
+
+.shop-cosmetic-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--teal);
+  text-shadow: 0 0 8px rgba(78,205,196,0.4);
+}
+
+.shop-cosmetic-balance {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--yellow);
+}
+
+.shop-categories {
+  display: flex;
+  gap: 6px;
+  padding: 0 4px 8px;
+}
+
+.shop-category-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  padding: 4px 10px;
+  background: rgba(78,205,196,0.1);
+  border: 1px solid rgba(78,205,196,0.3);
+  color: var(--teal);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.shop-category-btn.active {
+  background: rgba(78,205,196,0.2);
+  border-color: var(--teal);
+  box-shadow: 0 0 6px rgba(78,205,196,0.3);
+}
+
+.shop-cosmetic-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 4px;
+  max-height: 320px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(78,205,196,0.3) transparent;
+}
+
+.shop-section-header {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #a7a9be;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(167,169,190,0.2);
+}
+
+.shop-rotation-header {
+  color: #4ecdc4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.shop-rotation-timer {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #ffe66d;
+  text-shadow: 0 0 6px rgba(255,230,109,0.4);
+}
+
+.shop-section-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.shop-item-card {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  grid-template-rows: 1fr auto;
+  gap: 0;
+  background: rgba(15,14,23,0.9);
+  border: 1px solid rgba(78,205,196,0.15);
+  border-radius: 6px;
+  padding: 8px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  cursor: default;
+}
+
+.shop-item-card:hover {
+  border-color: rgba(78,205,196,0.4);
+}
+
+.shop-rarity-common {
+  border-color: rgba(167,169,190,0.25);
+}
+.shop-rarity-common:hover {
+  border-color: rgba(167,169,190,0.5);
+}
+
+.shop-rarity-rare {
+  border-color: rgba(66,165,245,0.3);
+  box-shadow: 0 0 6px rgba(66,165,245,0.1);
+}
+.shop-rarity-rare:hover {
+  border-color: rgba(66,165,245,0.6);
+  box-shadow: 0 0 10px rgba(66,165,245,0.2);
+}
+
+.shop-rarity-epic {
+  border-color: rgba(168,85,247,0.3);
+  box-shadow: 0 0 6px rgba(168,85,247,0.15);
+}
+.shop-rarity-epic:hover {
+  border-color: rgba(168,85,247,0.6);
+  box-shadow: 0 0 12px rgba(168,85,247,0.25);
+}
+
+.shop-item-owned {
+  opacity: 0.65;
+}
+
+.shop-item-preview {
+  grid-row: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shop-item-preview img {
+  image-rendering: pixelated;
+}
+
+.shop-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.shop-item-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #e0e0e0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shop-item-desc {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 5px;
+  color: #a7a9be;
+  line-height: 1.4;
+}
+
+.shop-item-rarity {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 5px;
+  margin-top: 2px;
+}
+
+.shop-rarity-tag-common { color: #a7a9be; }
+.shop-rarity-tag-rare { color: #42a5f5; }
+.shop-rarity-tag-epic { color: #a855f7; }
+
+.shop-item-action {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  padding-top: 6px;
+}
+
+.shop-buy-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 7px;
+  padding: 3px 10px;
+}
+
+.shop-buy-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.shop-owned-badge {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #4ecdc4;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.shop-owned-badge::before {
+  content: '\2714';
+}
+
+.shop-login-badge {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #a7a9be;
+  opacity: 0.6;
+}
+
+.shop-guest-banner {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #a7a9be;
+  text-align: center;
+  padding: 6px 0;
+  border: 1px dashed rgba(167,169,190,0.3);
+  border-radius: 4px;
+}
+
+.shop-guest-lock.hidden { display: none; }
+.shop-guest-lock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #a7a9be;
+  padding: 24px 0;
+  text-align: center;
+}
+
+.shop-empty {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #a7a9be;
+  text-align: center;
+  padding: 24px 0;
+}
+
+/* Shop purchase toast */
+.shop-purchase-toast .quest-toast-text {
+  color: var(--teal);
+}
+
+.shop-error-toast .quest-toast-icon {
+  color: var(--red);
+}
+
+.shop-new-badge {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 5px;
+  color: #0f0e17;
+  background: #ffe66d;
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin-left: 4px;
+  vertical-align: middle;
+  animation: shop-badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes shop-badge-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Icon picker shop section */
+.icon-picker-shop-label {
+  color: var(--yellow);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.icon-option-shop {
+  position: relative;
+}
+
+.icon-option-rarity-rare {
+  box-shadow: 0 0 4px rgba(66,165,245,0.3);
+}
+
+.icon-option-rarity-epic {
+  box-shadow: 0 0 4px rgba(168,85,247,0.3);
+}
+
+.icon-lock-coin {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 5px;
+  color: var(--yellow);
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+@media (min-width: 480px) {
+  .shop-section-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 479px) {
+  .shop-section-grid {
+    grid-template-columns: 1fr;
+  }
+  .shop-item-card {
+    padding: 6px;
+  }
+  .shop-item-name { font-size: 6px; }
+  .shop-item-desc { font-size: 5px; }
+}

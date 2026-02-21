@@ -1,5 +1,6 @@
 import { CURSOR_THROTTLE_MS } from './config.ts';
-import { STANDARD_ICONS, PREMIUM_AVATARS, PREMIUM_IDS, isPremium, renderIcon } from './avatars.ts';
+import { STANDARD_ICONS, PREMIUM_AVATARS, PREMIUM_IDS, isPremium, isShopAvatar, renderIcon, SHOP_AVATARS, SHOP_IDS, LEGACY_ICON_MAP } from './avatars.ts';
+import { getOwnedShopItems } from './cosmetic-shop-ui.ts';
 import { clientState, dom, initDom } from './state.ts';
 import { pixelToLogical } from './coordinates.ts';
 import { updateHUD, initHudSend } from './hud.ts';
@@ -13,6 +14,7 @@ import { stopPlayback, togglePause, cycleSpeed } from './playback.ts';
 import { showError, ERROR_LEVELS } from './error-handler.ts';
 import { initChatSend, initChat } from './chat.ts';
 import { initQuestsSend, requestQuests } from './quests-ui.ts';
+import { initShopSend, showShopTab, hideShopPanel } from './cosmetic-shop-ui.ts';
 import type { DifficultyPreset } from './client-types.ts';
 
 initDom();
@@ -57,6 +59,20 @@ export function buildIconPicker(): void {
   const current = clientState.selectedIcon;
   const isAuth = clientState.isLoggedIn;
 
+  const nameEntrySub = document.getElementById('name-entry-sub');
+
+  // Guests get a random server-assigned icon — no picker
+  if (!isAuth) {
+    if (!clientState.selectedIcon) clientState.selectedIcon = STANDARD_ICONS[0];
+    dom.iconPicker!.classList.add('hidden');
+    if (nameEntrySub) nameEntrySub.textContent = 'Choose your name';
+    return;
+  }
+
+  dom.iconPicker!.classList.remove('hidden');
+  if (nameEntrySub) nameEntrySub.textContent = 'Choose your name & icon';
+
+  // Standard section
   const stdLabel = document.createElement('div');
   stdLabel.className = 'icon-picker-label';
   stdLabel.textContent = 'PICK YOUR HUNTER';
@@ -75,6 +91,7 @@ export function buildIconPicker(): void {
     dom.iconPicker!.appendChild(el);
   });
 
+  // Premium section
   const premLabel = document.createElement('div');
   premLabel.className = 'icon-picker-label icon-picker-premium-label';
   premLabel.textContent = 'MEMBERS ONLY';
@@ -83,22 +100,10 @@ export function buildIconPicker(): void {
   PREMIUM_IDS.forEach(id => {
     const av = PREMIUM_AVATARS[id];
     const el = document.createElement('div');
-    const locked = !isAuth;
-    el.className = 'icon-option icon-option-premium' + (current === id ? ' selected' : '') + (locked ? ' locked' : '');
+    el.className = 'icon-option icon-option-premium' + (current === id ? ' selected' : '');
     el.dataset.icon = id;
     el.innerHTML = '<img src="' + av.svg + '" width="28" height="28" alt="' + av.name + '" style="image-rendering:pixelated">';
-    if (locked) {
-      const lock = document.createElement('div');
-      lock.className = 'icon-lock-overlay';
-      lock.textContent = '\u{1F512}';
-      el.appendChild(lock);
-    }
     el.addEventListener('click', () => {
-      if (locked) {
-        el.classList.add('locked-shake');
-        el.addEventListener('animationend', () => el.classList.remove('locked-shake'), { once: true });
-        return;
-      }
       dom.iconPicker!.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
       el.classList.add('selected');
       clientState.selectedIcon = id;
@@ -106,10 +111,57 @@ export function buildIconPicker(): void {
     dom.iconPicker!.appendChild(el);
   });
 
-  if (isPremium(current) && !isAuth) {
+  // Shop section
+  if (SHOP_IDS.length > 0) {
+    const shopLabel = document.createElement('div');
+    shopLabel.className = 'icon-picker-label icon-picker-shop-label';
+    shopLabel.innerHTML = '<svg class="byte-coin-svg" width="10" height="10" viewBox="0 0 16 16" fill="none"><rect x="4" y="1" width="8" height="14" rx="1" fill="#ffe66d"/><rect x="3" y="2" width="1" height="12" fill="#ffe66d"/><rect x="12" y="2" width="1" height="12" fill="#ffe66d"/><rect x="6" y="3" width="4" height="2" fill="#ffd700"/><rect x="6" y="7" width="4" height="2" fill="#ffd700"/><rect x="6" y="11" width="4" height="2" fill="#ffd700"/><rect x="5" y="1" width="6" height="1" fill="#fff8c4" opacity="0.6"/></svg> SHOP EXCLUSIVES';
+    dom.iconPicker!.appendChild(shopLabel);
+
+    const owned = getOwnedShopItems();
+    SHOP_IDS.forEach(id => {
+      const av = SHOP_AVATARS[id];
+      const isOwned = owned.has(id);
+      const el = document.createElement('div');
+      el.className = 'icon-option icon-option-shop icon-option-rarity-' + av.rarity +
+        (current === id ? ' selected' : '') +
+        (!isOwned ? ' locked' : '');
+      el.dataset.icon = id;
+      el.innerHTML = '<img src="' + av.svg + '" width="28" height="28" alt="' + av.name + '" style="image-rendering:pixelated">';
+      if (!isOwned) {
+        const lock = document.createElement('div');
+        lock.className = 'icon-lock-overlay icon-lock-coin';
+        const prices: Record<string, number> = { 'shop:robot': 50, 'shop:alien': 50, 'shop:witch': 75, 'shop:pirate': 75, 'shop:cyborg': 100, 'shop:phoenix_bird': 100, 'shop:samurai': 125, 'shop:astronaut': 100, 'shop:vampire': 100, 'shop:reaper': 150, 'shop:dragon': 175, 'shop:demon': 150, 'shop:angel': 150, 'shop:kraken': 200, 'shop:phoenix_gold': 250 };
+        lock.innerHTML = '<svg class="byte-coin-svg" width="8" height="8" viewBox="0 0 16 16" fill="none"><rect x="4" y="1" width="8" height="14" rx="1" fill="#ffe66d"/><rect x="3" y="2" width="1" height="12" fill="#ffe66d"/><rect x="12" y="2" width="1" height="12" fill="#ffe66d"/><rect x="6" y="3" width="4" height="2" fill="#ffd700"/><rect x="6" y="7" width="4" height="2" fill="#ffd700"/><rect x="6" y="11" width="4" height="2" fill="#ffd700"/></svg>' + (prices[id] || '?');
+        el.appendChild(lock);
+      }
+      el.addEventListener('click', () => {
+        if (!isOwned) {
+          el.classList.add('locked-shake');
+          el.addEventListener('animationend', () => el.classList.remove('locked-shake'), { once: true });
+          return;
+        }
+        dom.iconPicker!.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
+        el.classList.add('selected');
+        clientState.selectedIcon = id;
+      });
+      dom.iconPicker!.appendChild(el);
+    });
+  }
+
+  // If selected icon isn't valid, reset
+  if (isPremium(current) && LEGACY_ICON_MAP[current!]) {
     clientState.selectedIcon = STANDARD_ICONS[0];
     const first = dom.iconPicker!.querySelector<HTMLElement>('.icon-option[data-icon="' + STANDARD_ICONS[0] + '"]');
     if (first) first.classList.add('selected');
+  }
+  if (isShopAvatar(current)) {
+    const owned = getOwnedShopItems();
+    if (!owned.has(current!)) {
+      clientState.selectedIcon = STANDARD_ICONS[0];
+      const first = dom.iconPicker!.querySelector<HTMLElement>('.icon-option[data-icon="' + STANDARD_ICONS[0] + '"]');
+      if (first) first.classList.add('selected');
+    }
   }
 }
 buildIconPicker();
@@ -496,6 +548,9 @@ initChatSend(sendMessage);
 initChat();
 initQuestsSend(sendMessage);
 
+// Initialize cosmetic shop
+initShopSend(sendMessage);
+
 // ── Auth handlers ──
 dom.authShowLoginBtn!.addEventListener('click', showAuthOverlay);
 dom.authLogoutBtn!.addEventListener('click', submitLogout);
@@ -527,10 +582,13 @@ dom.lobbiesTab!.addEventListener('click', showLobbiesTab);
 dom.leaderboardTab!.addEventListener('click', showLeaderboardTab);
 
 // ── Replays tab handler ──
-if (dom.replaysTab) dom.replaysTab.addEventListener('click', () => { hideStatsCardTab(); showReplaysTab(); });
+if (dom.replaysTab) dom.replaysTab.addEventListener('click', () => { hideStatsCardTab(); hideShopPanel(); showReplaysTab(); });
 
 // ── Stats card tab handler ──
-if (dom.statsCardTab) dom.statsCardTab.addEventListener('click', showStatsCardTab);
+if (dom.statsCardTab) dom.statsCardTab.addEventListener('click', () => { hideShopPanel(); showStatsCardTab(); });
+
+// ── Shop tab handler ──
+if (dom.shopTab) dom.shopTab.addEventListener('click', () => { hideStatsCardTab(); showShopTab(); });
 if (dom.statsCardDownloadBtn) dom.statsCardDownloadBtn.addEventListener('click', downloadStatsCardPng);
 
 // ── Playback controls ──

@@ -16,6 +16,12 @@ export interface PremiumAvatar {
   svg: string;
 }
 
+export interface ShopAvatar {
+  name: string;
+  rarity: string;
+  svg: string;
+}
+
 export const PREMIUM_AVATARS: Record<string, PremiumAvatar> = {
   'av:knight': {
     name: 'Pixel Knight',
@@ -71,8 +77,33 @@ export const PREMIUM_AVATARS: Record<string, PremiumAvatar> = {
       '<rect x="4" y="8" width="2" height="2" fill="#c084fc" opacity="0.4"/>'
     ),
   },
-  'av:cyborg': {
+};
+
+export const PREMIUM_IDS: string[] = Object.keys(PREMIUM_AVATARS);
+
+// Legacy premium IDs that moved to the shop
+export const LEGACY_ICON_MAP: Record<string, string> = {
+  'av:cyborg': 'shop:cyborg',
+  'av:phoenix': 'shop:phoenix_bird',
+  'av:samurai': 'shop:samurai',
+  'av:reaper': 'shop:reaper',
+  'av:dragon': 'shop:dragon',
+};
+
+export function isPremium(icon: string | null | undefined): boolean {
+  return typeof icon === 'string' && icon.startsWith('av:');
+}
+
+export function isShopAvatar(icon: string | null | undefined): boolean {
+  return typeof icon === 'string' && icon.startsWith('shop:');
+}
+
+// ── Shop pixel-art SVG avatars (purchased with Byte Coins) ──
+
+export const SHOP_AVATARS: Record<string, ShopAvatar> = {
+  'shop:cyborg': {
     name: 'Neon Cyborg',
+    rarity: 'rare',
     svg: px(
       '<rect x="8" y="4" width="16" height="12" fill="#f5deb3"/>' +
       '<rect x="16" y="4" width="8" height="12" fill="#555"/>' +
@@ -91,8 +122,9 @@ export const PREMIUM_AVATARS: Record<string, PremiumAvatar> = {
       '<rect x="17" y="24" width="5" height="4" fill="#444"/>'
     ),
   },
-  'av:phoenix': {
+  'shop:phoenix_bird': {
     name: 'Pixel Phoenix',
+    rarity: 'rare',
     svg: px(
       '<rect x="14" y="2" width="4" height="4" fill="#ff6d00"/>' +
       '<rect x="12" y="0" width="2" height="4" fill="#ffab00"/>' +
@@ -114,8 +146,9 @@ export const PREMIUM_AVATARS: Record<string, PremiumAvatar> = {
       '<rect x="14" y="26" width="4" height="4" fill="#ff9100" opacity="0.6"/>'
     ),
   },
-  'av:samurai': {
+  'shop:samurai': {
     name: 'Neon Samurai',
+    rarity: 'rare',
     svg: px(
       '<rect x="6" y="4" width="20" height="4" fill="#444"/>' +
       '<rect x="8" y="2" width="16" height="4" fill="#555"/>' +
@@ -133,8 +166,9 @@ export const PREMIUM_AVATARS: Record<string, PremiumAvatar> = {
       '<rect x="24" y="6" width="2" height="2" fill="#00e5ff" opacity="0.5"/>'
     ),
   },
-  'av:reaper': {
+  'shop:reaper': {
     name: 'Code Reaper',
+    rarity: 'epic',
     svg: px(
       '<rect x="8" y="2" width="16" height="6" fill="#2d1b30"/>' +
       '<rect x="6" y="4" width="4" height="8" fill="#2d1b30"/>' +
@@ -152,8 +186,9 @@ export const PREMIUM_AVATARS: Record<string, PremiumAvatar> = {
       '<rect x="14" y="0" width="4" height="2" fill="#a855f7" opacity="0.5"/>'
     ),
   },
-  'av:dragon': {
+  'shop:dragon': {
     name: 'Bit Dragon',
+    rarity: 'epic',
     svg: px(
       '<rect x="6" y="4" width="6" height="4" fill="#388e3c"/>' +
       '<rect x="18" y="4" width="6" height="4" fill="#388e3c"/>' +
@@ -173,17 +208,210 @@ export const PREMIUM_AVATARS: Record<string, PremiumAvatar> = {
       '<rect x="17" y="22" width="5" height="4" fill="#2e7d32"/>'
     ),
   },
+  'shop:robot': {
+    name: 'Pixel Robot',
+    rarity: 'common',
+    svg: px(
+      '<rect x="10" y="2" width="12" height="4" fill="#4ecdc4"/>' +
+      '<rect x="8" y="6" width="16" height="10" fill="#3db8b0"/>' +
+      '<rect x="10" y="8" width="4" height="3" fill="#111"/>' +
+      '<rect x="18" y="8" width="4" height="3" fill="#111"/>' +
+      '<rect x="11" y="9" width="2" height="1" fill="#00e5ff"/>' +
+      '<rect x="19" y="9" width="2" height="1" fill="#00e5ff"/>' +
+      '<rect x="13" y="13" width="6" height="2" fill="#222"/>' +
+      '<rect x="10" y="16" width="12" height="6" fill="#3db8b0"/>' +
+      '<rect x="6" y="10" width="4" height="6" fill="#4ecdc4"/>' +
+      '<rect x="22" y="10" width="4" height="6" fill="#4ecdc4"/>' +
+      '<rect x="10" y="22" width="5" height="4" fill="#2a9d8f"/>' +
+      '<rect x="17" y="22" width="5" height="4" fill="#2a9d8f"/>'
+    ),
+  },
+  'shop:alien': {
+    name: 'Neon Alien',
+    rarity: 'common',
+    svg: px(
+      '<rect x="10" y="2" width="12" height="8" fill="#76ff03"/>' +
+      '<rect x="8" y="4" width="4" height="6" fill="#64dd17"/>' +
+      '<rect x="20" y="4" width="4" height="6" fill="#64dd17"/>' +
+      '<rect x="10" y="6" width="4" height="4" fill="#111"/>' +
+      '<rect x="18" y="6" width="4" height="4" fill="#111"/>' +
+      '<rect x="11" y="7" width="2" height="2" fill="#b2ff59"/>' +
+      '<rect x="19" y="7" width="2" height="2" fill="#b2ff59"/>' +
+      '<rect x="12" y="10" width="8" height="4" fill="#64dd17"/>' +
+      '<rect x="14" y="12" width="4" height="2" fill="#333"/>' +
+      '<rect x="10" y="14" width="12" height="6" fill="#76ff03"/>' +
+      '<rect x="8" y="16" width="4" height="4" fill="#64dd17"/>' +
+      '<rect x="20" y="16" width="4" height="4" fill="#64dd17"/>' +
+      '<rect x="11" y="20" width="4" height="6" fill="#64dd17"/>' +
+      '<rect x="17" y="20" width="4" height="6" fill="#64dd17"/>'
+    ),
+  },
+  'shop:witch': {
+    name: 'Glitch Witch',
+    rarity: 'common',
+    svg: px(
+      '<rect x="14" y="0" width="4" height="2" fill="#9c27b0"/>' +
+      '<rect x="12" y="2" width="8" height="2" fill="#7b1fa2"/>' +
+      '<rect x="10" y="4" width="12" height="4" fill="#6a1b9a"/>' +
+      '<rect x="8" y="8" width="16" height="8" fill="#f5deb3"/>' +
+      '<rect x="10" y="10" width="4" height="3" fill="#333"/>' +
+      '<rect x="18" y="10" width="4" height="3" fill="#333"/>' +
+      '<rect x="11" y="11" width="2" height="1" fill="#e040fb"/>' +
+      '<rect x="19" y="11" width="2" height="1" fill="#e040fb"/>' +
+      '<rect x="13" y="14" width="6" height="1" fill="#9c27b0"/>' +
+      '<rect x="10" y="16" width="12" height="6" fill="#6a1b9a"/>' +
+      '<rect x="10" y="22" width="5" height="4" fill="#4a148c"/>' +
+      '<rect x="17" y="22" width="5" height="4" fill="#4a148c"/>' +
+      '<rect x="6" y="6" width="2" height="2" fill="#e040fb" opacity="0.5"/>' +
+      '<rect x="24" y="4" width="2" height="2" fill="#e040fb" opacity="0.4"/>'
+    ),
+  },
+  'shop:pirate': {
+    name: 'Data Pirate',
+    rarity: 'rare',
+    svg: px(
+      '<rect x="8" y="4" width="16" height="4" fill="#5d4037"/>' +
+      '<rect x="6" y="2" width="20" height="2" fill="#4e342e"/>' +
+      '<rect x="14" y="0" width="4" height="2" fill="#ffe66d"/>' +
+      '<rect x="8" y="8" width="16" height="8" fill="#f5deb3"/>' +
+      '<rect x="10" y="10" width="4" height="3" fill="#111"/>' +
+      '<rect x="18" y="10" width="4" height="3" fill="#111"/>' +
+      '<rect x="11" y="11" width="2" height="1" fill="#fff"/>' +
+      '<rect x="18" y="9" width="4" height="4" fill="#333"/>' +
+      '<rect x="13" y="14" width="6" height="1" fill="#5d4037"/>' +
+      '<rect x="10" y="16" width="12" height="6" fill="#8d6e63"/>' +
+      '<rect x="10" y="22" width="5" height="4" fill="#5d4037"/>' +
+      '<rect x="17" y="22" width="5" height="4" fill="#5d4037"/>'
+    ),
+  },
+  'shop:astronaut': {
+    name: 'Space Dev',
+    rarity: 'rare',
+    svg: px(
+      '<rect x="10" y="2" width="12" height="12" fill="#e0e0e0"/>' +
+      '<rect x="12" y="4" width="8" height="8" fill="#263238"/>' +
+      '<rect x="14" y="6" width="4" height="4" fill="#42a5f5"/>' +
+      '<rect x="12" y="5" width="2" height="2" fill="#e8f5e9" opacity="0.5"/>' +
+      '<rect x="8" y="14" width="16" height="8" fill="#e0e0e0"/>' +
+      '<rect x="6" y="16" width="4" height="6" fill="#bdbdbd"/>' +
+      '<rect x="22" y="16" width="4" height="6" fill="#bdbdbd"/>' +
+      '<rect x="10" y="22" width="5" height="4" fill="#9e9e9e"/>' +
+      '<rect x="17" y="22" width="5" height="4" fill="#9e9e9e"/>' +
+      '<rect x="14" y="15" width="4" height="2" fill="#42a5f5"/>'
+    ),
+  },
+  'shop:vampire': {
+    name: 'Byte Vampire',
+    rarity: 'rare',
+    svg: px(
+      '<rect x="10" y="4" width="12" height="4" fill="#1a1a2e"/>' +
+      '<rect x="8" y="8" width="16" height="8" fill="#e0e0e0"/>' +
+      '<rect x="10" y="10" width="4" height="3" fill="#111"/>' +
+      '<rect x="18" y="10" width="4" height="3" fill="#111"/>' +
+      '<rect x="11" y="11" width="2" height="1" fill="#f44336"/>' +
+      '<rect x="19" y="11" width="2" height="1" fill="#f44336"/>' +
+      '<rect x="12" y="14" width="2" height="2" fill="#fff"/>' +
+      '<rect x="18" y="14" width="2" height="2" fill="#fff"/>' +
+      '<rect x="10" y="16" width="12" height="6" fill="#1a1a2e"/>' +
+      '<rect x="6" y="8" width="4" height="8" fill="#b71c1c"/>' +
+      '<rect x="22" y="8" width="4" height="8" fill="#b71c1c"/>' +
+      '<rect x="10" y="22" width="5" height="4" fill="#0d0d1a"/>' +
+      '<rect x="17" y="22" width="5" height="4" fill="#0d0d1a"/>'
+    ),
+  },
+  'shop:demon': {
+    name: 'Core Dump Demon',
+    rarity: 'epic',
+    svg: px(
+      '<rect x="6" y="2" width="4" height="4" fill="#ff1744"/>' +
+      '<rect x="22" y="2" width="4" height="4" fill="#ff1744"/>' +
+      '<rect x="8" y="6" width="16" height="10" fill="#d32f2f"/>' +
+      '<rect x="10" y="8" width="4" height="3" fill="#111"/>' +
+      '<rect x="18" y="8" width="4" height="3" fill="#111"/>' +
+      '<rect x="11" y="9" width="2" height="1" fill="#ffab00"/>' +
+      '<rect x="19" y="9" width="2" height="1" fill="#ffab00"/>' +
+      '<rect x="12" y="13" width="8" height="2" fill="#b71c1c"/>' +
+      '<rect x="14" y="13" width="4" height="2" fill="#333"/>' +
+      '<rect x="10" y="16" width="12" height="6" fill="#c62828"/>' +
+      '<rect x="10" y="22" width="5" height="4" fill="#b71c1c"/>' +
+      '<rect x="17" y="22" width="5" height="4" fill="#b71c1c"/>' +
+      '<rect x="4" y="4" width="2" height="2" fill="#ff1744" opacity="0.6"/>' +
+      '<rect x="26" y="4" width="2" height="2" fill="#ff1744" opacity="0.6"/>'
+    ),
+  },
+  'shop:angel': {
+    name: 'Refactor Angel',
+    rarity: 'epic',
+    svg: px(
+      '<rect x="14" y="0" width="4" height="2" fill="#fff9c4"/>' +
+      '<rect x="12" y="2" width="8" height="2" fill="#fff176"/>' +
+      '<rect x="10" y="4" width="12" height="8" fill="#f5deb3"/>' +
+      '<rect x="12" y="6" width="3" height="2" fill="#42a5f5"/>' +
+      '<rect x="19" y="6" width="3" height="2" fill="#42a5f5"/>' +
+      '<rect x="14" y="10" width="4" height="1" fill="#e0a080"/>' +
+      '<rect x="10" y="12" width="12" height="6" fill="#e3f2fd"/>' +
+      '<rect x="4" y="8" width="6" height="4" fill="#e3f2fd"/>' +
+      '<rect x="22" y="8" width="6" height="4" fill="#e3f2fd"/>' +
+      '<rect x="2" y="6" width="4" height="4" fill="#bbdefb"/>' +
+      '<rect x="26" y="6" width="4" height="4" fill="#bbdefb"/>' +
+      '<rect x="10" y="18" width="5" height="6" fill="#e3f2fd"/>' +
+      '<rect x="17" y="18" width="5" height="6" fill="#e3f2fd"/>' +
+      '<rect x="6" y="6" width="2" height="2" fill="#fff9c4" opacity="0.5"/>' +
+      '<rect x="24" y="6" width="2" height="2" fill="#fff9c4" opacity="0.5"/>'
+    ),
+  },
+  'shop:kraken': {
+    name: 'Dependency Kraken',
+    rarity: 'epic',
+    svg: px(
+      '<rect x="8" y="4" width="16" height="10" fill="#1565c0"/>' +
+      '<rect x="10" y="6" width="4" height="4" fill="#111"/>' +
+      '<rect x="18" y="6" width="4" height="4" fill="#111"/>' +
+      '<rect x="11" y="7" width="2" height="2" fill="#ff6d00"/>' +
+      '<rect x="19" y="7" width="2" height="2" fill="#ff6d00"/>' +
+      '<rect x="12" y="12" width="8" height="2" fill="#0d47a1"/>' +
+      '<rect x="6" y="14" width="4" height="8" fill="#1565c0"/>' +
+      '<rect x="10" y="14" width="4" height="8" fill="#1976d2"/>' +
+      '<rect x="14" y="14" width="4" height="8" fill="#1565c0"/>' +
+      '<rect x="18" y="14" width="4" height="8" fill="#1976d2"/>' +
+      '<rect x="22" y="14" width="4" height="8" fill="#1565c0"/>' +
+      '<rect x="4" y="20" width="4" height="4" fill="#1565c0"/>' +
+      '<rect x="24" y="20" width="4" height="4" fill="#1565c0"/>' +
+      '<rect x="8" y="22" width="4" height="4" fill="#1976d2"/>' +
+      '<rect x="20" y="22" width="4" height="4" fill="#1976d2"/>'
+    ),
+  },
+  'shop:phoenix_gold': {
+    name: 'Golden Phoenix',
+    rarity: 'epic',
+    svg: px(
+      '<rect x="14" y="0" width="4" height="4" fill="#ffd700"/>' +
+      '<rect x="12" y="0" width="2" height="4" fill="#ffab00"/>' +
+      '<rect x="18" y="0" width="2" height="4" fill="#ffab00"/>' +
+      '<rect x="10" y="4" width="12" height="6" fill="#ffd700"/>' +
+      '<rect x="12" y="5" width="3" height="2" fill="#fff"/>' +
+      '<rect x="18" y="5" width="3" height="2" fill="#fff"/>' +
+      '<rect x="13" y="5" width="2" height="2" fill="#111"/>' +
+      '<rect x="19" y="5" width="2" height="2" fill="#111"/>' +
+      '<rect x="14" y="8" width="4" height="2" fill="#ffab00"/>' +
+      '<rect x="8" y="10" width="16" height="6" fill="#ffd700"/>' +
+      '<rect x="4" y="8" width="6" height="4" fill="#ffab00"/>' +
+      '<rect x="22" y="8" width="6" height="4" fill="#ffab00"/>' +
+      '<rect x="2" y="6" width="4" height="4" fill="#ff9100"/>' +
+      '<rect x="26" y="6" width="4" height="4" fill="#ff9100"/>' +
+      '<rect x="10" y="16" width="12" height="4" fill="#ffd700"/>' +
+      '<rect x="12" y="20" width="3" height="4" fill="#ffab00"/>' +
+      '<rect x="17" y="20" width="3" height="4" fill="#ffab00"/>' +
+      '<rect x="14" y="24" width="4" height="4" fill="#ff9100" opacity="0.6"/>'
+    ),
+  },
 };
 
-export const PREMIUM_IDS: string[] = Object.keys(PREMIUM_AVATARS);
-
-export function isPremium(icon: string | null | undefined): boolean {
-  return typeof icon === 'string' && icon.startsWith('av:');
-}
+export const SHOP_IDS: string[] = Object.keys(SHOP_AVATARS);
 
 /**
- * Return safe HTML for an icon (emoji or premium SVG).
- * @param icon - emoji character or premium ID like "av:knight"
+ * Return safe HTML for an icon (emoji, premium, or shop SVG).
+ * @param icon - emoji character, premium ID "av:knight", or shop ID "shop:robot"
  * @param sizePx - rendered size in CSS pixels
  */
 export function renderIcon(icon: string, sizePx: number): string {
@@ -194,7 +422,18 @@ export function renderIcon(icon: string, sizePx: number): string {
         '" width="' + sizePx + '" height="' + sizePx +
         '" alt="' + av.name + '" style="vertical-align:middle;image-rendering:pixelated">';
     }
-    // Unknown premium ID — fall back to generic
+    // Check legacy map for premium icons that moved to shop
+    const shopId = LEGACY_ICON_MAP[icon];
+    if (shopId) return renderIcon(shopId, sizePx);
+    return '<span class="avatar-icon" style="font-size:' + sizePx + 'px;line-height:1;vertical-align:middle">?</span>';
+  }
+  if (isShopAvatar(icon)) {
+    const av = SHOP_AVATARS[icon];
+    if (av) {
+      return '<img class="avatar-icon avatar-shop avatar-rarity-' + av.rarity + '" src="' + av.svg +
+        '" width="' + sizePx + '" height="' + sizePx +
+        '" alt="' + av.name + '" style="vertical-align:middle;image-rendering:pixelated">';
+    }
     return '<span class="avatar-icon" style="font-size:' + sizePx + 'px;line-height:1;vertical-align:middle">?</span>';
   }
   // Standard emoji — use textContent trick for safe HTML

@@ -42,10 +42,12 @@ export function showLeaderboardTab(): void {
   dom.leaderboardPanel!.classList.remove('hidden');
   if (dom.replaysPanel) dom.replaysPanel.classList.add('hidden');
   if (dom.statsCardPanel) dom.statsCardPanel.classList.add('hidden');
+  if (dom.shopPanel) dom.shopPanel.classList.add('hidden');
   dom.lobbiesTab!.classList.remove('active');
   dom.leaderboardTab!.classList.add('active');
   if (dom.replaysTab) dom.replaysTab.classList.remove('active');
   if (dom.statsCardTab) dom.statsCardTab.classList.remove('active');
+  if (dom.shopTab) dom.shopTab.classList.remove('active');
   requestLeaderboard();
 }
 
@@ -54,8 +56,10 @@ export function showLobbiesTab(): void {
   dom.lobbyListPanel!.classList.remove('hidden');
   if (dom.replaysPanel) dom.replaysPanel.classList.add('hidden');
   if (dom.statsCardPanel) dom.statsCardPanel.classList.add('hidden');
+  if (dom.shopPanel) dom.shopPanel.classList.add('hidden');
   dom.leaderboardTab!.classList.remove('active');
   dom.lobbiesTab!.classList.add('active');
   if (dom.replaysTab) dom.replaysTab.classList.remove('active');
   if (dom.statsCardTab) dom.statsCardTab.classList.remove('active');
+  if (dom.shopTab) dom.shopTab.classList.remove('active');
 }

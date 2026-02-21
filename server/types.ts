@@ -61,6 +61,7 @@ export interface PlayerInfo {
   icon: string;
   userId?: number;
   guestToken?: string;
+  shopSeenRotation?: string;
 }
 
 export interface PlayerScoreEntry {
@@ -411,6 +412,21 @@ export interface UserQuestRow {
 export interface CurrencyBalance {
   balance: number;
   totalEarned: number;
+}
+
+export interface CosmeticShopItem {
+  id: string;
+  name: string;
+  category: 'avatar';
+  price: number;
+  description: string;
+  rarity: 'common' | 'rare' | 'epic';
+}
+
+export interface InventoryItem {
+  item_id: string;
+  category: string;
+  purchased_at: Date;
 }
 
 // DB row types

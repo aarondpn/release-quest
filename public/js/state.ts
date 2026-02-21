@@ -171,6 +171,11 @@ export const dom: DomRefs = {
   qtBalance: null,
   profileCoinBalance: null,
   profileCoins: null,
+  shopPanel: null,
+  shopTab: null,
+  shopGrid: null,
+  shopBalanceAmount: null,
+  shopGuestLock: null,
 };
 
 export function initDom(): void {
@@ -293,4 +298,9 @@ export function initDom(): void {
   dom.qtBalance = document.getElementById('qt-balance');
   dom.profileCoinBalance = document.getElementById('profile-coin-balance');
   dom.profileCoins = document.getElementById('lobby-profile-coins');
+  dom.shopPanel = document.getElementById('shop-panel');
+  dom.shopTab = document.getElementById('shop-tab');
+  dom.shopGrid = document.getElementById('shop-grid');
+  dom.shopBalanceAmount = document.getElementById('shop-balance-amount');
+  dom.shopGuestLock = document.getElementById('shop-guest-lock');
 }

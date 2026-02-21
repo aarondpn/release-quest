@@ -1,5 +1,5 @@
 import { dom, clientState } from './state.ts';
-import { renderIcon, isPremium, PREMIUM_AVATARS } from './avatars.ts';
+import { renderIcon, isPremium, isShopAvatar, PREMIUM_AVATARS, SHOP_AVATARS } from './avatars.ts';
 import type { SendMessageFn, StatsData } from './client-types.ts';
 
 let _sendMessage: SendMessageFn | null = null;
@@ -89,10 +89,12 @@ export function showStatsCardTab(): void {
   if (dom.lobbyListPanel) dom.lobbyListPanel.classList.add('hidden');
   if (dom.leaderboardPanel) dom.leaderboardPanel.classList.add('hidden');
   if (dom.replaysPanel) dom.replaysPanel.classList.add('hidden');
+  if (dom.shopPanel) dom.shopPanel.classList.add('hidden');
   if (dom.statsCardPanel) dom.statsCardPanel.classList.remove('hidden');
   if (dom.lobbiesTab) dom.lobbiesTab.classList.remove('active');
   if (dom.leaderboardTab) dom.leaderboardTab.classList.remove('active');
   if (dom.replaysTab) dom.replaysTab.classList.remove('active');
+  if (dom.shopTab) dom.shopTab.classList.remove('active');
   if (dom.statsCardTab) dom.statsCardTab.classList.add('active');
   requestMyStats();
 }
@@ -368,24 +370,22 @@ export function downloadStatsCardPng(): void {
 }
 
 function drawAvatar(ctx: CanvasRenderingContext2D, icon: string, cx: number, cy: number, radius: number): Promise<void> | true {
-  if (isPremium(icon)) {
-    const av = PREMIUM_AVATARS[icon];
-    if (av) {
-      const img = new Image();
-      img.src = av.svg;
-      return new Promise<void>((resolve) => {
-        img.onload = () => {
-          ctx.imageSmoothingEnabled = false;
-          ctx.drawImage(img, cx - radius, cy - radius, radius * 2, radius * 2);
-          ctx.imageSmoothingEnabled = true;
-          resolve();
-        };
-        img.onerror = () => {
-          drawEmojiAvatar(ctx, '?', cx, cy);
-          resolve();
-        };
-      });
-    }
+  const av = isPremium(icon) ? PREMIUM_AVATARS[icon] : isShopAvatar(icon) ? SHOP_AVATARS[icon] : null;
+  if (av) {
+    const img = new Image();
+    img.src = av.svg;
+    return new Promise<void>((resolve) => {
+      img.onload = () => {
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(img, cx - radius, cy - radius, radius * 2, radius * 2);
+        ctx.imageSmoothingEnabled = true;
+        resolve();
+      };
+      img.onerror = () => {
+        drawEmojiAvatar(ctx, '?', cx, cy);
+        resolve();
+      };
+    });
   }
   drawEmojiAvatar(ctx, icon || '\u{1F431}', cx, cy);
   return true;
