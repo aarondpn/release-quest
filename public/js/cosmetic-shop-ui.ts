@@ -11,8 +11,7 @@ interface ShopCatalogItem {
 }
 
 let _sendMessage: SendMessageFn | null = null;
-let _permanentItems: ShopCatalogItem[] = [];
-let _rotatingItems: ShopCatalogItem[] = [];
+let _shopItems: ShopCatalogItem[] = [];
 let _rotationEndUtc: string | null = null;
 let _ownedItems: Set<string> = new Set();
 let _shopBalance = 0;
@@ -26,16 +25,8 @@ export function requestShopCatalog(): void {
 }
 
 export function handleShopCatalog(msg: Record<string, unknown>): void {
-  // Support new split format and backward-compat flat catalog
-  if (msg.permanentItems) {
-    _permanentItems = msg.permanentItems as ShopCatalogItem[];
-    _rotatingItems = (msg.rotatingItems || []) as ShopCatalogItem[];
-    _rotationEndUtc = (msg.rotationEndUtc as string) || null;
-  } else {
-    _permanentItems = (msg.catalog || []) as ShopCatalogItem[];
-    _rotatingItems = [];
-    _rotationEndUtc = null;
-  }
+  _shopItems = (msg.rotatingItems || []) as ShopCatalogItem[];
+  _rotationEndUtc = (msg.rotationEndUtc as string) || null;
   _ownedItems = new Set((msg.owned || []) as string[]);
   _shopBalance = (msg.balance as number) ?? 0;
   // Only show badge if server says new AND shop is not currently open
@@ -66,8 +57,7 @@ export function handleShopPurchaseResult(msg: Record<string, unknown>): void {
 }
 
 function showPurchaseToast(itemId: string): void {
-  const allItems = [..._permanentItems, ..._rotatingItems];
-  const item = allItems.find(i => i.id === itemId);
+  const item = _shopItems.find(i => i.id === itemId);
   if (!item) return;
   const av = SHOP_AVATARS[itemId];
   const toast = document.createElement('div');
@@ -156,7 +146,7 @@ function renderShopGrid(): void {
   const balanceEl = document.querySelector('.shop-cosmetic-balance') as HTMLElement | null;
   if (balanceEl) balanceEl.style.display = isGuest ? 'none' : '';
 
-  if (_permanentItems.length === 0 && _rotatingItems.length === 0) {
+  if (_shopItems.length === 0) {
     dom.shopGrid.innerHTML = '<div class="shop-empty">Loading shop...</div>';
     return;
   }
@@ -169,25 +159,15 @@ function renderShopGrid(): void {
     html += '<div class="shop-guest-banner">LOG IN TO PURCHASE AVATARS</div>';
   }
 
-  // Permanent section
-  if (_permanentItems.length > 0) {
-    html += '<div class="shop-section-header">ALWAYS AVAILABLE</div>';
-    html += '<div class="shop-section-grid">';
-    html += _permanentItems.map(cardRenderer).join('');
-    html += '</div>';
-  }
-
-  // Rotating section
-  if (_rotatingItems.length > 0) {
-    const timerText = _rotationEndUtc ? formatCountdown(_rotationEndUtc) : null;
-    html += '<div class="shop-section-header shop-rotation-header">' +
-      '<span>WEEKLY ROTATION</span>' +
-      (timerText ? '<span class="shop-rotation-timer">' + timerText + '</span>' : '') +
-    '</div>';
-    html += '<div class="shop-section-grid">';
-    html += _rotatingItems.map(cardRenderer).join('');
-    html += '</div>';
-  }
+  // Weekly rotation header with timer
+  const timerText = _rotationEndUtc ? formatCountdown(_rotationEndUtc) : null;
+  html += '<div class="shop-section-header shop-rotation-header">' +
+    '<span>THIS WEEK</span>' +
+    (timerText ? '<span class="shop-rotation-timer">' + timerText + '</span>' : '') +
+  '</div>';
+  html += '<div class="shop-section-grid">';
+  html += _shopItems.map(cardRenderer).join('');
+  html += '</div>';
 
   dom.shopGrid.innerHTML = html;
 
@@ -285,7 +265,6 @@ export function getOwnedShopItems(): Set<string> {
 }
 
 export function getShopItemPrice(itemId: string): number | null {
-  const allItems = [..._permanentItems, ..._rotatingItems];
-  const item = allItems.find(i => i.id === itemId);
+  const item = _shopItems.find(i => i.id === itemId);
   return item ? item.price : null;
 }

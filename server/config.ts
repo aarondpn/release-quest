@@ -74,9 +74,7 @@ export const COSMETIC_SHOP_MAP = new Map(COSMETIC_SHOP_CATALOG.map(item => [item
 export const SHOP_ICON_IDS = COSMETIC_SHOP_CATALOG.map(item => item.id);
 export const ALL_ICONS = [...ICONS, ...PREMIUM_ICON_IDS, ...SHOP_ICON_IDS, ...Object.keys(LEGACY_ICON_MAP)];
 
-const PERMANENT_IDS = new Set(['shop:robot', 'shop:alien', 'shop:witch', 'shop:pirate']);
-export const PERMANENT_SHOP_ITEMS = COSMETIC_SHOP_CATALOG.filter(i => PERMANENT_IDS.has(i.id));
-export const ROTATING_POOL = COSMETIC_SHOP_CATALOG.filter(i => !PERMANENT_IDS.has(i.id));
+const ROTATION_SIZE = 8;
 
 export function getWeekBoundaries(): { weekStart: Date; weekEnd: Date; weekNumber: number } {
   const now = new Date();
@@ -103,13 +101,13 @@ function mulberry32(seed: number): () => number {
 export function getWeeklyRotation(): { items: CosmeticShopItem[]; rotationEndUtc: string } {
   const { weekEnd, weekNumber } = getWeekBoundaries();
   const rng = mulberry32(weekNumber);
-  // Fisher-Yates shuffle on a copy of the pool
-  const pool = [...ROTATING_POOL];
+  // Fisher-Yates shuffle on the full catalog
+  const pool = [...COSMETIC_SHOP_CATALOG];
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
-  return { items: pool.slice(0, 4), rotationEndUtc: weekEnd.toISOString() };
+  return { items: pool.slice(0, ROTATION_SIZE), rotationEndUtc: weekEnd.toISOString() };
 }
 
 // Difficulty presets

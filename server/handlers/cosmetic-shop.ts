@@ -1,5 +1,5 @@
 import type { MessageHandler } from './types.ts';
-import { COSMETIC_SHOP_MAP, PERMANENT_SHOP_ITEMS, getWeeklyRotation } from '../config.ts';
+import { COSMETIC_SHOP_MAP, getWeeklyRotation } from '../config.ts';
 import * as network from '../network.ts';
 import * as db from '../db.ts';
 
@@ -9,7 +9,6 @@ export const handleGetShopCatalog: MessageHandler = async ({ ws, pid, playerInfo
   if (!info?.userId) {
     network.send(ws, {
       type: 'shop-catalog',
-      permanentItems: PERMANENT_SHOP_ITEMS,
       rotatingItems: rotation.items,
       rotationEndUtc: rotation.rotationEndUtc,
       owned: [],
@@ -31,7 +30,6 @@ export const handleGetShopCatalog: MessageHandler = async ({ ws, pid, playerInfo
     const owned = inventory.map(i => i.item_id);
     network.send(ws, {
       type: 'shop-catalog',
-      permanentItems: PERMANENT_SHOP_ITEMS,
       rotatingItems: rotation.items,
       rotationEndUtc: rotation.rotationEndUtc,
       owned,
@@ -42,7 +40,6 @@ export const handleGetShopCatalog: MessageHandler = async ({ ws, pid, playerInfo
   } catch {
     network.send(ws, {
       type: 'shop-catalog',
-      permanentItems: PERMANENT_SHOP_ITEMS,
       rotatingItems: rotation.items,
       rotationEndUtc: rotation.rotationEndUtc,
       owned: [],
@@ -101,15 +98,11 @@ export const handleShopPurchase: MessageHandler = async ({ ws, msg, pid, playerI
     network.send(ws, { type: 'shop-purchase-result', success: false, error: 'Item not found' });
     return;
   }
-  // Verify item is currently available (permanent or in this week's rotation)
-  const isPermanent = PERMANENT_SHOP_ITEMS.some(i => i.id === itemId);
-  if (!isPermanent) {
-    const rotation = getWeeklyRotation();
-    const inRotation = rotation.items.some(i => i.id === itemId);
-    if (!inRotation) {
-      network.send(ws, { type: 'shop-purchase-result', success: false, error: 'Item not currently available' });
-      return;
-    }
+  // Verify item is in the current weekly rotation
+  const rotation = getWeeklyRotation();
+  if (!rotation.items.some(i => i.id === itemId)) {
+    network.send(ws, { type: 'shop-purchase-result', success: false, error: 'Item not currently available' });
+    return;
   }
   try {
     const result = await db.purchaseItem(info.userId, itemId, item.category, item.price);
