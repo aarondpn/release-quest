@@ -1,4 +1,5 @@
 import type { HandlerContext, MessageHandler } from './types.ts';
+import type { PlayerInfo } from '../types.ts';
 import { LOGICAL_W, LOGICAL_H } from '../config.ts';
 import { createPlayerLogger, createLobbyLogger } from '../logger.ts';
 import { getStateSnapshot } from '../state.ts';
@@ -7,6 +8,41 @@ import * as db from '../db.ts';
 import * as lobby from '../lobby.ts';
 import { getCtxForPlayer, handleLeaveLobby as doLeaveLobby, broadcastLobbyList, augmentLobbies } from '../helpers.ts';
 import { initChatForLobby, getLobbyModerator, removePlayerFromChat, broadcastSystemChat } from './chat.ts';
+
+// Returns true if the same registered user (by userId) or the same guest session
+// (by guestToken) already occupies a player or spectator slot in the lobby under
+// a *different* WebSocket connection (i.e. another tab).
+function isSameIdentityInLobby(
+  lobbyId: number,
+  pid: string,
+  playerInfo: Map<string, PlayerInfo>,
+): boolean {
+  const joining = playerInfo.get(pid);
+  if (!joining) return false;
+  // No persistent identity → can't detect duplicates
+  if (!joining.userId && !joining.guestToken) return false;
+
+  const mem = lobby.getLobbyState(lobbyId);
+  if (mem) {
+    for (const existingPid of Object.keys(mem.state.players)) {
+      if (existingPid === pid) continue;
+      const existing = playerInfo.get(existingPid);
+      if (!existing) continue;
+      if (joining.userId !== undefined && existing.userId === joining.userId) return true;
+      if (joining.guestToken !== undefined && existing.guestToken === joining.guestToken) return true;
+    }
+  }
+
+  for (const existingPid of lobby.getSpectators(lobbyId)) {
+    if (existingPid === pid) continue;
+    const existing = playerInfo.get(existingPid);
+    if (!existing) continue;
+    if (joining.userId !== undefined && existing.userId === joining.userId) return true;
+    if (joining.guestToken !== undefined && existing.guestToken === joining.guestToken) return true;
+  }
+
+  return false;
+}
 
 export const handleListLobbies: MessageHandler = ({ ws }) => {
   lobby.listLobbies().then(lobbies => {
@@ -69,6 +105,12 @@ export const handleJoinLobby: MessageHandler = async ({ ws, msg, pid, playerInfo
         return;
       }
     }
+  }
+
+  // Prevent the same user/guest from joining in multiple tabs
+  if (isSameIdentityInLobby(lobbyId, pid, playerInfo)) {
+    network.send(ws, { type: 'lobby-error', message: 'You are already in this lobby in another tab' });
+    return;
   }
 
   // Leave current lobby if in one
@@ -163,6 +205,12 @@ export const handleJoinLobbyByCode: MessageHandler = async ({ ws, msg, pid, play
 
     const lobbyId = targetLobby.id;
 
+    // Prevent the same user/guest from joining in multiple tabs
+    if (isSameIdentityInLobby(lobbyId, pid, playerInfo)) {
+      network.send(ws, { type: 'lobby-error', message: 'You are already in this lobby in another tab' });
+      return;
+    }
+
     // Leave current lobby if in one
     const currentLobbyId = lobby.getLobbyForPlayer(pid);
     if (currentLobbyId) {
@@ -234,6 +282,12 @@ export const handleJoinSpectate: MessageHandler = async ({ ws, msg, pid, playerI
   // Reject if already a player in any lobby
   if (lobby.getLobbyForPlayer(pid)) {
     network.send(ws, { type: 'lobby-error', message: 'Leave your current lobby before spectating' });
+    return;
+  }
+
+  // Prevent the same user/guest from spectating in multiple tabs
+  if (isSameIdentityInLobby(lobbyId, pid, playerInfo)) {
+    network.send(ws, { type: 'lobby-error', message: 'You are already in this lobby in another tab' });
     return;
   }
 
