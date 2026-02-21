@@ -421,6 +421,7 @@ export function buildIconPickerContent(
   owned: ReadonlySet<string>,
   getPrice: (id: string) => number | null | string,
   onSelect: (id: string) => void,
+  shopLoaded?: boolean,
 ): string | null {
   // Standard section
   const stdLabel = document.createElement('div');
@@ -497,8 +498,9 @@ export function buildIconPickerContent(
     });
   }
 
-  // If selected icon is a shop avatar the user doesn't own, reset
-  if (isShopAvatar(current) && !owned.has(current!)) {
+  // If selected icon is a shop avatar the user doesn't own, reset —
+  // but only if shop data has actually loaded (otherwise we'd wrongly reset on startup)
+  if (isShopAvatar(current) && shopLoaded !== false && !owned.has(current!)) {
     const fallback = STANDARD_ICONS[0];
     const first = container.querySelector<HTMLElement>('.icon-option[data-icon="' + fallback + '"]');
     if (first) first.classList.add('selected');

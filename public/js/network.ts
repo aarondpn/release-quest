@@ -1287,6 +1287,9 @@ export function handleMessageInternal(msg: Record<string, any>): void {
 
     case 'shop-catalog': {
       handleShopCatalog(msg);
+      // Rebuild icon pickers now that owned-items data is available
+      if (typeof window._buildIconPicker === 'function') window._buildIconPicker();
+      buildLobbyIconPicker();
       break;
     }
 

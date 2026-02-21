@@ -1,6 +1,6 @@
 import { dom, clientState, activateLobbyTab } from './state.ts';
 import { STANDARD_ICONS, renderIcon, buildIconPickerContent } from './avatars.ts';
-import { getOwnedShopItems, getShopItemPrice } from './cosmetic-shop-ui.ts';
+import { getOwnedShopItems, getShopItemPrice, isShopCatalogLoaded } from './cosmetic-shop-ui.ts';
 import { escapeHtml } from './utils.ts';
 import type { SendMessageFn, LobbyListEntry } from './client-types.ts';
 
@@ -202,6 +202,7 @@ export function buildLobbyIconPicker(): void {
     getOwnedShopItems(),
     getShopItemPrice,
     id => { _lobbyEditorSelectedIcon = id; },
+    isShopCatalogLoaded(),
   );
   if (resolved !== _lobbyEditorSelectedIcon) _lobbyEditorSelectedIcon = resolved;
 }

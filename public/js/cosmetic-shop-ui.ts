@@ -17,6 +17,11 @@ let _rotationEndUtc: string | null = null;
 let _ownedItems: Set<string> = new Set();
 let _rotationTimerId: ReturnType<typeof setInterval> | null = null;
 let _isNewRotation = false;
+let _catalogReceived = false;
+
+export function isShopCatalogLoaded(): boolean {
+  return _catalogReceived;
+}
 
 export function initShopSend(fn: SendMessageFn): void { _sendMessage = fn; }
 
@@ -28,6 +33,7 @@ export function handleShopCatalog(msg: Record<string, unknown>): void {
   _shopItems = (msg.rotatingItems || []) as ShopCatalogItem[];
   _rotationEndUtc = (msg.rotationEndUtc as string) || null;
   _ownedItems = new Set((msg.owned || []) as string[]);
+  _catalogReceived = true;
   clientState.byteCoinsBalance = (msg.balance as number) ?? 0;
   // Only show badge if server says new AND shop is not currently open
   const shopVisible = dom.shopPanel && !dom.shopPanel.classList.contains('hidden');

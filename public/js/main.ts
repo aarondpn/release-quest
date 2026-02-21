@@ -1,6 +1,6 @@
 import { CURSOR_THROTTLE_MS } from './config.ts';
 import { STANDARD_ICONS, buildIconPickerContent } from './avatars.ts';
-import { getOwnedShopItems, getShopItemPrice } from './cosmetic-shop-ui.ts';
+import { getOwnedShopItems, getShopItemPrice, isShopCatalogLoaded } from './cosmetic-shop-ui.ts';
 import { clientState, dom, initDom } from './state.ts';
 import { pixelToLogical } from './coordinates.ts';
 import { updateHUD, initHudSend } from './hud.ts';
@@ -77,6 +77,7 @@ export function buildIconPicker(): void {
     getOwnedShopItems(),
     getShopItemPrice,
     id => { clientState.selectedIcon = id; },
+    isShopCatalogLoaded(),
   );
   if (resolved !== clientState.selectedIcon) clientState.selectedIcon = resolved;
 }
