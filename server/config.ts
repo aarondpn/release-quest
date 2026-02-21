@@ -74,7 +74,7 @@ export const COSMETIC_SHOP_MAP = new Map(COSMETIC_SHOP_CATALOG.map(item => [item
 export const SHOP_ICON_IDS = COSMETIC_SHOP_CATALOG.map(item => item.id);
 export const ALL_ICONS = [...ICONS, ...PREMIUM_ICON_IDS, ...SHOP_ICON_IDS, ...Object.keys(LEGACY_ICON_MAP)];
 
-const ROTATION_SIZE = 8;
+const ROTATION_SIZE = 4;
 
 export function getWeekBoundaries(): { weekStart: Date; weekEnd: Date; weekNumber: number } {
   const now = new Date();
