@@ -1,4 +1,5 @@
 * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+.hidden { display: none !important; }
 
 :root {
   --bg: #0f0e17;
@@ -315,7 +316,6 @@ header p {
   text-align: center;
   padding: 20px;
 }
-.screen-overlay.hidden { display: none; }
 
 .screen-title {
   font-size: 20px;
@@ -488,7 +488,6 @@ header p {
   gap: 2px;
   font-family: 'Press Start 2P', monospace;
 }
-.live-dashboard.hidden { display: none; }
 
 .live-dash-row {
   display: flex;
@@ -581,7 +580,6 @@ header p {
   padding: 40px 20px;
   overflow-y: auto;
 }
-.name-entry.hidden { display: none; }
 
 /* Warm golden atmosphere */
 .name-entry::before {
@@ -2386,7 +2384,6 @@ header p {
   overflow-y: auto;
 }
 .lobby-browser-spacer { flex: 1 1 0; }
-.lobby-browser.hidden { display: none; }
 
 /* Radial glow atmosphere */
 .lobby-browser::before {
@@ -2981,7 +2978,6 @@ header p {
   z-index: 520;
   padding: 20px;
 }
-.password-modal.hidden { display: none; }
 
 .password-modal-box {
   display: flex;
@@ -3042,7 +3038,6 @@ header p {
   font-size: 7px;
   color: var(--red);
 }
-.password-modal-error.hidden { display: none; }
 
 .password-modal-buttons {
   display: flex;
@@ -3125,7 +3120,6 @@ header p {
   border-radius: 6px;
   max-width: 400px;
 }
-.lobby-error.hidden { display: none; }
 
 /* ── Leave lobby buttons ── */
 .btn-leave {
@@ -3161,10 +3155,8 @@ header p {
   background: var(--red);
   color: var(--bg);
 }
-.hud-leave-btn.hidden { display: none; }
 
 /* ── Spectator HUD item ── */
-#hud-spectators-item.hidden { display: none; }
 
 /* ── Spectator banner ── */
 .spectator-banner {
@@ -3180,7 +3172,6 @@ header p {
   color: #a78bfa;
   letter-spacing: 1px;
 }
-.spectator-banner.hidden { display: none; }
 .spectator-banner-label { flex: 1; text-align: center; }
 .spectator-leave-btn {
   font-size: 6px;
@@ -3273,8 +3264,6 @@ header p {
   color: var(--yellow);
 }
 
-.auth-logged-in-view.hidden,
-.auth-guest-view.hidden { display: none; }
 
 .btn-link {
   font-family: 'Press Start 2P', monospace;
@@ -3305,7 +3294,6 @@ header p {
   text-align: center;
   padding: 20px;
 }
-.auth-overlay.hidden { display: none; }
 
 .auth-overlay-title {
   font-size: 18px;
@@ -3346,7 +3334,6 @@ header p {
   width: 280px;
   max-width: 90vw;
 }
-.auth-form.hidden { display: none; }
 
 .auth-input {
   font-family: 'Press Start 2P', monospace;
@@ -3378,7 +3365,6 @@ header p {
   border-radius: 6px;
   max-width: 280px;
 }
-.auth-error.hidden { display: none; }
 
 .auth-back-btn {
   margin-top: 8px;
@@ -3447,7 +3433,6 @@ header p {
   to { opacity: 1; transform: translateY(0); }
 }
 
-#lobby-list-panel.hidden { display: none; }
 
 /* ── Lobby Profile Bar ── */
 .lobby-profile-bar {
@@ -3519,8 +3504,6 @@ header p {
   align-items: center;
   gap: 6px;
 }
-.lobby-profile-guest-view.hidden,
-.lobby-profile-logged-in-view.hidden { display: none; }
 
 /* ── Lobby Profile Editor ── */
 .lobby-profile-editor {
@@ -3610,7 +3593,6 @@ header p {
   width: 100%;
   align-items: center;
 }
-.leaderboard-panel.hidden { display: none; }
 
 .leaderboard-header {
   font-size: 10px;
@@ -3718,7 +3700,6 @@ header p {
   width: 100%;
   align-items: center;
 }
-.replays-panel.hidden { display: none; }
 
 .replays-header {
   font-size: 10px;
@@ -3857,7 +3838,6 @@ header p {
   margin: 0 auto;
   align-items: center;
 }
-.stats-card-panel.hidden { display: none; }
 
 .stats-card-panel-header {
   font-size: 10px;
@@ -4118,7 +4098,6 @@ header p {
   z-index: 100;
   backdrop-filter: blur(4px);
 }
-.playback-controls.hidden { display: none; }
 
 .playback-badge {
   font-family: 'Press Start 2P', monospace;
@@ -4542,7 +4521,6 @@ header p {
   text-align: center;
   margin-top: 8px;
 }
-.lobby-host-hint.hidden { display: none; }
 .lobby-start-btn::after {
   content: '';
   position: absolute;
@@ -4811,7 +4789,6 @@ header p {
   text-align: center;
   border-radius: 6px;
 }
-.lobby-custom-warning.hidden { display: none; }
 
 .advanced-config-warning {
   margin: 8px 0;
@@ -4823,7 +4800,6 @@ header p {
   text-align: center;
   border-radius: 4px;
 }
-.advanced-config-warning.hidden { display: none; }
 
 .lobby-list-custom {
   font-size: 5px;
@@ -4846,7 +4822,6 @@ header p {
   border-left: 2px solid #2a2a4a;
   z-index: 100;
 }
-.chat-panel.hidden { display: none; }
 
 .chat-handle {
   padding: 8px 0 4px;
@@ -4879,7 +4854,6 @@ header p {
   padding: 10px 6px;
   z-index: 100;
 }
-.chat-toggle-btn.hidden { display: none; }
 .chat-toggle-btn:hover { background: rgba(78, 205, 196, 0.15); }
 
 .chat-toggle-icon {
@@ -4906,7 +4880,6 @@ header p {
   justify-content: center;
   padding: 0 3px;
 }
-.chat-badge.hidden { display: none; }
 
 .chat-body {
   flex: 1;
@@ -5397,7 +5370,6 @@ header p {
   flex-direction: column;
   gap: 6px;
 }
-#dev-panel-body.hidden { display: none; }
 .dev-btn {
   background: #2a1515;
   color: #ff8888;
@@ -5576,7 +5548,6 @@ body.qa-hitbox-active .arena .bug::before {
    SUPPLY DEPOT — Arcade-style shop overlay
    ═══════════════════════════════════════════════════════════ */
 
-#shop-screen.hidden { display: none; }
 #shop-screen:not(.hidden) {
   display: flex;
   align-items: center;
@@ -5890,7 +5861,6 @@ body.qa-hitbox-active .arena .bug::before {
   margin-left: 8px;
 }
 
-.hud-buffs.hidden { display: none; }
 
 .hud-buff {
   display: flex;
@@ -5986,7 +5956,6 @@ body.qa-hitbox-active .arena .bug::before {
   margin-left: 4px;
   position: relative;
 }
-.lobby-profile-coins.hidden { display: none; }
 
 .coin-balance {
   font-family: 'Press Start 2P', monospace;
@@ -6007,43 +5976,28 @@ body.qa-hitbox-active .arena .bug::before {
 
 .quest-tracker {
   width: 100%;
-  max-width: 560px;
+  max-width: 900px;
   margin: 0 auto;
-  background:
-    linear-gradient(135deg, rgba(26,26,46,0.92) 0%, rgba(15,14,23,0.95) 100%);
-  border: 1px solid rgba(78, 205, 196, 0.12);
-  border-radius: 8px;
-  padding: 10px 12px 8px;
-  animation: lb-entrance 0.45s ease-out 0.12s both;
+  padding: 16px 20px 12px;
   position: relative;
   overflow: hidden;
-}
-
-/* Subtle inner edge glow */
-.quest-tracker::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 8px;
-  background: linear-gradient(180deg, rgba(78,205,196,0.04) 0%, transparent 40%);
-  pointer-events: none;
 }
 
 .quest-tracker-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
   position: relative;
 }
 
 .quest-tracker-coins {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 11px;
+  gap: 6px;
+  font-size: 14px;
   color: var(--yellow);
   font-family: 'Press Start 2P', monospace;
 }
@@ -6062,17 +6016,17 @@ body.qa-hitbox-active .arena .bug::before {
 }
 
 .quest-tracker-timer {
-  font-size: 7px;
+  font-size: 10px;
   color: var(--red);
   font-family: 'Press Start 2P', monospace;
   letter-spacing: 0.5px;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   animation: timer-urgency 2s ease-in-out infinite;
 }
 
-.qt-timer-icon { font-size: 8px; }
+.qt-timer-icon { font-size: 11px; }
 
 @keyframes timer-urgency {
   0%, 100% { opacity: 0.7; }
@@ -6081,24 +6035,48 @@ body.qa-hitbox-active .arena .bug::before {
 
 /* ── Quest Sections ── */
 
+.quest-tracker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (min-width: 700px) {
+  .quest-tracker-list {
+    flex-direction: row;
+    gap: 24px;
+  }
+  .quest-section {
+    flex: 1;
+    min-width: 0;
+  }
+  .quest-section + .quest-section {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+    padding-left: 24px;
+    border-left: 1px solid rgba(255,255,255,0.06);
+  }
+}
+
 .quest-section {
   position: relative;
 }
 
 .quest-section + .quest-section {
-  margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px solid rgba(255,255,255,0.03);
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.04);
 }
 
 .quest-section-header {
-  font-size: 5px;
+  font-size: 8px;
   letter-spacing: 2px;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
   font-family: 'Press Start 2P', monospace;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .quest-section-header::after {
@@ -6122,17 +6100,17 @@ body.qa-hitbox-active .arena .bug::before {
 
 .quest-row {
   display: grid;
-  grid-template-columns: 20px 1fr auto;
+  grid-template-columns: 28px 1fr auto;
   align-items: center;
-  gap: 6px;
-  padding: 3px 4px;
-  border-radius: 4px;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 6px;
   transition: background 0.15s ease;
   position: relative;
 }
 
 .quest-icon {
-  font-size: 13px;
+  font-size: 18px;
   text-align: center;
   line-height: 1;
 }
@@ -6141,7 +6119,7 @@ body.qa-hitbox-active .arena .bug::before {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .quest-title-row {
@@ -6151,17 +6129,17 @@ body.qa-hitbox-active .arena .bug::before {
 }
 
 .quest-title {
-  font-size: 7px;
+  font-size: 10px;
   color: #d0d0e0;
   font-family: 'Press Start 2P', monospace;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.2;
+  line-height: 1.3;
 }
 
 .quest-desc {
-  font-size: 5px;
+  font-size: 7px;
   color: var(--muted);
   opacity: 0.5;
   font-family: 'Press Start 2P', monospace;
@@ -6173,8 +6151,8 @@ body.qa-hitbox-active .arena .bug::before {
 .quest-reward-badge {
   display: flex;
   align-items: center;
-  gap: 3px;
-  font-size: 7px;
+  gap: 4px;
+  font-size: 10px;
   color: var(--yellow);
   font-family: 'Press Start 2P', monospace;
   flex-shrink: 0;
@@ -6195,9 +6173,9 @@ body.qa-hitbox-active .arena .bug::before {
 
 .quest-progress-bar {
   flex: 1;
-  height: 3px;
+  height: 5px;
   background: rgba(255, 255, 255, 0.06);
-  border-radius: 2px;
+  border-radius: 3px;
   overflow: hidden;
   position: relative;
 }
@@ -6239,11 +6217,11 @@ body.qa-hitbox-active .arena .bug::before {
 }
 
 .quest-progress-text {
-  font-size: 5px;
+  font-size: 8px;
   color: var(--muted);
   font-family: 'Press Start 2P', monospace;
   flex-shrink: 0;
-  min-width: 32px;
+  min-width: 40px;
   text-align: right;
   opacity: 0.6;
 }
@@ -6324,7 +6302,6 @@ body.qa-hitbox-active .arena .bug::before {
   letter-spacing: 0.5px;
   opacity: 0.6;
 }
-.quest-tracker-locked.hidden { display: none; }
 
 .qt-lock-icon {
   opacity: 0.5;
@@ -6436,7 +6413,6 @@ body.qa-hitbox-active .arena .bug::before {
 
 /* ── Cosmetic Shop ── */
 
-#shop-panel.hidden { display: none; }
 #shop-panel {
   max-width: 540px;
   margin: 0 auto;
@@ -6669,7 +6645,6 @@ body.qa-hitbox-active .arena .bug::before {
   border-radius: 4px;
 }
 
-.shop-guest-lock.hidden { display: none; }
 .shop-guest-lock {
   display: flex;
   align-items: center;
@@ -6699,7 +6674,8 @@ body.qa-hitbox-active .arena .bug::before {
   color: var(--red);
 }
 
-.shop-new-badge {
+.shop-new-badge,
+.quest-tab-badge {
   font-family: 'Press Start 2P', monospace;
   font-size: 5px;
   color: #0f0e17;

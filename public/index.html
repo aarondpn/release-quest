@@ -115,21 +115,6 @@
     </div>
   </div>
 
-  <div class="quest-tracker" id="quest-tracker">
-    <div class="quest-tracker-header">
-      <div class="quest-tracker-coins">
-        <svg class="byte-coin-svg qt-coin-icon" width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="4" y="1" width="8" height="14" rx="1" fill="#ffe66d"/><rect x="3" y="2" width="1" height="12" fill="#ffe66d"/><rect x="12" y="2" width="1" height="12" fill="#ffe66d"/><rect x="6" y="3" width="4" height="2" fill="#ffd700"/><rect x="6" y="7" width="4" height="2" fill="#ffd700"/><rect x="6" y="11" width="4" height="2" fill="#ffd700"/><rect x="5" y="1" width="6" height="1" fill="#fff8c4" opacity="0.6"/></svg>
-        <span id="qt-balance">0</span>
-      </div>
-      <div class="quest-tracker-timer" id="qt-timer"><span class="qt-timer-icon">&#x23F1;</span> --:--</div>
-    </div>
-    <div class="quest-tracker-list" id="quest-tracker-list"></div>
-    <div class="quest-tracker-locked hidden" id="quest-tracker-locked">
-      <svg class="qt-lock-icon" width="12" height="14" viewBox="0 0 12 14" fill="none"><rect x="1" y="6" width="10" height="7" rx="1" fill="#a7a9be"/><rect x="3" y="2" width="6" height="5" rx="3" fill="none" stroke="#a7a9be" stroke-width="1.5"/><rect x="5" y="8" width="2" height="3" rx="0.5" fill="#0f0e17"/></svg>
-      LOG IN TO EARN BYTE COINS
-    </div>
-  </div>
-
   <div class="lobby-profile-editor collapsed" id="lobby-profile-editor">
     <div class="lobby-editor-icon-picker" id="lobby-editor-icon-picker"></div>
     <div class="lobby-editor-row">
@@ -144,6 +129,7 @@
     <button class="lobby-tab" id="replays-tab">REPLAYS</button>
     <button class="lobby-tab" id="stats-card-tab">STATS CARD</button>
     <button class="lobby-tab" id="shop-tab">SHOP</button>
+    <button class="lobby-tab" id="quests-tab">QUESTS</button>
     <a href="/overview.html" class="lobby-tab lobby-tab-link" target="_blank">📚 WIKI</a>
   </div>
 
@@ -371,6 +357,23 @@
     <div class="shop-guest-lock hidden" id="shop-guest-lock">
       <svg class="qt-lock-icon" width="12" height="14" viewBox="0 0 12 14" fill="none"><rect x="1" y="6" width="10" height="7" rx="1" fill="#a7a9be"/><rect x="3" y="2" width="6" height="5" rx="3" fill="none" stroke="#a7a9be" stroke-width="1.5"/><rect x="5" y="8" width="2" height="3" rx="0.5" fill="#0f0e17"/></svg>
       LOG IN TO ACCESS THE SHOP
+    </div>
+  </div>
+
+  <div id="quests-panel" class="hidden">
+    <div class="quest-tracker" id="quest-tracker">
+      <div class="quest-tracker-header">
+        <div class="quest-tracker-coins">
+          <svg class="byte-coin-svg qt-coin-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="4" y="1" width="8" height="14" rx="1" fill="#ffe66d"/><rect x="3" y="2" width="1" height="12" fill="#ffe66d"/><rect x="12" y="2" width="1" height="12" fill="#ffe66d"/><rect x="6" y="3" width="4" height="2" fill="#ffd700"/><rect x="6" y="7" width="4" height="2" fill="#ffd700"/><rect x="6" y="11" width="4" height="2" fill="#ffd700"/><rect x="5" y="1" width="6" height="1" fill="#fff8c4" opacity="0.6"/></svg>
+          <span id="qt-balance">0</span>
+        </div>
+        <div class="quest-tracker-timer" id="qt-timer"><span class="qt-timer-icon">&#x23F1;</span> --:--</div>
+      </div>
+      <div class="quest-tracker-list" id="quest-tracker-list"></div>
+      <div class="quest-tracker-locked hidden" id="quest-tracker-locked">
+        <svg class="qt-lock-icon" width="12" height="14" viewBox="0 0 12 14" fill="none"><rect x="1" y="6" width="10" height="7" rx="1" fill="#a7a9be"/><rect x="3" y="2" width="6" height="5" rx="3" fill="none" stroke="#a7a9be" stroke-width="1.5"/><rect x="5" y="8" width="2" height="3" rx="0.5" fill="#0f0e17"/></svg>
+        LOG IN TO EARN BYTE COINS
+      </div>
     </div>
   </div>
 

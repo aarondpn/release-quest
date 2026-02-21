@@ -13,7 +13,7 @@ import { initStatsCardSend, showStatsCardTab, initThemePicker, downloadStatsCard
 import { stopPlayback, togglePause, cycleSpeed } from './playback.ts';
 import { showError, ERROR_LEVELS } from './error-handler.ts';
 import { initChatSend, initChat } from './chat.ts';
-import { initQuestsSend, requestQuests } from './quests-ui.ts';
+import { initQuestsSend, requestQuests, showQuestsTab } from './quests-ui.ts';
 import { initShopSend, showShopTab, hideShopPanel } from './cosmetic-shop-ui.ts';
 import type { DifficultyPreset } from './client-types.ts';
 
@@ -506,6 +506,9 @@ if (dom.statsCardTab) dom.statsCardTab.addEventListener('click', () => { hideSho
 
 // ── Shop tab handler ──
 if (dom.shopTab) dom.shopTab.addEventListener('click', showShopTab);
+
+// ── Quests tab handler ──
+if (dom.questsTab) dom.questsTab.addEventListener('click', showQuestsTab);
 if (dom.statsCardDownloadBtn) dom.statsCardDownloadBtn.addEventListener('click', downloadStatsCardPng);
 
 // ── Playback controls ──

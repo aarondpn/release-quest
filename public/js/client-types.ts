@@ -353,6 +353,8 @@ export interface DomRefs {
   profileCoins: HTMLElement | null;
   shopPanel: HTMLElement | null;
   shopTab: HTMLElement | null;
+  questsPanel: HTMLElement | null;
+  questsTab: HTMLElement | null;
   shopGrid: HTMLElement | null;
   shopBalanceAmount: HTMLElement | null;
   shopGuestLock: HTMLElement | null;

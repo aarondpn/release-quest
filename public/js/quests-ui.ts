@@ -1,10 +1,10 @@
-import { clientState, dom } from './state.ts';
+import { clientState, dom, activateLobbyTab } from './state.ts';
 import { showToast } from './utils.ts';
 import type { SendMessageFn, QuestEntry, QuestData } from './client-types.ts';
 
 let _sendMessage: SendMessageFn | null = null;
 
-const COIN_SVG_SMALL = '<svg class="byte-coin-svg" width="8" height="8" viewBox="0 0 16 16" fill="none"><rect x="4" y="1" width="8" height="14" rx="1" fill="#ffe66d"/><rect x="3" y="2" width="1" height="12" fill="#ffe66d"/><rect x="12" y="2" width="1" height="12" fill="#ffe66d"/><rect x="6" y="3" width="4" height="2" fill="#ffd700"/><rect x="6" y="7" width="4" height="2" fill="#ffd700"/><rect x="6" y="11" width="4" height="2" fill="#ffd700"/><rect x="5" y="1" width="6" height="1" fill="#fff8c4" opacity="0.6"/></svg>';
+const COIN_SVG_SMALL = '<svg class="byte-coin-svg" width="11" height="11" viewBox="0 0 16 16" fill="none"><rect x="4" y="1" width="8" height="14" rx="1" fill="#ffe66d"/><rect x="3" y="2" width="1" height="12" fill="#ffe66d"/><rect x="12" y="2" width="1" height="12" fill="#ffe66d"/><rect x="6" y="3" width="4" height="2" fill="#ffd700"/><rect x="6" y="7" width="4" height="2" fill="#ffd700"/><rect x="6" y="11" width="4" height="2" fill="#ffd700"/><rect x="5" y="1" width="6" height="1" fill="#fff8c4" opacity="0.6"/></svg>';
 const COIN_SVG_TOAST = '<svg class="byte-coin-svg" width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="4" y="1" width="8" height="14" rx="1" fill="#ffe66d"/><rect x="3" y="2" width="1" height="12" fill="#ffe66d"/><rect x="12" y="2" width="1" height="12" fill="#ffe66d"/><rect x="6" y="3" width="4" height="2" fill="#ffd700"/><rect x="6" y="7" width="4" height="2" fill="#ffd700"/><rect x="6" y="11" width="4" height="2" fill="#ffd700"/><rect x="5" y="1" width="6" height="1" fill="#fff8c4" opacity="0.6"/></svg>';
 
 export function initQuestsSend(sendFn: SendMessageFn): void {
@@ -13,6 +13,11 @@ export function initQuestsSend(sendFn: SendMessageFn): void {
 
 export function requestQuests(): void {
   if (_sendMessage) _sendMessage({ type: 'get-quests' });
+}
+
+export function showQuestsTab(): void {
+  activateLobbyTab(dom.questsPanel, dom.questsTab);
+  requestQuests();
 }
 
 export function handleQuestsData(msg: Record<string, any>): void {
@@ -26,6 +31,7 @@ export function handleQuestsData(msg: Record<string, any>): void {
   clientState.byteCoinsBalance = msg.balance || 0;
   renderQuestTracker();
   updateBalanceDisplay();
+  updateQuestTabIndicator();
   startCountdownTimer();
 }
 
@@ -49,6 +55,7 @@ export function handleQuestProgress(msg: Record<string, any>): void {
 
   renderQuestTracker();
   updateBalanceDisplay();
+  updateQuestTabIndicator();
 
   for (const update of msg.updates) {
     if (update.completed) {
@@ -74,6 +81,7 @@ export function resetQuestState(): void {
   if (dom.qtBalance) dom.qtBalance.textContent = '0';
   if (dom.profileCoinBalance) dom.profileCoinBalance.textContent = '0';
   showGuestView();
+  updateQuestTabIndicator();
 }
 
 function showGuestView(): void {
@@ -229,6 +237,25 @@ function startCountdownTimer(): void {
 
   update();
   clientState.questTimerInterval = setInterval(update, 60000);
+}
+
+export function updateQuestTabIndicator(): void {
+  if (!dom.questsTab) return;
+  const badge = dom.questsTab.querySelector('.quest-tab-badge');
+  const data = clientState.questData;
+  const openCount = data?.quests ? data.quests.filter((q: QuestEntry) => !q.completed).length : 0;
+  if (openCount > 0) {
+    if (badge) {
+      badge.textContent = String(openCount);
+    } else {
+      const el = document.createElement('span');
+      el.className = 'quest-tab-badge';
+      el.textContent = String(openCount);
+      dom.questsTab.appendChild(el);
+    }
+  } else {
+    if (badge) badge.remove();
+  }
 }
 
 function showQuestCompletionToast(update: Record<string, any>): void {
