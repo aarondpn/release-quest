@@ -1,52 +1,70 @@
-import { dom, clientState } from './state.js';
-import { renderIcon } from './avatars.js';
-import { showWalkout } from './walkout.js';
+import { dom, clientState } from './state.ts';
+import { renderIcon } from './avatars.ts';
+import { showWalkout } from './walkout.ts';
+import type { WalkoutPlayer } from './walkout.ts';
+import type { SendMessageFn } from './client-types.ts';
 
-// sendMessage is injected lazily to avoid circular dependency
-let _hudSendMessage = null;
-export function initHudSend(fn) { _hudSendMessage = fn; }
+let _hudSendMessage: SendMessageFn | null = null;
+export function initHudSend(fn: SendMessageFn): void { _hudSendMessage = fn; }
 
-const ROLE_DEFS = [
+interface RoleDef {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+}
+
+export interface ScoreboardEntry {
+  id: string;
+  name: string;
+  icon?: string;
+  color?: string;
+  score: number;
+  isGuest?: boolean;
+  bugsSquashed?: number;
+}
+
+const ROLE_DEFS: RoleDef[] = [
   { id: 'debugger', name: 'Debugger', icon: '🔍', description: '+50% pts on special bugs' },
   { id: 'qa',       name: 'QA Eng',   icon: '🎯', description: '+40% click hitbox' },
   { id: 'devops',   name: 'DevOps',   icon: '⚡', description: 'Power-ups last 50% longer' },
   { id: 'architect',name: 'Architect',icon: '🏗️', description: 'Solo merge conflicts; free pipeline reset' },
 ];
-const ROLE_MAP = Object.fromEntries(ROLE_DEFS.map(r => [r.id, r]));
+const ROLE_MAP: Record<string, RoleDef> = Object.fromEntries(ROLE_DEFS.map(r => [r.id, r]));
 
-function escapeHtml(s) {
+function escapeHtml(s: string): string {
   const d = document.createElement('div');
   d.textContent = s;
   return d.innerHTML;
 }
 
-export function updateHUD(score, level, hp) {
-  if (score !== undefined) dom.scoreEl.textContent = score;
-  if (level !== undefined) dom.levelEl.textContent = level;
+export function updateHUD(score?: number, level?: number | string, hp?: number): void {
+  if (score !== undefined) dom.scoreEl!.textContent = String(score);
+  if (level !== undefined) dom.levelEl!.textContent = String(level);
   if (hp !== undefined) {
-    dom.hpBar.style.width = hp + '%';
-    if (hp <= 25) dom.hpBar.classList.add('low');
-    else dom.hpBar.classList.remove('low');
+    dom.hpBar!.style.width = hp + '%';
+    if (hp <= 25) dom.hpBar!.classList.add('low');
+    else dom.hpBar!.classList.remove('low');
   }
 }
 
-export function updatePlayerCount() {
-  dom.playerCountEl.textContent = Object.keys(clientState.players).length;
+export function updatePlayerCount(): void {
+  dom.playerCountEl!.textContent = String(Object.keys(clientState.players).length);
 }
 
-export function hideAllScreens() {
-  dom.startScreen.classList.add('hidden');
-  dom.gameoverScreen.classList.add('hidden');
-  dom.winScreen.classList.add('hidden');
-  dom.levelScreen.classList.add('hidden');
-  dom.bossScreen.classList.add('hidden');
+export function hideAllScreens(): void {
+  dom.startScreen!.classList.add('hidden');
+  dom.gameoverScreen!.classList.add('hidden');
+  dom.winScreen!.classList.add('hidden');
+  dom.levelScreen!.classList.add('hidden');
+  dom.bossScreen!.classList.add('hidden');
   if (dom.shopScreen) dom.shopScreen.classList.add('hidden');
   stopLobbyAnimations();
 }
 
-export function showStartScreen() {
+export function showStartScreen(): void {
   hideAllScreens();
-  dom.startScreen.classList.remove('hidden');
+  dom.startScreen!.classList.remove('hidden');
   startLobbyAnimations();
   updateLobbyRoster();
   updateLobbyRolePicker();
@@ -57,11 +75,11 @@ export function showStartScreen() {
   }
 }
 
-function isLobbyModerator() {
+function isLobbyModerator(): boolean {
   return !clientState.lobbyCreatorId || clientState.lobbyCreatorId === clientState.myId;
 }
 
-export function updateStartButtonState() {
+export function updateStartButtonState(): void {
   const isMod = isLobbyModerator();
   const btns = [document.getElementById('start-btn'), document.getElementById('retry-btn'), document.getElementById('continue-btn')];
   for (const btn of btns) {
@@ -71,58 +89,58 @@ export function updateStartButtonState() {
       continue;
     }
     btn.style.display = '';
-    btn.disabled = !isMod;
+    (btn as HTMLButtonElement).disabled = !isMod;
     btn.title = isMod ? '' : 'Only the lobby host can start the game';
   }
   const hint = document.getElementById('lobby-host-hint');
   if (hint) hint.classList.toggle('hidden', isMod);
 }
 
-export function showGameOverScreen(score, level, playerList) {
+export function showGameOverScreen(score: number, level: number, playerList: ScoreboardEntry[]): void {
   if (playerList && playerList.length >= 2) {
-    showWalkout(playerList, () => {
+    showWalkout(playerList as WalkoutPlayer[], () => {
       hideAllScreens();
-      document.getElementById('final-score').textContent = score;
-      document.getElementById('final-level').textContent = level;
-      renderScoreboard(document.getElementById('gameover-scoreboard'), playerList);
-      dom.gameoverScreen.classList.remove('hidden');
+      document.getElementById('final-score')!.textContent = String(score);
+      document.getElementById('final-level')!.textContent = String(level);
+      renderScoreboard(document.getElementById('gameover-scoreboard')!, playerList);
+      dom.gameoverScreen!.classList.remove('hidden');
       updateStartButtonState();
     });
     return;
   }
   hideAllScreens();
-  document.getElementById('final-score').textContent = score;
-  document.getElementById('final-level').textContent = level;
-  renderScoreboard(document.getElementById('gameover-scoreboard'), playerList);
-  dom.gameoverScreen.classList.remove('hidden');
+  document.getElementById('final-score')!.textContent = String(score);
+  document.getElementById('final-level')!.textContent = String(level);
+  renderScoreboard(document.getElementById('gameover-scoreboard')!, playerList);
+  dom.gameoverScreen!.classList.remove('hidden');
   updateStartButtonState();
 }
 
-export function showWinScreen(score, playerList) {
+export function showWinScreen(score: number, playerList: ScoreboardEntry[]): void {
   if (playerList && playerList.length >= 2) {
-    showWalkout(playerList, () => {
+    showWalkout(playerList as WalkoutPlayer[], () => {
       hideAllScreens();
-      document.getElementById('win-score').textContent = score;
-      renderScoreboard(document.getElementById('win-scoreboard'), playerList);
-      dom.winScreen.classList.remove('hidden');
+      document.getElementById('win-score')!.textContent = String(score);
+      renderScoreboard(document.getElementById('win-scoreboard')!, playerList);
+      dom.winScreen!.classList.remove('hidden');
       updateStartButtonState();
     });
     return;
   }
   hideAllScreens();
-  document.getElementById('win-score').textContent = score;
-  renderScoreboard(document.getElementById('win-scoreboard'), playerList);
-  dom.winScreen.classList.remove('hidden');
+  document.getElementById('win-score')!.textContent = String(score);
+  renderScoreboard(document.getElementById('win-scoreboard')!, playerList);
+  dom.winScreen!.classList.remove('hidden');
   updateStartButtonState();
 }
 
-export function showLevelScreen(levelNum) {
+export function showLevelScreen(levelNum: number): void {
   hideAllScreens();
-  document.getElementById('level-screen-num').textContent = levelNum;
-  dom.levelScreen.classList.remove('hidden');
+  document.getElementById('level-screen-num')!.textContent = String(levelNum);
+  dom.levelScreen!.classList.remove('hidden');
 }
 
-export function renderScoreboard(container, playerList) {
+export function renderScoreboard(container: HTMLElement, playerList: ScoreboardEntry[]): void {
   const sorted = playerList.slice().sort((a, b) => b.score - a.score);
   container.innerHTML = sorted.map(p =>
     '<div class="scoreboard-row">' +
@@ -142,7 +160,7 @@ export function renderScoreboard(container, playerList) {
 
 let dashRafPending = false;
 
-export function updateLiveDashboard() {
+export function updateLiveDashboard(): void {
   if (dashRafPending) return;
   dashRafPending = true;
   requestAnimationFrame(() => {
@@ -151,7 +169,7 @@ export function updateLiveDashboard() {
   });
 }
 
-function renderLiveDashboard() {
+function renderLiveDashboard(): void {
   const container = dom.liveDashboard;
   if (!container || container.classList.contains('hidden')) return;
 
@@ -161,20 +179,20 @@ function renderLiveDashboard() {
   const sorted = players.slice().sort((a, b) => (b.score || 0) - (a.score || 0));
 
   // Capture old positions (FLIP step 1: First)
-  const existingRows = container.querySelectorAll('.live-dash-row');
-  const oldPositions = {};
+  const existingRows = container.querySelectorAll<HTMLElement>('.live-dash-row');
+  const oldPositions: Record<string, DOMRect> = {};
   existingRows.forEach(row => {
-    oldPositions[row.dataset.playerId] = row.getBoundingClientRect();
+    oldPositions[row.dataset.playerId!] = row.getBoundingClientRect();
   });
 
   // Build or reuse rows
-  const rowMap = {};
-  existingRows.forEach(row => { rowMap[row.dataset.playerId] = row; });
+  const rowMap: Record<string, HTMLElement> = {};
+  existingRows.forEach(row => { rowMap[row.dataset.playerId!] = row; });
 
   // Remove rows for players no longer present
   const currentIds = new Set(sorted.map(p => p.id));
   existingRows.forEach(row => {
-    if (!currentIds.has(row.dataset.playerId)) row.remove();
+    if (!currentIds.has(row.dataset.playerId!)) row.remove();
   });
 
   sorted.forEach((p, i) => {
@@ -187,7 +205,7 @@ function renderLiveDashboard() {
       row = document.createElement('div');
       row.className = 'live-dash-row';
       row.dataset.playerId = p.id;
-      row.dataset.prevScore = score;
+      row.dataset.prevScore = String(score);
 
       row.innerHTML =
         '<span class="live-dash-rank"></span>' +
@@ -201,14 +219,14 @@ function renderLiveDashboard() {
     }
 
     // Update rank
-    row.querySelector('.live-dash-rank').textContent = rank;
+    row.querySelector('.live-dash-rank')!.textContent = String(rank);
 
     // Update name & icon
-    row.querySelector('.live-dash-icon').innerHTML = renderIcon(p.icon || '', 10);
-    row.querySelector('.live-dash-name-text').textContent = escapeHtml(p.name);
+    (row.querySelector('.live-dash-icon') as HTMLElement).innerHTML = renderIcon(p.icon || '', 10);
+    (row.querySelector('.live-dash-name-text') as HTMLElement).textContent = escapeHtml(p.name);
 
     // Update role icon
-    const roleEl = row.querySelector('.live-dash-role');
+    const roleEl = row.querySelector<HTMLElement>('.live-dash-role');
     if (roleEl) {
       const rd = p.role ? ROLE_MAP[p.role] : null;
       roleEl.textContent = rd ? rd.icon : '';
@@ -216,20 +234,20 @@ function renderLiveDashboard() {
     }
 
     // Guest badge
-    let guestBadge = row.querySelector('.guest-badge');
+    let guestBadge = row.querySelector<HTMLElement>('.guest-badge');
     if (p.isGuest && !guestBadge) {
       guestBadge = document.createElement('span');
       guestBadge.className = 'guest-badge';
       guestBadge.textContent = 'GUEST';
-      row.querySelector('.live-dash-name').appendChild(guestBadge);
+      row.querySelector('.live-dash-name')!.appendChild(guestBadge);
     } else if (!p.isGuest && guestBadge) {
       guestBadge.remove();
     }
 
     // Score change detection
-    const prevScore = parseInt(row.dataset.prevScore) || 0;
-    const scoreEl = row.querySelector('.live-dash-score');
-    scoreEl.textContent = score;
+    const prevScore = parseInt(row.dataset.prevScore!) || 0;
+    const scoreEl = row.querySelector<HTMLElement>('.live-dash-score')!;
+    scoreEl.textContent = String(score);
 
     if (score > prevScore && prevScore > 0) {
       // Pop animation
@@ -245,7 +263,7 @@ function renderLiveDashboard() {
       row.appendChild(deltaEl);
       setTimeout(() => deltaEl.remove(), 800);
     }
-    row.dataset.prevScore = score;
+    row.dataset.prevScore = String(score);
 
     // Highlight current player
     row.classList.toggle('is-me', isMe);
@@ -255,9 +273,9 @@ function renderLiveDashboard() {
   });
 
   // FLIP step 2: Last — get new positions, then Invert + Play
-  const newRows = container.querySelectorAll('.live-dash-row');
+  const newRows = container.querySelectorAll<HTMLElement>('.live-dash-row');
   newRows.forEach(row => {
-    const pid = row.dataset.playerId;
+    const pid = row.dataset.playerId!;
     const oldPos = oldPositions[pid];
     if (oldPos) {
       const newPos = row.getBoundingClientRect();
@@ -273,12 +291,12 @@ function renderLiveDashboard() {
   });
 }
 
-export function showLiveDashboard() {
+export function showLiveDashboard(): void {
   if (dom.liveDashboard) dom.liveDashboard.classList.remove('hidden');
   updateLiveDashboard();
 }
 
-export function hideLiveDashboard() {
+export function hideLiveDashboard(): void {
   if (dom.liveDashboard) dom.liveDashboard.classList.add('hidden');
 }
 
@@ -299,47 +317,42 @@ const LOBBY_TIPS = [
   'The duck gives a 2x score boost to everyone',
 ];
 
-let lobbyTipTimer = null;
-let lobbyBugSpawner = null;
+let lobbyTipTimer: ReturnType<typeof setInterval> | null = null;
+let lobbyBugSpawner: ReturnType<typeof setInterval> | null = null;
 let lobbyBugId = 0;
 
-function startLobbyAnimations() {
-  // Start tips rotation
+function startLobbyAnimations(): void {
   rotateTip();
   lobbyTipTimer = setInterval(rotateTip, 5000);
 
-  // Start spawning background bugs
   spawnLobbyBugs();
   lobbyBugSpawner = setInterval(spawnLobbyBugs, 3000);
 }
 
-function stopLobbyAnimations() {
+function stopLobbyAnimations(): void {
   if (lobbyTipTimer) { clearInterval(lobbyTipTimer); lobbyTipTimer = null; }
   if (lobbyBugSpawner) { clearInterval(lobbyBugSpawner); lobbyBugSpawner = null; }
-  // Clean up existing lobby bugs
   const container = document.getElementById('lobby-bg-bugs');
   if (container) container.innerHTML = '';
 }
 
 /* ── Tips rotation ── */
 let currentTipIndex = -1;
-function rotateTip() {
+function rotateTip(): void {
   const el = document.getElementById('lobby-tips-text');
   if (!el) return;
   currentTipIndex = (currentTipIndex + 1) % LOBBY_TIPS.length;
   el.style.animation = 'none';
-  // force reflow
   void el.offsetWidth;
   el.textContent = LOBBY_TIPS[currentTipIndex];
   el.style.animation = 'lobby-tip-slide 0.4s ease-out';
 }
 
 /* ── Player roster ── */
-export function updateLobbyRoster() {
+export function updateLobbyRoster(): void {
   const list = document.getElementById('lobby-roster-list');
   if (!list) return;
-  // Only update if the start screen is visible
-  if (dom.startScreen.classList.contains('hidden')) return;
+  if (dom.startScreen!.classList.contains('hidden')) return;
 
   const players = Object.values(clientState.players);
   list.innerHTML = players.map((p, i) => {
@@ -359,18 +372,17 @@ export function updateLobbyRoster() {
   }).join('');
 }
 
-export function updateLobbyPlayerRoleBadge(pid, role) {
+export function updateLobbyPlayerRoleBadge(pid: string, role: string | null): void {
   const list = document.getElementById('lobby-roster-list');
   if (!list) return;
-  const card = list.querySelector('[data-player-id="' + pid + '"]');
+  const card = list.querySelector<HTMLElement>('[data-player-id="' + pid + '"]');
   if (!card) return;
   const roleData = role ? ROLE_MAP[role] : null;
-  let badge = card.querySelector('.lobby-player-role');
+  let badge = card.querySelector<HTMLElement>('.lobby-player-role');
   if (roleData) {
     if (!badge) {
       badge = document.createElement('span');
       badge.className = 'lobby-player-role';
-      // Insert after the name span
       const nameSpan = card.querySelector('.lobby-player-name');
       if (nameSpan) nameSpan.after(badge);
       else card.insertBefore(badge, card.children[2] || null);
@@ -383,18 +395,18 @@ export function updateLobbyPlayerRoleBadge(pid, role) {
 }
 
 /* ── Role picker ── */
-export function updateLobbyRolePicker() {
+export function updateLobbyRolePicker(): void {
   const section = document.getElementById('lobby-role-section');
   const cards = document.getElementById('lobby-role-cards');
   if (!cards) return;
-  if (dom.startScreen.classList.contains('hidden')) return;
+  if (dom.startScreen!.classList.contains('hidden')) return;
   if (clientState.isSpectating) {
     if (section) section.style.display = 'none';
     return;
   }
   if (section) section.style.display = '';
 
-  const myPlayer = clientState.players[clientState.myId];
+  const myPlayer = clientState.players[clientState.myId!];
   const myRole = myPlayer?.role || null;
 
   cards.innerHTML = ROLE_DEFS.map(role => {
@@ -409,16 +421,15 @@ export function updateLobbyRolePicker() {
     '</button>';
   }).join('');
 
-  cards.querySelectorAll('.lobby-role-card').forEach(card => {
+  cards.querySelectorAll<HTMLElement>('.lobby-role-card').forEach(card => {
     card.addEventListener('click', () => {
-      const roleId = card.dataset.role;
-      const currentRole = clientState.players[clientState.myId]?.role || null;
+      const roleId = card.dataset.role!;
+      const currentRole = clientState.players[clientState.myId!]?.role || null;
       const newRole = currentRole === roleId ? null : roleId;
       if (_hudSendMessage) _hudSendMessage({ type: 'select-role', role: newRole });
     });
   });
 
-  // Update hint line
   const hint = document.getElementById('lobby-role-hint');
   if (hint) {
     if (myRole) {
@@ -433,22 +444,19 @@ export function updateLobbyRolePicker() {
 }
 
 /* ── Background crawling bugs ── */
-function spawnLobbyBugs() {
+function spawnLobbyBugs(): void {
   const container = document.getElementById('lobby-bg-bugs');
   if (!container) return;
 
-  // Set arena dimensions for transform-based crawl animations
   container.style.setProperty('--arena-w', container.offsetWidth + 'px');
   container.style.setProperty('--arena-h', container.offsetHeight + 'px');
 
-  // Cap at 8 bugs on screen
   if (container.children.length >= 8) return;
 
   const bug = document.createElement('div');
   const id = ++lobbyBugId;
-  bug.dataset.id = id;
+  bug.dataset.id = String(id);
 
-  // Random edge and direction
   const directions = ['crawl-right', 'crawl-left', 'crawl-down', 'crawl-up'];
   const dir = directions[Math.floor(Math.random() * directions.length)];
   const dur = 8 + Math.random() * 10;
@@ -458,7 +466,6 @@ function spawnLobbyBugs() {
   bug.style.setProperty('--crawl-dur', dur + 's');
   bug.style.setProperty('--crawl-delay', delay + 's');
 
-  // Position along the perpendicular axis
   if (dir === 'crawl-right' || dir === 'crawl-left') {
     bug.style.top = (10 + Math.random() * 80) + '%';
   } else {
@@ -470,13 +477,11 @@ function spawnLobbyBugs() {
       '<span class="lobby-bg-bug-eyes">oo</span>' +
     '</div>';
 
-  // Click to squish
-  bug.addEventListener('click', (e) => {
+  bug.addEventListener('click', (e: MouseEvent) => {
     e.stopPropagation();
     if (bug.classList.contains('squished')) return;
     bug.classList.add('squished');
 
-    // Splat particles
     const rect = bug.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
     const cx = rect.left - containerRect.left + rect.width / 2;
@@ -506,7 +511,6 @@ function spawnLobbyBugs() {
 
   container.appendChild(bug);
 
-  // Auto-remove after animation completes
   setTimeout(() => {
     if (bug.parentNode && !bug.classList.contains('squished')) {
       bug.remove();

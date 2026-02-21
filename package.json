@@ -8,7 +8,7 @@
     "start": "node server.ts",
     "build": "node build.mjs",
     "dev": "node build.mjs --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.client.json"
   },
   "engines": {
     "node": ">=24"

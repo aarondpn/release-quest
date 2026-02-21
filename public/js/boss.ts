@@ -1,13 +1,20 @@
-import { LOGICAL_W, LOGICAL_H } from './config.js';
-import { dom, clientState } from './state.js';
-import { logicalToPixel } from './coordinates.js';
-import { shakeArena, showBossDamageNumber, showImpactRing } from './vfx.js';
-import { showError, ERROR_LEVELS } from './error-handler.js';
+import { LOGICAL_W, LOGICAL_H } from './config.ts';
+import { dom, clientState } from './state.ts';
+import { logicalToPixel } from './coordinates.ts';
+import { shakeArena, showBossDamageNumber, showImpactRing } from './vfx.ts';
+import { showError, ERROR_LEVELS } from './error-handler.ts';
 
-const PHASE_CLASSES = { 1: 'phase-sprint', 2: 'phase-shield', 3: 'phase-swarm' };
-const HP_FILL_CLASSES = { 1: '', 2: 'phase-shield', 3: 'phase-swarm' };
+const PHASE_CLASSES: Record<number, string> = { 1: 'phase-sprint', 2: 'phase-shield', 3: 'phase-swarm' };
+const HP_FILL_CLASSES: Record<number, string> = { 1: '', 2: 'phase-shield', 3: 'phase-swarm' };
 
-export function createBossElement(x, y, hp, maxHp, timeRemaining, extra) {
+export function createBossElement(
+  x: number,
+  y: number,
+  hp: number,
+  maxHp: number,
+  timeRemaining: number | undefined,
+  extra: Record<string, any> | null | undefined
+): void {
   removeBossElement();
   const phase = (extra && extra.phase) || 1;
   const shieldActive = (extra && extra.shieldActive) || false;
@@ -31,7 +38,7 @@ export function createBossElement(x, y, hp, maxHp, timeRemaining, extra) {
   el.style.left = pos.x + 'px';
   el.style.top = pos.y + 'px';
 
-  el.addEventListener('click', (e) => {
+  el.addEventListener('click', (e: MouseEvent) => {
     try {
       e.stopPropagation();
       if (clientState.ws && clientState.ws.readyState === 1) {
@@ -43,7 +50,7 @@ export function createBossElement(x, y, hp, maxHp, timeRemaining, extra) {
     }
   });
 
-  dom.arena.appendChild(el);
+  dom.arena!.appendChild(el);
   clientState.bossElement = el;
   clientState.bossPhase = phase;
   clientState.bossPhaseName = phaseName;
@@ -52,20 +59,20 @@ export function createBossElement(x, y, hp, maxHp, timeRemaining, extra) {
   const hpContainer = document.createElement('div');
   hpContainer.className = 'boss-hp-bar-container';
   const timeStr = typeof timeRemaining === 'number' ? formatTime(timeRemaining) : '1:30';
-  const urgentClass = timeRemaining <= 20 ? ' urgent' : '';
+  const urgentClass = (timeRemaining !== undefined && timeRemaining <= 20) ? ' urgent' : '';
   const fillClass = HP_FILL_CLASSES[phase] || '';
   hpContainer.innerHTML =
     '<div class="boss-timer' + urgentClass + '" id="boss-timer">' + timeStr + '</div>' +
     '<div class="boss-hp-bar-label">MEGA BUG &mdash; <span class="boss-phase-name">' + phaseName + '</span> &mdash; <span class="boss-hp-text">' + hp + '/' + maxHp + '</span></div>' +
     '<div class="boss-hp-bar-track"><div class="boss-hp-bar-fill' + (fillClass ? ' ' + fillClass : '') + '" style="width:' + ((hp / maxHp) * 100) + '%"></div></div>';
-  dom.arena.appendChild(hpContainer);
+  dom.arena!.appendChild(hpContainer);
   clientState.bossHpBarContainer = hpContainer;
 }
 
-export function updateBossHp(hp, maxHp, phase, damageReduction) {
+export function updateBossHp(hp: number, maxHp: number, phase?: number, damageReduction?: number): void {
   if (!clientState.bossHpBarContainer) return;
-  const fill = clientState.bossHpBarContainer.querySelector('.boss-hp-bar-fill');
-  const label = clientState.bossHpBarContainer.querySelector('.boss-hp-text');
+  const fill = clientState.bossHpBarContainer.querySelector('.boss-hp-bar-fill') as HTMLElement | null;
+  const label = clientState.bossHpBarContainer.querySelector('.boss-hp-text') as HTMLElement | null;
   if (fill) {
     fill.style.width = ((hp / maxHp) * 100) + '%';
     // Update phase-based HP bar color
@@ -76,7 +83,7 @@ export function updateBossHp(hp, maxHp, phase, damageReduction) {
   if (label) label.textContent = hp + '/' + maxHp;
 
   // Damage reduction indicator (phase 3)
-  let drEl = clientState.bossHpBarContainer.querySelector('.boss-dr-indicator');
+  let drEl = clientState.bossHpBarContainer.querySelector('.boss-dr-indicator') as HTMLElement | null;
   if (typeof damageReduction === 'number' && damageReduction > 0) {
     if (!drEl) {
       drEl = document.createElement('div');
@@ -90,7 +97,7 @@ export function updateBossHp(hp, maxHp, phase, damageReduction) {
   }
 }
 
-export function setBossPhase(phase, phaseName) {
+export function setBossPhase(phase: number, phaseName: string): void {
   if (!clientState.bossElement) return;
   // Remove old phase class, add new
   clientState.bossElement.classList.remove('phase-sprint', 'phase-shield', 'phase-swarm');
@@ -100,10 +107,10 @@ export function setBossPhase(phase, phaseName) {
 
   // Update HP bar label
   if (clientState.bossHpBarContainer) {
-    const phaseLabel = clientState.bossHpBarContainer.querySelector('.boss-phase-name');
+    const phaseLabel = clientState.bossHpBarContainer.querySelector('.boss-phase-name') as HTMLElement | null;
     if (phaseLabel) phaseLabel.textContent = phaseName;
     // Update fill color
-    const fill = clientState.bossHpBarContainer.querySelector('.boss-hp-bar-fill');
+    const fill = clientState.bossHpBarContainer.querySelector('.boss-hp-bar-fill') as HTMLElement | null;
     if (fill) {
       fill.classList.remove('phase-shield', 'phase-swarm');
       const cls = HP_FILL_CLASSES[phase];
@@ -112,7 +119,7 @@ export function setBossPhase(phase, phaseName) {
   }
 }
 
-export function setBossShield(active) {
+export function setBossShield(active: boolean): void {
   if (!clientState.bossElement) return;
   if (active) {
     clientState.bossElement.classList.add('shielded');
@@ -122,12 +129,12 @@ export function setBossShield(active) {
   clientState.bossShieldActive = active;
 }
 
-export function shrinkBoss() {
+export function shrinkBoss(): void {
   if (!clientState.bossElement) return;
   clientState.bossElement.classList.add('boss-shrink');
 }
 
-export function anchorBoss(lx, ly) {
+export function anchorBoss(lx: number, ly: number): void {
   if (!clientState.bossElement) return;
   const pos = logicalToPixel(lx, ly);
   // boss-shrink makes the element 80x80; offset by half to center it
@@ -136,7 +143,7 @@ export function anchorBoss(lx, ly) {
   clientState.bossElement.style.top = (pos.y - 40) + 'px';
 }
 
-export function removeBossElement() {
+export function removeBossElement(): void {
   if (clientState.bossElement) { clientState.bossElement.remove(); clientState.bossElement = null; }
   if (clientState.bossHpBarContainer) { clientState.bossHpBarContainer.remove(); clientState.bossHpBarContainer = null; }
   clientState.bossPhase = 1;
@@ -145,14 +152,14 @@ export function removeBossElement() {
   clientState.bossType = null;
 }
 
-export function showBossHitEffect(color, damage) {
+export function showBossHitEffect(color: string | null | undefined, damage: number | undefined): void {
   if (!clientState.bossElement) return;
   clientState.bossElement.style.animation = 'boss-hit-flash 0.15s ease-out';
   setTimeout(() => {
     if (clientState.bossElement) clientState.bossElement.style.animation = '';
   }, 150);
   const rect = clientState.bossElement.getBoundingClientRect();
-  const arenaRect = dom.arena.getBoundingClientRect();
+  const arenaRect = dom.arena!.getBoundingClientRect();
   const lx = ((rect.left - arenaRect.left + rect.width / 2) / arenaRect.width) * LOGICAL_W + (Math.random() - 0.5) * 40;
   const ly = ((rect.top - arenaRect.top) / arenaRect.height) * LOGICAL_H + (Math.random() - 0.5) * 30;
   showBossDamageNumber(lx, ly, damage || 5, color);
@@ -160,7 +167,7 @@ export function showBossHitEffect(color, damage) {
   shakeArena('micro');
 }
 
-export function formatTime(seconds) {
+export function formatTime(seconds: number): string {
   if (seconds < 0) seconds = 0;
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;

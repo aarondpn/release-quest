@@ -1,15 +1,112 @@
 // Wiki page — fetches game config from server and renders dynamic values
 // so the wiki is always in sync with actual game balance.
 
-let config = null;
+interface BossPhases {
+  phase2Threshold: number;
+  phase3Threshold: number;
+  shieldInterval: number;
+  shieldDuration: number;
+  phase2WanderInterval: number;
+  phase2SpawnRateMultiplier: number;
+  phase3SpawnRateMultiplier: number;
+  phase3MaxOnScreenMultiplier: number;
+  screenWipeInterval: number;
+  screenWipeBugCount: number;
+  phase3DamageReductionPerMinion: number;
+  phase3MaxDamageReduction: number;
+  phase3TimeReduction: number;
+  transitionInvulnTime: number;
+}
+
+interface BossConfig {
+  hp: number;
+  clickDamage: number;
+  clickPoints: number;
+  killBonus: number;
+  timeLimit: number;
+  regenPerSecond: number;
+  minionEscapeTime: number;
+  bossPhases: BossPhases;
+  escalation: Array<{ timeRemaining: number; spawnRate: number; maxOnScreen: number }>;
+}
+
+interface LevelConfig {
+  bugsTotal: number;
+  escapeTime: number;
+  maxOnScreen: number;
+}
+
+interface PowerupsConfig {
+  rubberDuckPoints: number;
+  rubberDuckPointsMultiplier: number;
+  rubberDuckBuffDuration: number;
+  rubberDuckIntervalMin: number;
+  rubberDuckIntervalMax: number;
+  rubberDuckDespawnTime: number;
+  hotfixHammerPoints: number;
+  hotfixHammerStunDuration: number;
+  hotfixHammerIntervalMin: number;
+  hotfixHammerIntervalMax: number;
+  hotfixHammerDespawnTime: number;
+}
+
+interface DifficultyConfig {
+  bugPoints: number;
+  hpDamage: number;
+  startingHp: number;
+  scoreMultiplier: number;
+  levels: Record<number, LevelConfig>;
+  specialBugs: {
+    heisenbugChance: number;
+    codeReviewChance: number;
+    codeReviewStartLevel: number;
+    memoryLeakChance: number;
+    mergeConflictChance: number;
+    pipelineBugChance: number;
+    pipelineBugStartLevel: number;
+    infiniteLoopChance: number;
+    infiniteLoopStartLevel: number;
+    azubiChance?: number;
+    azubiStartLevel?: number;
+    azubiSpawnInterval?: number;
+    azubiFeatureChance?: number;
+  };
+  boss: BossConfig;
+  powerups: PowerupsConfig;
+}
+
+interface MechanicsConfig {
+  heisenbug: { pointsMultiplier: number; escapeTimeMultiplier: number; maxFlees: number };
+  feature: { hpPenalty: number };
+  memoryLeak: {
+    holdTimeByStage: number[];
+    escapeTimeMultiplier: number;
+    pointsByStage: number[];
+    damageByStage: number[];
+    growthInterval: number;
+  };
+  mergeConflict: { bonusPoints: number; resolveWindow: number; minPlayers: number };
+  pipeline: { minChainLength: number; maxChainLength: number; pointsPerBug: number; chainBonus: number; escapeTimeMultiplier: number };
+  infiniteLoop: { points: number; escapeTimeMultiplier: number };
+  azubi?: { escapeTimeMultiplier: number };
+  bossHpPerExtraPlayer: number;
+  bossRegenPerExtraPlayer: number;
+}
+
+interface WikiConfig {
+  difficulties: Record<string, DifficultyConfig>;
+  mechanics: MechanicsConfig;
+}
+
+let config: WikiConfig | null = null;
 let currentDifficulty = 'medium';
 
 document.addEventListener('DOMContentLoaded', init);
 
-async function init() {
+async function init(): Promise<void> {
   try {
     const res = await fetch('/api/wiki-config');
-    config = await res.json();
+    config = await res.json() as WikiConfig;
     showDifficultySelector();
     render();
   } catch (err) {
@@ -17,13 +114,13 @@ async function init() {
   }
 }
 
-function showDifficultySelector() {
+function showDifficultySelector(): void {
   const el = document.getElementById('difficulty-selector');
   if (el) el.hidden = false;
 
-  document.querySelectorAll('[data-difficulty]').forEach(btn => {
+  document.querySelectorAll<HTMLElement>('[data-difficulty]').forEach(btn => {
     btn.addEventListener('click', () => {
-      currentDifficulty = btn.dataset.difficulty;
+      currentDifficulty = btn.dataset['difficulty']!;
       document.querySelectorAll('[data-difficulty]').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       render();
@@ -33,33 +130,33 @@ function showDifficultySelector() {
 
 // ── Helpers ──
 
-function ms(val) { return val / 1000; }
+function ms(val: number): number { return val / 1000; }
 
-function sec(val) {
+function sec(val: number): string {
   const s = ms(val);
   return s % 1 === 0 ? String(s) : s.toFixed(1);
 }
 
-function pct(val) { return Math.round(val * 100) + '%'; }
+function pct(val: number): string { return Math.round(val * 100) + '%'; }
 
-function setStats(id, lines) {
+function setStats(id: string, lines: string[]): void {
   const el = document.getElementById(id);
   if (el) el.innerHTML = lines.map(l => '<div class="stat">' + l + '</div>').join('');
 }
 
-function setText(id, val) {
+function setText(id: string, val: string | number): void {
   const el = document.getElementById(id);
   if (el) el.textContent = String(val);
 }
 
-function setHtml(id, val) {
+function setHtml(id: string, val: string): void {
   const el = document.getElementById(id);
   if (el) el.innerHTML = val;
 }
 
 // ── Main render ──
 
-function render() {
+function render(): void {
   if (!config) return;
   const d = config.difficulties[currentDifficulty];
   const m = config.mechanics;
@@ -72,7 +169,7 @@ function render() {
 
 // ── Bug Types ──
 
-function renderBugTypes(d, m) {
+function renderBugTypes(d: DifficultyConfig, m: MechanicsConfig): void {
   // Normal Bug
   setStats('normal-bug-stats', [
     '\u26A1 Click to squash',
@@ -86,8 +183,8 @@ function renderBugTypes(d, m) {
 
   // Heisenbug
   setText('heisenbug-badge', pct(d.specialBugs.heisenbugChance) + ' spawn chance');
-  var heisenPoints = d.bugPoints * m.heisenbug.pointsMultiplier;
-  var heisenFasterPct = Math.round((1 - m.heisenbug.escapeTimeMultiplier) * 100);
+  const heisenPoints = d.bugPoints * m.heisenbug.pointsMultiplier;
+  const heisenFasterPct = Math.round((1 - m.heisenbug.escapeTimeMultiplier) * 100);
   setStats('heisenbug-stats', [
     '\uD83C\uDFC3 Flees when clicked (' + m.heisenbug.maxFlees + 'x max)',
     '\uD83D\uDCB0 ' + heisenPoints + ' points (' + m.heisenbug.pointsMultiplier + 'x multiplier)',
@@ -110,11 +207,11 @@ function renderBugTypes(d, m) {
 
   // Memory Leak
   setText('memory-leak-badge', pct(d.specialBugs.memoryLeakChance) + ' spawn chance');
-  var holdMin = sec(m.memoryLeak.holdTimeByStage[0]);
-  var holdMax = sec(m.memoryLeak.holdTimeByStage[m.memoryLeak.holdTimeByStage.length - 1]);
-  var slowerPct = Math.round((m.memoryLeak.escapeTimeMultiplier - 1) * 100);
-  var pointsDesc = m.memoryLeak.pointsByStage.slice().reverse().join('\u2192');
-  var damageDesc = m.memoryLeak.damageByStage.join('\u2192');
+  const holdMin = sec(m.memoryLeak.holdTimeByStage[0]);
+  const holdMax = sec(m.memoryLeak.holdTimeByStage[m.memoryLeak.holdTimeByStage.length - 1]);
+  const slowerPct = Math.round((m.memoryLeak.escapeTimeMultiplier - 1) * 100);
+  const pointsDesc = m.memoryLeak.pointsByStage.slice().reverse().join('\u2192');
+  const damageDesc = m.memoryLeak.damageByStage.join('\u2192');
   setStats('memory-leak-stats', [
     '\uD83D\uDDB1\uFE0F Click & HOLD to clear (' + holdMin + '-' + holdMax + 's)',
     '\uD83D\uDC65 Multiple holders = faster progress!',
@@ -123,14 +220,14 @@ function renderBugTypes(d, m) {
     '\uD83D\uDC94 ' + damageDesc + ' HP damage (stage-based)',
     '\u23F1\uFE0F ' + slowerPct + '% slower escape time',
   ]);
-  var holdTimesDesc = m.memoryLeak.holdTimeByStage.map(function(t) { return sec(t) + 's'; }).join('/');
+  const holdTimesDesc = m.memoryLeak.holdTimeByStage.map(t => sec(t) + 's').join('/');
   setText('memory-leak-growth-interval', ms(m.memoryLeak.growthInterval));
   setText('memory-leak-hold-times', holdTimesDesc);
 
   // Merge Conflict
   setText('merge-conflict-badge',
     pct(d.specialBugs.mergeConflictChance) + ' spawn chance (' + m.mergeConflict.minPlayers + '+ players)');
-  var mcDamage = d.hpDamage * 2;
+  const mcDamage = d.hpDamage * 2;
   setStats('merge-conflict-stats', [
     '\uD83D\uDC65 Spawns in pairs',
     '\uD83D\uDCB0 ' + m.mergeConflict.bonusPoints + ' bonus points if resolved',
@@ -166,11 +263,11 @@ function renderBugTypes(d, m) {
   // Azubi
   if (m.azubi) {
     setText('azubi-badge',
-      pct(d.specialBugs.azubiChance) + ' spawn chance (Level ' + d.specialBugs.azubiStartLevel + '+)');
+      pct(d.specialBugs.azubiChance!) + ' spawn chance (Level ' + d.specialBugs.azubiStartLevel + '+)');
     setStats('azubi-stats', [
       '\uD83D\uDC64 Follows nearest player\u2019s cursor',
       '\uD83D\uDEAB Blocks clicks on bugs underneath (high z-index)',
-      '\uD83D\uDC1B Spawns bugs every ' + sec(d.specialBugs.azubiSpawnInterval) + 's (' + pct(d.specialBugs.azubiFeatureChance) + ' feature)',
+      '\uD83D\uDC1B Spawns bugs every ' + sec(d.specialBugs.azubiSpawnInterval!) + 's (' + pct(d.specialBugs.azubiFeatureChance!) + ' feature)',
       '\u23F1\uFE0F ' + m.azubi.escapeTimeMultiplier + 'x escape time',
       '\u2705 Leaves harmlessly when escape timer expires',
     ]);
@@ -187,7 +284,7 @@ function renderBugTypes(d, m) {
 
 // ── Boss ──
 
-function renderBoss(d, m) {
+function renderBoss(d: DifficultyConfig, m: MechanicsConfig): void {
   setStats('boss-stats', [
     '\u2764\uFE0F ' + d.boss.hp + ' HP (+' + m.bossHpPerExtraPlayer + ' per extra player)',
     '\uD83D\uDCA5 ' + d.boss.clickDamage + ' damage per click',
@@ -197,11 +294,10 @@ function renderBoss(d, m) {
     '\uD83D\uDD04 Regenerates ' + d.boss.regenPerSecond + ' HP/s (+' + m.bossRegenPerExtraPlayer + ' per extra player)',
   ]);
 
-  // Boss phases
-  var bp = d.boss.bossPhases;
-  var escalationHtml = d.boss.escalation.map(function(e) {
-    return '<li>At ' + e.timeRemaining + 's: Spawn rate ' + sec(e.spawnRate) + 's, max ' + e.maxOnScreen + ' minions</li>';
-  }).join('');
+  const bp = d.boss.bossPhases;
+  const escalationHtml = d.boss.escalation.map(e =>
+    '<li>At ' + e.timeRemaining + 's: Spawn rate ' + sec(e.spawnRate) + 's, max ' + e.maxOnScreen + ' minions</li>'
+  ).join('');
   setHtml('boss-phases', '' +
     '<div class="phase">' +
       '<strong>\uD83C\uDFC3 Phase 1: The Sprint (100% \u2192 ' + pct(bp.phase2Threshold) + ' HP)</strong>' +
@@ -249,7 +345,7 @@ function renderBoss(d, m) {
 
 // ── Powerups ──
 
-function renderPowerups(d, m) {
+function renderPowerups(d: DifficultyConfig, _m: MechanicsConfig): void {
   // Rubber Duck
   setStats('rubber-duck-stats', [
     '\uD83D\uDCB0 ' + d.powerups.rubberDuckPoints + ' points on collection',
@@ -257,7 +353,7 @@ function renderPowerups(d, m) {
     '\u23F1\uFE0F Spawns every ' + sec(d.powerups.rubberDuckIntervalMin) + '-' + sec(d.powerups.rubberDuckIntervalMax) + ' seconds',
     '\u231B Despawns after ' + sec(d.powerups.rubberDuckDespawnTime) + ' seconds',
   ]);
-  var duckMultWord = d.powerups.rubberDuckPointsMultiplier === 2 ? 'doubles' : d.powerups.rubberDuckPointsMultiplier + 'x';
+  const duckMultWord = d.powerups.rubberDuckPointsMultiplier === 2 ? 'doubles' : d.powerups.rubberDuckPointsMultiplier + 'x';
   setText('duck-buff-multiplier', duckMultWord);
   setText('duck-buff-duration', sec(d.powerups.rubberDuckBuffDuration));
 
@@ -273,7 +369,7 @@ function renderPowerups(d, m) {
 
 // ── Game Mechanics ──
 
-function renderMechanics(d, m) {
+function renderMechanics(d: DifficultyConfig, m: MechanicsConfig): void {
   // Levels
   setHtml('levels-card', '' +
     '<h3>\uD83D\uDCCA Levels</h3>' +
@@ -283,7 +379,7 @@ function renderMechanics(d, m) {
     '<p><strong>Boss:</strong> Appears after completing all 3 levels</p>');
 
   // Health System
-  var memDamage = m.memoryLeak.damageByStage.map(function(v) { return v; }).join('/');
+  const memDamage = m.memoryLeak.damageByStage.join('/');
   setHtml('health-card', '' +
     '<h3>\u2764\uFE0F Health System</h3>' +
     '<p><strong>Starting HP:</strong> ' + d.startingHp + '</p>' +
@@ -304,8 +400,8 @@ function renderMechanics(d, m) {
     '<p><strong>Competition:</strong> Individual scores and leaderboard</p>');
 
   // Scoring
-  var heisenPts = d.bugPoints * m.heisenbug.pointsMultiplier;
-  var memPts = m.memoryLeak.pointsByStage.slice().reverse().join('/');
+  const heisenPts = d.bugPoints * m.heisenbug.pointsMultiplier;
+  const memPts = m.memoryLeak.pointsByStage.slice().reverse().join('/');
   setHtml('scoring-card', '' +
     '<h3>\uD83C\uDFAF Scoring</h3>' +
     '<p><strong>Normal bug:</strong> ' + d.bugPoints + ' points</p>' +
@@ -323,20 +419,20 @@ function renderMechanics(d, m) {
     '<p style="margin-top:8px;"><em>All scores are multiplied by the difficulty multiplier (see below).</em></p>');
 
   // Difficulty Multipliers
-  var allDiffs = config.difficulties;
-  var diffLines = Object.keys(allDiffs).map(function(key) {
-    var label = key.charAt(0).toUpperCase() + key.slice(1);
-    var isDefault = key === 'medium' ? ' (default)' : '';
-    var marker = key === currentDifficulty ? ' \u25C4' : '';
+  const allDiffs = config!.difficulties;
+  const diffLines = Object.keys(allDiffs).map(key => {
+    const label = key.charAt(0).toUpperCase() + key.slice(1);
+    const isDefault = key === 'medium' ? ' (default)' : '';
+    const marker = key === currentDifficulty ? ' \u25C4' : '';
     return '<p><strong>' + label + ':</strong> ' + allDiffs[key].scoreMultiplier + 'x score' + isDefault + marker + '</p>';
   }).join('');
-  var exBug = d.bugPoints;
+  const exBug = d.bugPoints;
   setHtml('difficulty-card', '' +
     '<h3>\uD83C\uDF9A\uFE0F Difficulty Multipliers</h3>' +
     '<p>All point rewards are scaled by a multiplier based on the selected difficulty:</p>' +
     diffLines +
     '<p style="margin-top:8px;"><em>Example: A ' + exBug + '-point bug is worth ' +
-      Math.round(exBug * allDiffs.easy.scoreMultiplier) + ' on Easy, ' +
-      Math.round(exBug * allDiffs.medium.scoreMultiplier) + ' on Medium, and ' +
-      Math.round(exBug * allDiffs.hard.scoreMultiplier) + ' on Hard. This applies to all scoring \u2014 bugs, powerups, boss clicks, and bonuses.</em></p>');
+      Math.round(exBug * allDiffs['easy'].scoreMultiplier) + ' on Easy, ' +
+      Math.round(exBug * allDiffs['medium'].scoreMultiplier) + ' on Medium, and ' +
+      Math.round(exBug * allDiffs['hard'].scoreMultiplier) + ' on Hard. This applies to all scoring \u2014 bugs, powerups, boss clicks, and bonuses.</em></p>');
 }

@@ -1,17 +1,22 @@
 // ── Standard emoji icons (available to everyone) ──
-export const STANDARD_ICONS = ['\u{1F431}', '\u{1F436}', '\u{1F430}', '\u{1F98A}', '\u{1F438}', '\u{1F427}', '\u{1F43C}', '\u{1F428}'];
+export const STANDARD_ICONS: string[] = ['\u{1F431}', '\u{1F436}', '\u{1F430}', '\u{1F98A}', '\u{1F438}', '\u{1F427}', '\u{1F43C}', '\u{1F428}'];
 
 // ── Premium pixel-art SVG avatars (members only) ──
 // 32x32 pixel-art, neon-on-dark aesthetic, stored as data URIs
 
 const S = 32; // grid size
-function px(svg) {
+function px(svg: string): string {
   return 'data:image/svg+xml,' + encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${S} ${S}" shape-rendering="crispEdges">${svg}</svg>`
   );
 }
 
-export const PREMIUM_AVATARS = {
+export interface PremiumAvatar {
+  name: string;
+  svg: string;
+}
+
+export const PREMIUM_AVATARS: Record<string, PremiumAvatar> = {
   'av:knight': {
     name: 'Pixel Knight',
     svg: px(
@@ -170,19 +175,18 @@ export const PREMIUM_AVATARS = {
   },
 };
 
-export const PREMIUM_IDS = Object.keys(PREMIUM_AVATARS);
+export const PREMIUM_IDS: string[] = Object.keys(PREMIUM_AVATARS);
 
-export function isPremium(icon) {
+export function isPremium(icon: string | null | undefined): boolean {
   return typeof icon === 'string' && icon.startsWith('av:');
 }
 
 /**
  * Return safe HTML for an icon (emoji or premium SVG).
- * @param {string} icon - emoji character or premium ID like "av:knight"
- * @param {number} sizePx - rendered size in CSS pixels
- * @returns {string} HTML string
+ * @param icon - emoji character or premium ID like "av:knight"
+ * @param sizePx - rendered size in CSS pixels
  */
-export function renderIcon(icon, sizePx) {
+export function renderIcon(icon: string, sizePx: number): string {
   if (isPremium(icon)) {
     const av = PREMIUM_AVATARS[icon];
     if (av) {

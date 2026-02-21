@@ -1,18 +1,18 @@
-import { LOGICAL_W, LOGICAL_H } from './config.js';
-import { dom, clientState } from './state.js';
-import { logicalToPixel } from './coordinates.js';
+import { LOGICAL_W, LOGICAL_H } from './config.ts';
+import { dom, clientState } from './state.ts';
+import { logicalToPixel } from './coordinates.ts';
 
-const SHAKE_DURATIONS = { light: 200, micro: 100, medium: 300, heavy: 500 };
+const SHAKE_DURATIONS: Record<string, number> = { light: 200, micro: 100, medium: 300, heavy: 500 };
 
-export function shakeArena(intensity) {
+export function shakeArena(intensity: string): void {
   const cls = 'shake-' + intensity;
-  dom.arena.classList.remove(cls);
-  void dom.arena.offsetWidth;
-  dom.arena.classList.add(cls);
-  setTimeout(() => dom.arena.classList.remove(cls), SHAKE_DURATIONS[intensity] || 300);
+  dom.arena!.classList.remove(cls);
+  void dom.arena!.offsetWidth;
+  dom.arena!.classList.add(cls);
+  setTimeout(() => dom.arena!.classList.remove(cls), SHAKE_DURATIONS[intensity] || 300);
 }
 
-export function showParticleBurst(lx, ly, color) {
+export function showParticleBurst(lx: number, ly: number, color: string | null | undefined): void {
   const pos = logicalToPixel(lx, ly);
   const count = 6 + Math.floor(Math.random() * 3);
   for (let i = 0; i < count; i++) {
@@ -27,43 +27,43 @@ export function showParticleBurst(lx, ly, color) {
     p.style.background = color || 'var(--yellow)';
     p.style.setProperty('--px', px + 'px');
     p.style.setProperty('--py', py + 'px');
-    dom.arena.appendChild(p);
+    dom.arena!.appendChild(p);
     setTimeout(() => p.remove(), 450);
   }
 }
 
-export function showImpactRing(lx, ly, color) {
+export function showImpactRing(lx: number, ly: number, color: string | null | undefined): void {
   const pos = logicalToPixel(lx, ly);
   const ring = document.createElement('div');
   ring.className = 'impact-ring';
   ring.style.left = pos.x + 'px';
   ring.style.top = pos.y + 'px';
   ring.style.color = color || 'var(--yellow)';
-  dom.arena.appendChild(ring);
+  dom.arena!.appendChild(ring);
   setTimeout(() => ring.remove(), 450);
 }
 
-export function showDamageVignette() {
+export function showDamageVignette(): void {
   const v = document.createElement('div');
   v.className = 'damage-vignette';
-  dom.arena.appendChild(v);
+  dom.arena!.appendChild(v);
   setTimeout(() => v.remove(), 450);
 }
 
-export function showPhaseTransitionFlash(phaseName) {
+export function showPhaseTransitionFlash(phaseName: string): void {
   const flash = document.createElement('div');
   flash.className = 'phase-transition-flash';
-  dom.arena.appendChild(flash);
+  dom.arena!.appendChild(flash);
 
   const text = document.createElement('div');
   text.className = 'phase-transition-text';
   text.textContent = phaseName;
-  dom.arena.appendChild(text);
+  dom.arena!.appendChild(text);
 
   // Burst of sparks from boss position toward edges
   if (clientState.bossElement) {
     const rect = clientState.bossElement.getBoundingClientRect();
-    const arenaRect = dom.arena.getBoundingClientRect();
+    const arenaRect = dom.arena!.getBoundingClientRect();
     const cx = ((rect.left - arenaRect.left + rect.width / 2) / arenaRect.width) * LOGICAL_W;
     const cy = ((rect.top - arenaRect.top + rect.height / 2) / arenaRect.height) * LOGICAL_H;
     // Ring of particles radiating outward
@@ -80,7 +80,7 @@ export function showPhaseTransitionFlash(phaseName) {
       p.style.top = pos.y + 'px';
       p.style.setProperty('--px', px + 'px');
       p.style.setProperty('--py', py + 'px');
-      dom.arena.appendChild(p);
+      dom.arena!.appendChild(p);
       setTimeout(() => p.remove(), 600);
     }
   }
@@ -90,41 +90,41 @@ export function showPhaseTransitionFlash(phaseName) {
   shakeArena('heavy');
 }
 
-export function showBlockedText(lx, ly) {
+export function showBlockedText(lx: number, ly: number): void {
   const pos = logicalToPixel(lx, ly);
   const el = document.createElement('div');
   el.className = 'boss-blocked-text';
   el.style.left = pos.x + 'px';
   el.style.top = pos.y + 'px';
   el.textContent = 'BLOCKED!';
-  dom.arena.appendChild(el);
+  dom.arena!.appendChild(el);
   setTimeout(() => el.remove(), 800);
 }
 
-export function showScreenWipeFlash() {
+export function showScreenWipeFlash(): void {
   const el = document.createElement('div');
   el.className = 'screen-wipe-flash';
-  dom.arena.appendChild(el);
+  dom.arena!.appendChild(el);
   setTimeout(() => el.remove(), 700);
   shakeArena('light');
 }
 
-export function showLevelFlash() {
+export function showLevelFlash(): void {
   const el = document.createElement('div');
   el.className = 'level-flash';
-  dom.arena.appendChild(el);
+  dom.arena!.appendChild(el);
   setTimeout(() => el.remove(), 550);
 }
 
-export function showEscalationWarning() {
+export function showEscalationWarning(): void {
   const el = document.createElement('div');
   el.className = 'escalation-flash';
-  dom.arena.appendChild(el);
+  dom.arena!.appendChild(el);
   setTimeout(() => el.remove(), 450);
   shakeArena('light');
 }
 
-export function showBossDamageNumber(lx, ly, damage, color) {
+export function showBossDamageNumber(lx: number, ly: number, damage: number, color: string | null | undefined): void {
   const pos = logicalToPixel(lx, ly);
   const el = document.createElement('div');
   el.className = 'boss-damage-num';
@@ -132,14 +132,14 @@ export function showBossDamageNumber(lx, ly, damage, color) {
   el.style.top = pos.y + 'px';
   el.style.color = color || 'var(--yellow)';
   el.textContent = '-' + damage;
-  dom.arena.appendChild(el);
+  dom.arena!.appendChild(el);
   setTimeout(() => el.remove(), 600);
 }
 
-export function showBossRegenNumber(amount) {
+export function showBossRegenNumber(amount: number): void {
   if (!clientState.bossElement) return;
   const rect = clientState.bossElement.getBoundingClientRect();
-  const arenaRect = dom.arena.getBoundingClientRect();
+  const arenaRect = dom.arena!.getBoundingClientRect();
   const lx = ((rect.left - arenaRect.left + rect.width / 2) / arenaRect.width) * LOGICAL_W + (Math.random() - 0.5) * 30;
   const ly = ((rect.top - arenaRect.top + rect.height * 0.3) / arenaRect.height) * LOGICAL_H;
   const pos = logicalToPixel(lx, ly);
@@ -148,57 +148,57 @@ export function showBossRegenNumber(amount) {
   el.style.left = pos.x + 'px';
   el.style.top = pos.y + 'px';
   el.textContent = '+' + amount;
-  dom.arena.appendChild(el);
+  dom.arena!.appendChild(el);
   setTimeout(() => el.remove(), 850);
 }
 
 // ── Heisenbug flee effect ──
-export function showHeisenbugFleeEffect(bugEl) {
+export function showHeisenbugFleeEffect(bugEl: HTMLElement): void {
   if (!bugEl) return;
   const ghost = document.createElement('div');
   ghost.className = 'heisenbug-ghost';
   ghost.style.left = bugEl.style.left;
   ghost.style.top = bugEl.style.top;
   ghost.textContent = '?';
-  dom.arena.appendChild(ghost);
+  dom.arena!.appendChild(ghost);
   setTimeout(() => ghost.remove(), 400);
 }
 
 // ── Feature penalty effect ──
-export function showFeaturePenaltyEffect(lx, ly) {
+export function showFeaturePenaltyEffect(lx: number, ly: number): void {
   const pos = logicalToPixel(lx, ly);
   const el = document.createElement('div');
   el.className = 'feature-penalty-text';
   el.style.left = pos.x + 'px';
   el.style.top = pos.y + 'px';
   el.textContent = 'THAT WAS A FEATURE!';
-  dom.arena.appendChild(el);
+  dom.arena!.appendChild(el);
   setTimeout(() => el.remove(), 1200);
 }
 
 // ── Shared powerup indicator container ──
-function getIndicatorContainer() {
+function getIndicatorContainer(): HTMLElement {
   let c = document.getElementById('powerup-indicators');
   if (!c) {
     c = document.createElement('div');
     c.id = 'powerup-indicators';
-    dom.arena.appendChild(c);
+    dom.arena!.appendChild(c);
   }
   return c;
 }
 
 // ── Duck buff overlay ──
-let _duckBuffInterval = null;
-let _duckBuffTimeout = null;
+let _duckBuffInterval: ReturnType<typeof setInterval> | null = null;
+let _duckBuffTimeout: ReturnType<typeof setTimeout> | null = null;
 
-export function showDuckBuffOverlay(duration) {
+export function showDuckBuffOverlay(duration: number): void {
   removeDuckBuffOverlay();
 
   // Full-arena border pulse
   const el = document.createElement('div');
   el.className = 'duck-buff-overlay';
   el.id = 'duck-buff-overlay';
-  dom.arena.appendChild(el);
+  dom.arena!.appendChild(el);
 
   // Compact indicator row in shared stack
   const row = document.createElement('div');
@@ -210,7 +210,7 @@ export function showDuckBuffOverlay(duration) {
   // In replay mode skip real-time timers; duck-buff-expired handles removal
   if (clientState.isPlayback) return;
 
-  const timer = row.querySelector('.powerup-indicator-timer');
+  const timer = row.querySelector('.powerup-indicator-timer') as HTMLElement;
   const endTime = Date.now() + duration;
   function tick() {
     const remaining = Math.max(0, endTime - Date.now());
@@ -221,7 +221,7 @@ export function showDuckBuffOverlay(duration) {
   _duckBuffTimeout = setTimeout(() => removeDuckBuffOverlay(), duration);
 }
 
-export function removeDuckBuffOverlay() {
+export function removeDuckBuffOverlay(): void {
   if (_duckBuffInterval !== null) { clearInterval(_duckBuffInterval); _duckBuffInterval = null; }
   if (_duckBuffTimeout !== null) { clearTimeout(_duckBuffTimeout); _duckBuffTimeout = null; }
   const existing = document.getElementById('duck-buff-overlay');
@@ -231,17 +231,17 @@ export function removeDuckBuffOverlay() {
 }
 
 // ── Hammer stun overlay ──
-let _hammerStunInterval = null;
-let _hammerStunTimeout = null;
+let _hammerStunInterval: ReturnType<typeof setInterval> | null = null;
+let _hammerStunTimeout: ReturnType<typeof setTimeout> | null = null;
 
-export function showHammerStunOverlay(duration) {
+export function showHammerStunOverlay(duration: number): void {
   removeHammerStunOverlay();
 
   // Full-arena border pulse
   const el = document.createElement('div');
   el.className = 'hammer-stun-overlay';
   el.id = 'hammer-stun-overlay';
-  dom.arena.appendChild(el);
+  dom.arena!.appendChild(el);
 
   // Compact indicator row in shared stack
   const row = document.createElement('div');
@@ -253,7 +253,7 @@ export function showHammerStunOverlay(duration) {
   // In replay mode skip real-time timers; hammer-stun-expired handles removal
   if (clientState.isPlayback) return;
 
-  const timer = row.querySelector('.powerup-indicator-timer');
+  const timer = row.querySelector('.powerup-indicator-timer') as HTMLElement;
   const endTime = Date.now() + duration;
   function tick() {
     const remaining = Math.max(0, endTime - Date.now());
@@ -264,7 +264,7 @@ export function showHammerStunOverlay(duration) {
   _hammerStunTimeout = setTimeout(() => removeHammerStunOverlay(), duration);
 }
 
-export function removeHammerStunOverlay() {
+export function removeHammerStunOverlay(): void {
   if (_hammerStunInterval !== null) { clearInterval(_hammerStunInterval); _hammerStunInterval = null; }
   if (_hammerStunTimeout !== null) { clearTimeout(_hammerStunTimeout); _hammerStunTimeout = null; }
   const existing = document.getElementById('hammer-stun-overlay');
@@ -274,29 +274,29 @@ export function removeHammerStunOverlay() {
 }
 
 // ── Pipeline chain resolved effect ──
-export function showPipelineChainResolvedEffect() {
+export function showPipelineChainResolvedEffect(): void {
   const el = document.createElement('div');
   el.className = 'pipeline-resolved-text';
   el.style.left = '50%';
   el.style.top = '40%';
   el.textContent = 'DEPLOYED!';
-  dom.arena.appendChild(el);
+  dom.arena!.appendChild(el);
   setTimeout(() => el.remove(), 1200);
 }
 
 // ── Pipeline chain reset effect ──
-export function showPipelineChainResetEffect() {
+export function showPipelineChainResetEffect(): void {
   const el = document.createElement('div');
   el.className = 'pipeline-reset-text';
   el.style.left = '50%';
   el.style.top = '40%';
   el.textContent = 'STAGE FAILED!';
-  dom.arena.appendChild(el);
+  dom.arena!.appendChild(el);
   setTimeout(() => el.remove(), 1000);
 }
 
 // ── Infinite loop breakpoint hit effect ──
-export function showBreakpointHitEffect(lx, ly) {
+export function showBreakpointHitEffect(lx: number, ly: number): void {
   const pos = logicalToPixel(lx, ly);
 
   // "BREAK;" rising text
@@ -305,7 +305,7 @@ export function showBreakpointHitEffect(lx, ly) {
   text.style.left = pos.x + 'px';
   text.style.top = pos.y + 'px';
   text.textContent = 'BREAK;';
-  dom.arena.appendChild(text);
+  dom.arena!.appendChild(text);
   setTimeout(() => text.remove(), 1100);
 
   // Breakpoint shatter: red diamond shards flying outward
@@ -320,19 +320,19 @@ export function showBreakpointHitEffect(lx, ly) {
     shard.style.setProperty('--sx', (Math.cos(angle) * dist) + 'px');
     shard.style.setProperty('--sy', (Math.sin(angle) * dist) + 'px');
     shard.style.setProperty('--sr', (Math.random() * 360) + 'deg');
-    dom.arena.appendChild(shard);
+    dom.arena!.appendChild(shard);
     setTimeout(() => shard.remove(), 500);
   }
 }
 
 // ── Merge conflict resolved effect ──
-export function showMergeResolvedEffect(lx, ly) {
+export function showMergeResolvedEffect(lx: number, ly: number): void {
   const pos = logicalToPixel(lx, ly);
   const el = document.createElement('div');
   el.className = 'merge-resolved-text';
   el.style.left = pos.x + 'px';
   el.style.top = pos.y + 'px';
   el.textContent = 'MERGED!';
-  dom.arena.appendChild(el);
+  dom.arena!.appendChild(el);
   setTimeout(() => el.remove(), 1000);
 }

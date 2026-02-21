@@ -1,7 +1,8 @@
-import { SQUASH_WORDS } from './config.js';
-import { dom, clientState } from './state.js';
-import { logicalToPixel, getArenaRect } from './coordinates.js';
-import { showError, ERROR_LEVELS } from './error-handler.js';
+import { SQUASH_WORDS } from './config.ts';
+import { dom, clientState } from './state.ts';
+import { logicalToPixel, getArenaRect } from './coordinates.ts';
+import { showError, ERROR_LEVELS } from './error-handler.ts';
+import type { BugVariant, BugElement } from './client-types.ts';
 
 // Pixel-art intern SVG (32x32) — amber hoodie, headphones, laptop
 const AZUBI_INTERN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
@@ -39,8 +40,8 @@ const AZUBI_INTERN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3
   <rect x="17" y="28" width="5" height="2" rx="1" fill="#333"/>
 </svg>`;
 
-export function createBugElement(bugId, lx, ly, variant) {
-  const el = document.createElement('div');
+export function createBugElement(bugId: string, lx: number, ly: number, variant: BugVariant | null | undefined): void {
+  const el = document.createElement('div') as BugElement;
   el.className = 'bug walking';
   el.dataset.bugId = bugId;
   el.innerHTML = `
@@ -59,7 +60,7 @@ export function createBugElement(bugId, lx, ly, variant) {
     }
     if (variant.isMemoryLeak) {
       el.classList.add('memory-leak');
-      el.dataset.growthStage = variant.growthStage || 0;
+      el.dataset.growthStage = String(variant.growthStage || 0);
     }
     if (variant.isFeature) {
       // Delayed checkmark reveal (600ms ambiguity)
@@ -81,8 +82,8 @@ export function createBugElement(bugId, lx, ly, variant) {
     if (variant.isPipeline) {
       el.classList.add('pipeline-bug');
       el.dataset.chainId = variant.chainId;
-      el.dataset.chainIndex = variant.chainIndex;
-      el.dataset.chainLength = variant.chainLength;
+      el.dataset.chainIndex = String(variant.chainIndex);
+      el.dataset.chainLength = String(variant.chainLength);
     }
     if (variant.isInfiniteLoop) {
       el.classList.add('infinite-loop');
@@ -109,10 +110,9 @@ export function createBugElement(bugId, lx, ly, variant) {
   }
   // Memory leak requires hold mechanic
   else if (variant && variant.isMemoryLeak) {
-    let holdTimer = null;
-    let holdStartTime = null;
+    let holdStartTime: number | null = null;
 
-    const handleMouseDown = (e) => {
+    const handleMouseDown = (e: MouseEvent) => {
       try {
         e.stopPropagation();
         e.preventDefault();
@@ -126,7 +126,7 @@ export function createBugElement(bugId, lx, ly, variant) {
       }
     };
 
-    const handleMouseUp = (e) => {
+    const handleMouseUp = (e: MouseEvent) => {
       try {
         e.stopPropagation();
         if (clientState.ws && clientState.ws.readyState === 1 && holdStartTime) {
@@ -139,7 +139,7 @@ export function createBugElement(bugId, lx, ly, variant) {
       }
     };
 
-    const handleMouseLeave = (e) => {
+    const handleMouseLeave = (_e: MouseEvent) => {
       try {
         // Cancel hold if mouse leaves
         if (holdStartTime) {
@@ -156,7 +156,7 @@ export function createBugElement(bugId, lx, ly, variant) {
     el.addEventListener('mousedown', handleMouseDown);
     el.addEventListener('mouseup', handleMouseUp);
     el.addEventListener('mouseleave', handleMouseLeave);
-    
+
     // Store handlers for cleanup
     el._memoryLeakHandlers = {
       mousedown: handleMouseDown,
@@ -165,7 +165,7 @@ export function createBugElement(bugId, lx, ly, variant) {
     };
   } else {
     // Normal click for other bugs
-    const handleClick = (e) => {
+    const handleClick = (e: MouseEvent) => {
       try {
         e.stopPropagation();
         if (clientState.ws && clientState.ws.readyState === 1) {
@@ -176,12 +176,12 @@ export function createBugElement(bugId, lx, ly, variant) {
         showError('Error clicking bug', ERROR_LEVELS.ERROR);
       }
     };
-    
+
     el.addEventListener('click', handleClick);
     el._clickHandler = handleClick;
   }
 
-  dom.arena.appendChild(el);
+  dom.arena!.appendChild(el);
   clientState.bugs[bugId] = el;
 
   // Merge conflict tether line
@@ -194,12 +194,12 @@ export function createBugElement(bugId, lx, ly, variant) {
 
   // Pipeline chain tether lines
   if (variant && variant.isPipeline) {
-    tryCreatePipelineTether(variant.chainId);
+    tryCreatePipelineTether(variant.chainId!);
   }
 }
 
-export function createMergeTether(bugId1, bugId2, conflictId) {
-  const existing = dom.arena.querySelector('.merge-tether[data-conflict="' + conflictId + '"]');
+export function createMergeTether(bugId1: string, bugId2: string, conflictId: string): void {
+  const existing = dom.arena!.querySelector('.merge-tether[data-conflict="' + conflictId + '"]');
   if (existing) return;
 
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -212,14 +212,14 @@ export function createMergeTether(bugId1, bugId2, conflictId) {
   line.setAttribute('stroke-dasharray', '6 4');
   line.setAttribute('opacity', '0.7');
   svg.appendChild(line);
-  dom.arena.appendChild(svg);
+  dom.arena!.appendChild(svg);
   clientState.mergeTethers = clientState.mergeTethers || {};
   clientState.mergeTethers[conflictId] = { svg, line, bug1: bugId1, bug2: bugId2 };
   updateMergeTether(conflictId);
   startTetherTracking();
 }
 
-export function updateMergeTether(conflictId) {
+export function updateMergeTether(conflictId: string): void {
   if (!clientState.mergeTethers || !clientState.mergeTethers[conflictId]) return;
   const t = clientState.mergeTethers[conflictId];
   const el1 = clientState.bugs[t.bug1];
@@ -232,15 +232,15 @@ export function updateMergeTether(conflictId) {
   const y1 = r1.top - arenaRect.top + r1.height / 2;
   const x2 = r2.left - arenaRect.left + r2.width / 2;
   const y2 = r2.top - arenaRect.top + r2.height / 2;
-  t.line.setAttribute('x1', x1);
-  t.line.setAttribute('y1', y1);
-  t.line.setAttribute('x2', x2);
-  t.line.setAttribute('y2', y2);
+  t.line.setAttribute('x1', String(x1));
+  t.line.setAttribute('y1', String(y1));
+  t.line.setAttribute('x2', String(x2));
+  t.line.setAttribute('y2', String(y2));
 }
 
-let tetherRafId = null;
+let tetherRafId: number | null = null;
 
-function tickTethers() {
+function tickTethers(): void {
   const hasMerge = clientState.mergeTethers && Object.keys(clientState.mergeTethers).length > 0;
   const hasDep = clientState.pipelineTethers && Object.keys(clientState.pipelineTethers).length > 0;
   if (!hasMerge && !hasDep) {
@@ -248,27 +248,27 @@ function tickTethers() {
     return;
   }
   if (hasMerge) {
-    for (const cid of Object.keys(clientState.mergeTethers)) {
+    for (const cid of Object.keys(clientState.mergeTethers!)) {
       updateMergeTether(cid);
     }
   }
   if (hasDep) {
-    for (const cid of Object.keys(clientState.pipelineTethers)) {
+    for (const cid of Object.keys(clientState.pipelineTethers!)) {
       updatePipelineTether(cid);
     }
   }
   tetherRafId = requestAnimationFrame(tickTethers);
 }
 
-export function startTetherTracking() {
+export function startTetherTracking(): void {
   if (!tetherRafId) tetherRafId = requestAnimationFrame(tickTethers);
 }
 
-export function stopTetherTracking() {
+export function stopTetherTracking(): void {
   if (tetherRafId) { cancelAnimationFrame(tetherRafId); tetherRafId = null; }
 }
 
-export function removeMergeTether(conflictId) {
+export function removeMergeTether(conflictId: string): void {
   if (!clientState.mergeTethers || !clientState.mergeTethers[conflictId]) return;
   clientState.mergeTethers[conflictId].svg.remove();
   delete clientState.mergeTethers[conflictId];
@@ -280,12 +280,12 @@ export function removeMergeTether(conflictId) {
 
 // ── Pipeline chain tethers ──
 
-function tryCreatePipelineTether(chainId) {
+function tryCreatePipelineTether(chainId: string): void {
   // Collect all bugs belonging to this chain
-  const chainBugs = [];
+  const chainBugs: { id: string; index: number }[] = [];
   for (const [bid, el] of Object.entries(clientState.bugs)) {
     if (el.dataset.chainId === chainId) {
-      chainBugs.push({ id: bid, index: parseInt(el.dataset.chainIndex, 10) });
+      chainBugs.push({ id: bid, index: parseInt(el.dataset.chainIndex!, 10) });
     }
   }
   if (chainBugs.length < 2) return;
@@ -301,7 +301,7 @@ function tryCreatePipelineTether(chainId) {
   svg.setAttribute('data-chain', chainId);
   svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9;';
 
-  const lines = [];
+  const lines: { line: SVGLineElement; from: string; to: string }[] = [];
   for (let i = 0; i < chainBugs.length - 1; i++) {
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     line.setAttribute('stroke', '#a855f7');
@@ -312,14 +312,14 @@ function tryCreatePipelineTether(chainId) {
     lines.push({ line, from: chainBugs[i].id, to: chainBugs[i + 1].id });
   }
 
-  dom.arena.appendChild(svg);
+  dom.arena!.appendChild(svg);
   clientState.pipelineTethers = clientState.pipelineTethers || {};
   clientState.pipelineTethers[chainId] = { svg, lines, bugIds: chainBugs.map(b => b.id) };
   updatePipelineTether(chainId);
   startTetherTracking();
 }
 
-export function updatePipelineTether(chainId) {
+export function updatePipelineTether(chainId: string): void {
   if (!clientState.pipelineTethers || !clientState.pipelineTethers[chainId]) return;
   const t = clientState.pipelineTethers[chainId];
   const arenaRect = getArenaRect();
@@ -329,14 +329,14 @@ export function updatePipelineTether(chainId) {
     if (!el1 || !el2) continue;
     const r1 = el1.getBoundingClientRect();
     const r2 = el2.getBoundingClientRect();
-    seg.line.setAttribute('x1', r1.left - arenaRect.left + r1.width / 2);
-    seg.line.setAttribute('y1', r1.top - arenaRect.top + r1.height / 2);
-    seg.line.setAttribute('x2', r2.left - arenaRect.left + r2.width / 2);
-    seg.line.setAttribute('y2', r2.top - arenaRect.top + r2.height / 2);
+    seg.line.setAttribute('x1', String(r1.left - arenaRect.left + r1.width / 2));
+    seg.line.setAttribute('y1', String(r1.top - arenaRect.top + r1.height / 2));
+    seg.line.setAttribute('x2', String(r2.left - arenaRect.left + r2.width / 2));
+    seg.line.setAttribute('y2', String(r2.top - arenaRect.top + r2.height / 2));
   }
 }
 
-export function removePipelineTether(chainId) {
+export function removePipelineTether(chainId: string): void {
   if (!clientState.pipelineTethers || !clientState.pipelineTethers[chainId]) return;
   clientState.pipelineTethers[chainId].svg.remove();
   delete clientState.pipelineTethers[chainId];
@@ -346,14 +346,14 @@ export function removePipelineTether(chainId) {
   }
 }
 
-export function rebuildPipelineTether(chainId) {
+export function rebuildPipelineTether(chainId: string): void {
   removePipelineTether(chainId);
   tryCreatePipelineTether(chainId);
 }
 
 // ── Infinite Loop overlay (breakpoint marker + orbit path) ──
 
-function createInfiniteLoopOverlay(bugId, variant) {
+function createInfiniteLoopOverlay(bugId: string, variant: BugVariant): void {
   const { loopCenterX, loopCenterY, loopRadiusX, loopRadiusY, breakpointAngle } = variant;
 
   // Draw SVG ellipse orbit path with animated flowing dashes
@@ -361,7 +361,7 @@ function createInfiniteLoopOverlay(bugId, variant) {
   svg.classList.add('infinite-loop-path');
   svg.setAttribute('data-bug-id', bugId);
   svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:8;';
-  const center = logicalToPixel(loopCenterX, loopCenterY);
+  const center = logicalToPixel(loopCenterX!, loopCenterY!);
   // Bug elements are 48x48px positioned by top-left corner;
   // offset the orbit path to align with the bug's visual center
   const bugOffset = 24;
@@ -370,15 +370,15 @@ function createInfiniteLoopOverlay(bugId, variant) {
   const arenaRect = getArenaRect();
   const scaleX = arenaRect.width / 800;
   const scaleY = arenaRect.height / 500;
-  const rxPx = loopRadiusX * scaleX;
-  const ryPx = loopRadiusY * scaleY;
+  const rxPx = loopRadiusX! * scaleX;
+  const ryPx = loopRadiusY! * scaleY;
 
   // Outer glow track
   const glowEllipse = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-  glowEllipse.setAttribute('cx', center.x);
-  glowEllipse.setAttribute('cy', center.y);
-  glowEllipse.setAttribute('rx', rxPx);
-  glowEllipse.setAttribute('ry', ryPx);
+  glowEllipse.setAttribute('cx', String(center.x));
+  glowEllipse.setAttribute('cy', String(center.y));
+  glowEllipse.setAttribute('rx', String(rxPx));
+  glowEllipse.setAttribute('ry', String(ryPx));
   glowEllipse.setAttribute('fill', 'none');
   glowEllipse.setAttribute('stroke', '#06b6d4');
   glowEllipse.setAttribute('stroke-width', '4');
@@ -387,10 +387,10 @@ function createInfiniteLoopOverlay(bugId, variant) {
 
   // Main orbit track with animated dash flow
   const ellipse = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-  ellipse.setAttribute('cx', center.x);
-  ellipse.setAttribute('cy', center.y);
-  ellipse.setAttribute('rx', rxPx);
-  ellipse.setAttribute('ry', ryPx);
+  ellipse.setAttribute('cx', String(center.x));
+  ellipse.setAttribute('cy', String(center.y));
+  ellipse.setAttribute('rx', String(rxPx));
+  ellipse.setAttribute('ry', String(ryPx));
   ellipse.setAttribute('fill', 'none');
   ellipse.setAttribute('stroke', '#22d3ee');
   ellipse.setAttribute('stroke-width', '1.5');
@@ -404,12 +404,12 @@ function createInfiniteLoopOverlay(bugId, variant) {
   let dashOffset = 0;
   const dashSpeed = circumference / (variant.loopTickMs ? (2800 / variant.loopTickMs) : 56);
 
-  dom.arena.appendChild(svg);
+  dom.arena!.appendChild(svg);
 
   // Create breakpoint marker at the breakpoint angle on the ellipse
   // Breakpoint uses translate(-50%,-50%) so it's centered — offset to match the bug-center orbit
-  const bpX = loopCenterX + Math.cos(breakpointAngle) * loopRadiusX;
-  const bpY = loopCenterY + Math.sin(breakpointAngle) * loopRadiusY;
+  const bpX = loopCenterX! + Math.cos(breakpointAngle!) * loopRadiusX!;
+  const bpY = loopCenterY! + Math.sin(breakpointAngle!) * loopRadiusY!;
   const bpPos = logicalToPixel(bpX, bpY);
   bpPos.x += bugOffset;
   bpPos.y += bugOffset;
@@ -419,7 +419,7 @@ function createInfiniteLoopOverlay(bugId, variant) {
   bp.style.left = bpPos.x + 'px';
   bp.style.top = bpPos.y + 'px';
 
-  bp.addEventListener('click', (e) => {
+  bp.addEventListener('click', (e: MouseEvent) => {
     try {
       e.stopPropagation();
       if (clientState.ws && clientState.ws.readyState === 1) {
@@ -431,7 +431,7 @@ function createInfiniteLoopOverlay(bugId, variant) {
     }
   });
 
-  dom.arena.appendChild(bp);
+  dom.arena!.appendChild(bp);
 
   // Store references for cleanup
   clientState.infiniteLoopOverlays = clientState.infiniteLoopOverlays || {};
@@ -443,7 +443,7 @@ function createInfiniteLoopOverlay(bugId, variant) {
   startInfiniteLoopAnimations(bugId);
 }
 
-function startInfiniteLoopAnimations(bugId) {
+function startInfiniteLoopAnimations(bugId: string): void {
   const overlay = clientState.infiniteLoopOverlays && clientState.infiniteLoopOverlays[bugId];
   if (!overlay) return;
   const { variant, breakpoint, ellipse } = overlay;
@@ -458,26 +458,26 @@ function startInfiniteLoopAnimations(bugId) {
     dot.className = 'infinite-loop-trail-dot';
     dot.style.left = pxPos.x + 'px';
     dot.style.top = pxPos.y + 'px';
-    dom.arena.appendChild(dot);
+    dom.arena!.appendChild(dot);
     setTimeout(() => dot.remove(), 600);
   }, 100);
 
-  function animate() {
+  function animate(): void {
     if (!clientState.infiniteLoopOverlays || !clientState.infiniteLoopOverlays[bugId]) return;
     const bugEl = clientState.bugs[bugId];
     if (!bugEl) return;
 
     // Animate flowing dashes
-    overlay.dashOffset -= overlay.dashSpeed * 0.016; // ~60fps
-    ellipse.setAttribute('stroke-dashoffset', overlay.dashOffset);
+    overlay!.dashOffset -= overlay!.dashSpeed * 0.016; // ~60fps
+    ellipse.setAttribute('stroke-dashoffset', String(overlay!.dashOffset));
 
     // Proximity check: estimate current angle from bug position
     const pos = clientState.bugPositions[bugId];
     if (pos) {
-      const dx = pos.x - variant.loopCenterX;
-      const dy = pos.y - variant.loopCenterY;
+      const dx = pos.x - variant.loopCenterX!;
+      const dy = pos.y - variant.loopCenterY!;
       const currentAngle = Math.atan2(dy, dx);
-      let diff = Math.abs(currentAngle - variant.breakpointAngle);
+      let diff = Math.abs(currentAngle - variant.breakpointAngle!);
       if (diff > Math.PI) diff = 2 * Math.PI - diff;
 
       // "hot" zone at 1.2× the hit window for visual lead-in
@@ -488,13 +488,13 @@ function startInfiniteLoopAnimations(bugId) {
       }
     }
 
-    overlay.rafId = requestAnimationFrame(animate);
+    overlay!.rafId = requestAnimationFrame(animate);
   }
 
   overlay.rafId = requestAnimationFrame(animate);
 }
 
-function removeInfiniteLoopOverlay(bugId) {
+function removeInfiniteLoopOverlay(bugId: string): void {
   if (!clientState.infiniteLoopOverlays || !clientState.infiniteLoopOverlays[bugId]) return;
   const overlay = clientState.infiniteLoopOverlays[bugId];
   if (overlay.rafId) cancelAnimationFrame(overlay.rafId);
@@ -502,14 +502,14 @@ function removeInfiniteLoopOverlay(bugId) {
   overlay.svg.remove();
   overlay.breakpoint.remove();
   // Clean up any lingering trail dots for this bug
-  dom.arena.querySelectorAll('.infinite-loop-trail-dot').forEach(dot => dot.remove());
+  dom.arena!.querySelectorAll('.infinite-loop-trail-dot').forEach(dot => dot.remove());
   delete clientState.infiniteLoopOverlays[bugId];
 }
 
-export function removeBugElement(bugId, animate) {
+export function removeBugElement(bugId: string, animate?: boolean): void {
   const el = clientState.bugs[bugId];
   if (!el) return;
-  
+
   // Clean up event listeners to prevent memory leaks
   if (el._memoryLeakHandlers) {
     el.removeEventListener('mousedown', el._memoryLeakHandlers.mousedown);
@@ -521,7 +521,7 @@ export function removeBugElement(bugId, animate) {
     el.removeEventListener('click', el._clickHandler);
     delete el._clickHandler;
   }
-  
+
   delete clientState.bugs[bugId];
   delete clientState.bugPositions[bugId];
   removeInfiniteLoopOverlay(bugId);
@@ -533,7 +533,7 @@ export function removeBugElement(bugId, animate) {
   }
 }
 
-export function clearAllBugs() {
+export function clearAllBugs(): void {
   for (const id of Object.keys(clientState.bugs)) {
     const el = clientState.bugs[id];
     // Clean up event listeners
@@ -578,7 +578,7 @@ export function clearAllBugs() {
   }
 }
 
-export function showSquashEffect(lx, ly, color) {
+export function showSquashEffect(lx: number, ly: number, color: string | null | undefined): void {
   const pos = logicalToPixel(lx, ly);
   const fx = document.createElement('div');
   fx.className = 'squash';
@@ -586,6 +586,6 @@ export function showSquashEffect(lx, ly, color) {
   fx.style.top = pos.y + 'px';
   const word = SQUASH_WORDS[Math.floor(Math.random() * SQUASH_WORDS.length)];
   fx.innerHTML = '<span class="squash-text" style="color:' + (color || 'var(--yellow)') + '">' + word + '</span>';
-  dom.arena.appendChild(fx);
+  dom.arena!.appendChild(fx);
   setTimeout(() => fx.remove(), 600);
 }

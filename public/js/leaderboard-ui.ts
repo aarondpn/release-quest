@@ -1,28 +1,29 @@
-import { dom } from './state.js';
-import { renderIcon } from './avatars.js';
+import { dom } from './state.ts';
+import { renderIcon } from './avatars.ts';
+import type { SendMessageFn, LeaderboardEntry } from './client-types.ts';
 
-let _sendMessage = null;
-export function initLeaderboardSend(fn) { _sendMessage = fn; }
+let _sendMessage: SendMessageFn | null = null;
+export function initLeaderboardSend(fn: SendMessageFn): void { _sendMessage = fn; }
 
-function escapeHtml(s) {
+function escapeHtml(s: string): string {
   const d = document.createElement('div');
   d.textContent = s;
   return d.innerHTML;
 }
 
-export function requestLeaderboard() {
+export function requestLeaderboard(): void {
   if (_sendMessage) _sendMessage({ type: 'get-leaderboard' });
 }
 
-export function renderLeaderboard(entries) {
+export function renderLeaderboard(entries: LeaderboardEntry[]): void {
   if (!entries || entries.length === 0) {
-    dom.leaderboardList.innerHTML = '<div class="leaderboard-empty">No stats yet. Play a game!</div>';
+    dom.leaderboardList!.innerHTML = '<div class="leaderboard-empty">No stats yet. Play a game!</div>';
     return;
   }
 
   const rankIcons = ['gold', 'silver', 'bronze'];
 
-  dom.leaderboardList.innerHTML = entries.map((e, i) => {
+  dom.leaderboardList!.innerHTML = entries.map((e, i) => {
     const rankClass = i < 3 ? ' leaderboard-rank-' + rankIcons[i] : '';
     const winRate = e.games_played > 0 ? Math.round((e.games_won / e.games_played) * 100) : 0;
     return '<div class="leaderboard-row' + rankClass + '">' +
@@ -36,25 +37,25 @@ export function renderLeaderboard(entries) {
   }).join('');
 }
 
-export function showLeaderboardTab() {
-  dom.lobbyListPanel.classList.add('hidden');
-  dom.leaderboardPanel.classList.remove('hidden');
+export function showLeaderboardTab(): void {
+  dom.lobbyListPanel!.classList.add('hidden');
+  dom.leaderboardPanel!.classList.remove('hidden');
   if (dom.replaysPanel) dom.replaysPanel.classList.add('hidden');
   if (dom.statsCardPanel) dom.statsCardPanel.classList.add('hidden');
-  dom.lobbiesTab.classList.remove('active');
-  dom.leaderboardTab.classList.add('active');
+  dom.lobbiesTab!.classList.remove('active');
+  dom.leaderboardTab!.classList.add('active');
   if (dom.replaysTab) dom.replaysTab.classList.remove('active');
   if (dom.statsCardTab) dom.statsCardTab.classList.remove('active');
   requestLeaderboard();
 }
 
-export function showLobbiesTab() {
-  dom.leaderboardPanel.classList.add('hidden');
-  dom.lobbyListPanel.classList.remove('hidden');
+export function showLobbiesTab(): void {
+  dom.leaderboardPanel!.classList.add('hidden');
+  dom.lobbyListPanel!.classList.remove('hidden');
   if (dom.replaysPanel) dom.replaysPanel.classList.add('hidden');
   if (dom.statsCardPanel) dom.statsCardPanel.classList.add('hidden');
-  dom.leaderboardTab.classList.remove('active');
-  dom.lobbiesTab.classList.add('active');
+  dom.leaderboardTab!.classList.remove('active');
+  dom.lobbiesTab!.classList.add('active');
   if (dom.replaysTab) dom.replaysTab.classList.remove('active');
   if (dom.statsCardTab) dom.statsCardTab.classList.remove('active');
 }

@@ -1,39 +1,40 @@
-import { dom, clientState } from './state.js';
-import { isPremium, renderIcon } from './avatars.js';
+import { dom, clientState } from './state.ts';
+import { isPremium, renderIcon } from './avatars.ts';
+import type { SendMessageFn } from './client-types.ts';
 
-let _sendMessage = null;
+let _sendMessage: SendMessageFn | null = null;
 let isChatOpen = false;
 let unreadCount = 0;
 
-export function initChatSend(fn) { _sendMessage = fn; }
+export function initChatSend(fn: SendMessageFn): void { _sendMessage = fn; }
 
-export function initChat() {
-  dom.chatSendBtn.addEventListener('click', sendChat);
-  dom.chatInput.addEventListener('keydown', (e) => {
+export function initChat(): void {
+  dom.chatSendBtn!.addEventListener('click', sendChat);
+  dom.chatInput!.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.key === 'Enter') sendChat();
   });
-  dom.chatToggleBtn.addEventListener('click', toggleChat);
-  dom.chatHandle.addEventListener('click', () => closeChat());
+  dom.chatToggleBtn!.addEventListener('click', toggleChat);
+  dom.chatHandle!.addEventListener('click', () => closeChat());
 
   // On mobile, adjust chat panel when virtual keyboard opens/closes
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', () => {
       if (!isChatOpen) return;
-      const offset = window.innerHeight - window.visualViewport.height;
-      dom.chatPanel.style.bottom = offset + 'px';
+      const offset = window.innerHeight - window.visualViewport!.height;
+      dom.chatPanel!.style.bottom = offset + 'px';
     });
   }
 }
 
-function sendChat() {
+function sendChat(): void {
   if (!_sendMessage) return;
-  const text = dom.chatInput.value.trim();
+  const text = dom.chatInput!.value.trim();
   if (!text) return;
   _sendMessage({ type: 'chat-message', message: text });
-  dom.chatInput.value = '';
+  dom.chatInput!.value = '';
 }
 
-export function handleChatBroadcast(msg) {
+export function handleChatBroadcast(msg: Record<string, any>): void {
   const el = document.createElement('div');
 
   if (msg.system) {
@@ -69,34 +70,34 @@ export function handleChatBroadcast(msg) {
     el.appendChild(time);
   }
 
-  dom.chatMessages.appendChild(el);
+  dom.chatMessages!.appendChild(el);
 
   // Auto-scroll to bottom
-  dom.chatMessages.scrollTop = dom.chatMessages.scrollHeight;
+  dom.chatMessages!.scrollTop = dom.chatMessages!.scrollHeight;
 
   // Update unread badge if chat is closed
   if (!isChatOpen) {
     unreadCount++;
-    dom.chatBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-    dom.chatBadge.classList.remove('hidden');
+    dom.chatBadge!.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
+    dom.chatBadge!.classList.remove('hidden');
   }
 }
 
 /** Enable the chat system (show toggle button, keep panel closed) */
-export function showChat() {
+export function showChat(): void {
   if (!dom.chatToggleBtn) return;
   dom.chatToggleBtn.classList.remove('hidden');
   updateInputState();
 }
 
 /** Fully remove chat (toggle + panel) */
-export function hideChat() {
+export function hideChat(): void {
   if (dom.chatPanel) dom.chatPanel.classList.add('hidden');
   if (dom.chatToggleBtn) dom.chatToggleBtn.classList.add('hidden');
   isChatOpen = false;
 }
 
-export function clearChat() {
+export function clearChat(): void {
   if (dom.chatMessages) dom.chatMessages.innerHTML = '';
   unreadCount = 0;
   if (dom.chatBadge) {
@@ -105,41 +106,41 @@ export function clearChat() {
   }
 }
 
-function openChat() {
-  dom.chatPanel.classList.remove('hidden');
-  dom.chatToggleBtn.classList.add('hidden');
+function openChat(): void {
+  dom.chatPanel!.classList.remove('hidden');
+  dom.chatToggleBtn!.classList.add('hidden');
   isChatOpen = true;
   unreadCount = 0;
-  dom.chatBadge.classList.add('hidden');
-  dom.chatBadge.textContent = '0';
+  dom.chatBadge!.classList.add('hidden');
+  dom.chatBadge!.textContent = '0';
   updateInputState();
 }
 
-function closeChat() {
-  dom.chatPanel.classList.add('hidden');
-  dom.chatPanel.style.bottom = '';
-  dom.chatToggleBtn.classList.remove('hidden');
+function closeChat(): void {
+  dom.chatPanel!.classList.add('hidden');
+  dom.chatPanel!.style.bottom = '';
+  dom.chatToggleBtn!.classList.remove('hidden');
   isChatOpen = false;
 }
 
-function toggleChat() {
-  if (dom.chatPanel.classList.contains('hidden')) {
+function toggleChat(): void {
+  if (dom.chatPanel!.classList.contains('hidden')) {
     openChat();
   } else {
     closeChat();
   }
 }
 
-function updateInputState() {
+function updateInputState(): void {
   if (!clientState.isLoggedIn) {
-    dom.chatInput.disabled = true;
-    dom.chatSendBtn.disabled = true;
-    dom.chatInput.placeholder = 'Log in to chat';
-    dom.chatInput.parentElement.classList.add('chat-disabled');
+    dom.chatInput!.disabled = true;
+    dom.chatSendBtn!.disabled = true;
+    dom.chatInput!.placeholder = 'Log in to chat';
+    dom.chatInput!.parentElement!.classList.add('chat-disabled');
   } else {
-    dom.chatInput.disabled = false;
-    dom.chatSendBtn.disabled = false;
-    dom.chatInput.placeholder = 'Type a message...';
-    dom.chatInput.parentElement.classList.remove('chat-disabled');
+    dom.chatInput!.disabled = false;
+    dom.chatSendBtn!.disabled = false;
+    dom.chatInput!.placeholder = 'Type a message...';
+    dom.chatInput!.parentElement!.classList.remove('chat-disabled');
   }
 }

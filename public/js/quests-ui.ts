@@ -1,38 +1,39 @@
-import { clientState, dom } from './state.js';
+import { clientState, dom } from './state.ts';
+import type { SendMessageFn, QuestEntry, QuestData } from './client-types.ts';
 
-let _sendMessage = null;
+let _sendMessage: SendMessageFn | null = null;
 
 const COIN_SVG_SMALL = '<svg class="byte-coin-svg" width="8" height="8" viewBox="0 0 16 16" fill="none"><rect x="4" y="1" width="8" height="14" rx="1" fill="#ffe66d"/><rect x="3" y="2" width="1" height="12" fill="#ffe66d"/><rect x="12" y="2" width="1" height="12" fill="#ffe66d"/><rect x="6" y="3" width="4" height="2" fill="#ffd700"/><rect x="6" y="7" width="4" height="2" fill="#ffd700"/><rect x="6" y="11" width="4" height="2" fill="#ffd700"/><rect x="5" y="1" width="6" height="1" fill="#fff8c4" opacity="0.6"/></svg>';
 const COIN_SVG_TOAST = '<svg class="byte-coin-svg" width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="4" y="1" width="8" height="14" rx="1" fill="#ffe66d"/><rect x="3" y="2" width="1" height="12" fill="#ffe66d"/><rect x="12" y="2" width="1" height="12" fill="#ffe66d"/><rect x="6" y="3" width="4" height="2" fill="#ffd700"/><rect x="6" y="7" width="4" height="2" fill="#ffd700"/><rect x="6" y="11" width="4" height="2" fill="#ffd700"/><rect x="5" y="1" width="6" height="1" fill="#fff8c4" opacity="0.6"/></svg>';
 
-export function initQuestsSend(sendFn) {
+export function initQuestsSend(sendFn: SendMessageFn): void {
   _sendMessage = sendFn;
 }
 
-export function requestQuests() {
+export function requestQuests(): void {
   if (_sendMessage) _sendMessage({ type: 'get-quests' });
 }
 
-export function handleQuestsData(msg) {
+export function handleQuestsData(msg: Record<string, any>): void {
   if (msg.isGuest) {
     clientState.questData = null;
     clientState.byteCoinsBalance = 0;
     showGuestView();
     return;
   }
-  clientState.questData = msg;
+  clientState.questData = msg as QuestData;
   clientState.byteCoinsBalance = msg.balance || 0;
   renderQuestTracker();
   updateBalanceDisplay();
   startCountdownTimer();
 }
 
-export function handleQuestProgress(msg) {
+export function handleQuestProgress(msg: Record<string, any>): void {
   if (!msg.updates || msg.updates.length === 0) return;
 
   if (clientState.questData && clientState.questData.quests) {
     for (const update of msg.updates) {
-      const quest = clientState.questData.quests.find(q => q.id === update.questId);
+      const quest = clientState.questData.quests.find((q: QuestEntry) => q.id === update.questId);
       if (quest) {
         quest.progress = update.progress;
         quest.completed = update.completed;
@@ -55,12 +56,12 @@ export function handleQuestProgress(msg) {
   }
 }
 
-export function handleBalanceData(msg) {
+export function handleBalanceData(msg: Record<string, any>): void {
   clientState.byteCoinsBalance = msg.balance || 0;
   updateBalanceDisplay();
 }
 
-export function resetQuestState() {
+export function resetQuestState(): void {
   clientState.questData = null;
   clientState.byteCoinsBalance = 0;
   if (clientState.questTimerInterval) {
@@ -74,25 +75,25 @@ export function resetQuestState() {
   showGuestView();
 }
 
-function showGuestView() {
+function showGuestView(): void {
   if (dom.questTrackerList) dom.questTrackerList.innerHTML = '';
   if (dom.questTrackerLocked) dom.questTrackerLocked.classList.remove('hidden');
   if (dom.profileCoins) dom.profileCoins.classList.add('hidden');
 }
 
-function hideGuestView() {
+function hideGuestView(): void {
   if (dom.questTrackerLocked) dom.questTrackerLocked.classList.add('hidden');
   if (dom.profileCoins) dom.profileCoins.classList.remove('hidden');
 }
 
-export function updateBalanceDisplay() {
+export function updateBalanceDisplay(): void {
   const bal = clientState.byteCoinsBalance || 0;
   const formatted = bal.toLocaleString();
   if (dom.qtBalance) dom.qtBalance.textContent = formatted;
   if (dom.profileCoinBalance) dom.profileCoinBalance.textContent = formatted;
 }
 
-function renderQuestTracker() {
+function renderQuestTracker(): void {
   const data = clientState.questData;
   if (!data || !data.quests) {
     showGuestView();
@@ -104,8 +105,8 @@ function renderQuestTracker() {
   if (!list) return;
   list.innerHTML = '';
 
-  const dailyQuests = data.quests.filter(q => q.type === 'daily');
-  const weeklyQuests = data.quests.filter(q => q.type === 'weekly');
+  const dailyQuests = data.quests.filter((q: QuestEntry) => q.type === 'daily');
+  const weeklyQuests = data.quests.filter((q: QuestEntry) => q.type === 'weekly');
 
   if (dailyQuests.length > 0) {
     const section = document.createElement('div');
@@ -134,19 +135,17 @@ function renderQuestTracker() {
   }
 }
 
-function createQuestRow(quest) {
+function createQuestRow(quest: QuestEntry): HTMLElement {
   const row = document.createElement('div');
   const pct = Math.min(100, Math.round((quest.progress / quest.target) * 100));
   const almost = !quest.completed && pct >= 80;
 
   row.className = 'quest-row' + (quest.completed ? ' quest-done' : '') + (almost ? ' quest-almost' : '');
 
-  // Icon
   const icon = document.createElement('span');
   icon.className = 'quest-icon';
   icon.textContent = quest.icon;
 
-  // Info column
   const info = document.createElement('div');
   info.className = 'quest-info';
 
@@ -157,7 +156,6 @@ function createQuestRow(quest) {
   title.textContent = quest.title;
   titleRow.appendChild(title);
 
-  // Description
   const desc = document.createElement('div');
   desc.className = 'quest-desc';
   desc.textContent = quest.description;
@@ -183,7 +181,6 @@ function createQuestRow(quest) {
   info.appendChild(desc);
   info.appendChild(progressWrap);
 
-  // Reward badge
   const reward = document.createElement('div');
   reward.className = 'quest-reward-badge';
   reward.innerHTML = '+' + quest.reward + ' ' + COIN_SVG_SMALL;
@@ -195,12 +192,12 @@ function createQuestRow(quest) {
   return row;
 }
 
-function startCountdownTimer() {
+function startCountdownTimer(): void {
   if (clientState.questTimerInterval) {
     clearInterval(clientState.questTimerInterval);
   }
 
-  function update() {
+  function update(): void {
     const data = clientState.questData;
     if (!data || !dom.questTrackerTimer) return;
 
@@ -211,7 +208,7 @@ function startCountdownTimer() {
     if (nextReset <= now) {
       dom.questTrackerTimer.innerHTML = '<span class="qt-timer-icon">\u23F1</span> RESETTING\u2026';
       if (_sendMessage) {
-        setTimeout(() => _sendMessage({ type: 'get-quests' }), 2000);
+        setTimeout(() => _sendMessage!({ type: 'get-quests' }), 2000);
       }
       return;
     }
@@ -220,7 +217,7 @@ function startCountdownTimer() {
     const hours = Math.floor(diff / 3600000);
     const mins = Math.floor((diff % 3600000) / 60000);
 
-    let timeStr;
+    let timeStr: string;
     if (hours > 0) {
       timeStr = hours + 'h ' + mins + 'm';
     } else {
@@ -233,7 +230,7 @@ function startCountdownTimer() {
   clientState.questTimerInterval = setInterval(update, 60000);
 }
 
-function showQuestCompletionToast(update) {
+function showQuestCompletionToast(update: Record<string, any>): void {
   const toast = document.createElement('div');
   toast.className = 'quest-toast';
   toast.innerHTML =

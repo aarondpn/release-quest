@@ -1,19 +1,19 @@
-import { dom, clientState } from './state.js';
-import { logicalToPixel } from './coordinates.js';
-import { renderIcon } from './avatars.js';
+import { dom, clientState } from './state.ts';
+import { logicalToPixel } from './coordinates.ts';
+import { renderIcon } from './avatars.ts';
 
-function escapeHtml(s) {
+function escapeHtml(s: string): string {
   const d = document.createElement('div');
   d.textContent = s;
   return d.innerHTML;
 }
 
-export function addRemoteCursor(playerId, name, color, icon) {
+export function addRemoteCursor(playerId: string, name: string, color: string, icon: string): void {
   if (playerId === clientState.myId) return;
   if (clientState.remoteCursors[playerId]) {
     const el = clientState.remoteCursors[playerId];
-    el.querySelector('.remote-cursor-icon').innerHTML = renderIcon(icon || '\u{1F431}', 22);
-    el.querySelector('.remote-cursor-name').textContent = name;
+    (el.querySelector('.remote-cursor-icon') as HTMLElement).innerHTML = renderIcon(icon || '\u{1F431}', 22);
+    (el.querySelector('.remote-cursor-name') as HTMLElement).textContent = name;
     el.style.color = color;
     return;
   }
@@ -24,11 +24,11 @@ export function addRemoteCursor(playerId, name, color, icon) {
   el.innerHTML =
     '<span class="remote-cursor-icon">' + renderIcon(icon || '\u{1F431}', 22) + '</span>' +
     '<span class="remote-cursor-name">' + escapeHtml(name) + '</span>';
-  dom.arena.appendChild(el);
+  dom.arena!.appendChild(el);
   clientState.remoteCursors[playerId] = el;
 }
 
-export function removeRemoteCursor(playerId) {
+export function removeRemoteCursor(playerId: string): void {
   const el = clientState.remoteCursors[playerId];
   if (el) {
     el.remove();
@@ -36,14 +36,14 @@ export function removeRemoteCursor(playerId) {
   }
 }
 
-export function updateRemoteCursor(playerId, lx, ly) {
+export function updateRemoteCursor(playerId: string, lx: number, ly: number): void {
   const el = clientState.remoteCursors[playerId];
   if (!el) return;
   const pos = logicalToPixel(lx, ly);
   el.style.transform = 'translate(' + pos.x + 'px,' + pos.y + 'px)';
 }
 
-export function clearRemoteCursors() {
+export function clearRemoteCursors(): void {
   for (const id of Object.keys(clientState.remoteCursors)) {
     clientState.remoteCursors[id].remove();
   }
@@ -52,7 +52,7 @@ export function clearRemoteCursors() {
 
 // ── Cursor trail dots for replay playback ──
 
-export function addCursorTrailDot(playerId, lx, ly, color) {
+export function addCursorTrailDot(playerId: string, lx: number, ly: number, color: string): void {
   const pos = logicalToPixel(lx, ly);
   const dot = document.createElement('div');
   dot.className = 'replay-cursor-trail-dot';
@@ -61,12 +61,12 @@ export function addCursorTrailDot(playerId, lx, ly, color) {
   // Use the player's avatar icon
   const player = clientState.players[playerId];
   dot.innerHTML = renderIcon((player && player.icon) || '\u{1F431}', 22);
-  dom.arena.appendChild(dot);
+  dom.arena!.appendChild(dot);
   // Remove after a short delay
   setTimeout(() => dot.remove(), 100);
 }
 
-export function clearCursorTrails() {
-  const dots = dom.arena.querySelectorAll('.replay-cursor-trail-dot');
+export function clearCursorTrails(): void {
+  const dots = dom.arena!.querySelectorAll('.replay-cursor-trail-dot');
   dots.forEach(d => d.remove());
 }

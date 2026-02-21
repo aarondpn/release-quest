@@ -1,4 +1,6 @@
-export const clientState = {
+import type { ClientState, DomRefs } from './client-types.ts';
+
+export const clientState: ClientState = {
   myId: null,
   myColor: null,
   myIcon: null,
@@ -49,7 +51,7 @@ export const clientState = {
   playbackWallTimeRef: 0,
 };
 
-export const dom = {
+export const dom: DomRefs = {
   arena: null,
   scoreEl: null,
   levelEl: null,
@@ -171,7 +173,7 @@ export const dom = {
   profileCoins: null,
 };
 
-export function initDom() {
+export function initDom(): void {
   dom.arena = document.getElementById('arena');
   dom.scoreEl = document.getElementById('score');
   dom.levelEl = document.getElementById('level');
@@ -185,44 +187,44 @@ export function initDom() {
   dom.bossScreen = document.getElementById('boss-screen');
   dom.shopScreen = document.getElementById('shop-screen');
   dom.nameEntry = document.getElementById('name-entry');
-  dom.nameInput = document.getElementById('name-input');
+  dom.nameInput = document.getElementById('name-input') as HTMLInputElement | null;
   dom.iconPicker = document.getElementById('icon-picker');
   dom.joinBtn = document.getElementById('join-btn');
   dom.lobbyBrowser = document.getElementById('lobby-browser');
   dom.lobbyList = document.getElementById('lobby-list');
-  dom.lobbyNameInput = document.getElementById('lobby-name-input');
+  dom.lobbyNameInput = document.getElementById('lobby-name-input') as HTMLInputElement | null;
   dom.lobbyMaxPlayers = document.getElementById('lobby-max-players');
-  dom.lobbyPasswordInput = document.getElementById('lobby-password-input');
+  dom.lobbyPasswordInput = document.getElementById('lobby-password-input') as HTMLInputElement | null;
   dom.lobbyDifficulty = document.getElementById('lobby-difficulty');
   dom.createLobbyBtn = document.getElementById('create-lobby-btn');
   dom.lobbyError = document.getElementById('lobby-error');
   dom.advancedToggleBtn = document.getElementById('advanced-toggle-btn');
   dom.lobbyAdvancedConfig = document.getElementById('lobby-advanced-config');
   dom.advancedResetBtn = document.getElementById('advanced-reset-btn');
-  dom.configStartingHp = document.getElementById('config-starting-hp');
-  dom.configHpDamage = document.getElementById('config-hp-damage');
-  dom.configBugPoints = document.getElementById('config-bug-points');
-  dom.configBossHp = document.getElementById('config-boss-hp');
-  dom.configBossTime = document.getElementById('config-boss-time');
-  dom.configBossClickDamage = document.getElementById('config-boss-click-damage');
-  dom.configBossKillBonus = document.getElementById('config-boss-kill-bonus');
-  dom.configBossRegen = document.getElementById('config-boss-regen');
-  dom.configHeisenbug = document.getElementById('config-heisenbug');
-  dom.configCodeReview = document.getElementById('config-code-review');
-  dom.configMergeConflict = document.getElementById('config-merge-conflict');
-  dom.configPipelineBug = document.getElementById('config-pipeline-bug');
-  dom.configMemoryLeak = document.getElementById('config-memory-leak');
-  dom.configInfiniteLoop = document.getElementById('config-infinite-loop');
-  dom.configAzubi = document.getElementById('config-azubi');
-  dom.toggleHeisenbug = document.getElementById('toggle-heisenbug');
-  dom.toggleCodeReview = document.getElementById('toggle-code-review');
-  dom.toggleMergeConflict = document.getElementById('toggle-merge-conflict');
-  dom.togglePipelineBug = document.getElementById('toggle-pipeline-bug');
-  dom.toggleMemoryLeak = document.getElementById('toggle-memory-leak');
-  dom.toggleInfiniteLoop = document.getElementById('toggle-infinite-loop');
-  dom.toggleAzubi = document.getElementById('toggle-azubi');
-  dom.configDuckDuration = document.getElementById('config-duck-duration');
-  dom.configHammerDuration = document.getElementById('config-hammer-duration');
+  dom.configStartingHp = document.getElementById('config-starting-hp') as HTMLInputElement | null;
+  dom.configHpDamage = document.getElementById('config-hp-damage') as HTMLInputElement | null;
+  dom.configBugPoints = document.getElementById('config-bug-points') as HTMLInputElement | null;
+  dom.configBossHp = document.getElementById('config-boss-hp') as HTMLInputElement | null;
+  dom.configBossTime = document.getElementById('config-boss-time') as HTMLInputElement | null;
+  dom.configBossClickDamage = document.getElementById('config-boss-click-damage') as HTMLInputElement | null;
+  dom.configBossKillBonus = document.getElementById('config-boss-kill-bonus') as HTMLInputElement | null;
+  dom.configBossRegen = document.getElementById('config-boss-regen') as HTMLInputElement | null;
+  dom.configHeisenbug = document.getElementById('config-heisenbug') as HTMLInputElement | null;
+  dom.configCodeReview = document.getElementById('config-code-review') as HTMLInputElement | null;
+  dom.configMergeConflict = document.getElementById('config-merge-conflict') as HTMLInputElement | null;
+  dom.configPipelineBug = document.getElementById('config-pipeline-bug') as HTMLInputElement | null;
+  dom.configMemoryLeak = document.getElementById('config-memory-leak') as HTMLInputElement | null;
+  dom.configInfiniteLoop = document.getElementById('config-infinite-loop') as HTMLInputElement | null;
+  dom.configAzubi = document.getElementById('config-azubi') as HTMLInputElement | null;
+  dom.toggleHeisenbug = document.getElementById('toggle-heisenbug') as HTMLInputElement | null;
+  dom.toggleCodeReview = document.getElementById('toggle-code-review') as HTMLInputElement | null;
+  dom.toggleMergeConflict = document.getElementById('toggle-merge-conflict') as HTMLInputElement | null;
+  dom.togglePipelineBug = document.getElementById('toggle-pipeline-bug') as HTMLInputElement | null;
+  dom.toggleMemoryLeak = document.getElementById('toggle-memory-leak') as HTMLInputElement | null;
+  dom.toggleInfiniteLoop = document.getElementById('toggle-infinite-loop') as HTMLInputElement | null;
+  dom.toggleAzubi = document.getElementById('toggle-azubi') as HTMLInputElement | null;
+  dom.configDuckDuration = document.getElementById('config-duck-duration') as HTMLInputElement | null;
+  dom.configHammerDuration = document.getElementById('config-hammer-duration') as HTMLInputElement | null;
   dom.authStatus = document.getElementById('auth-status');
   dom.authShowLoginBtn = document.getElementById('auth-show-login-btn');
   dom.authLogoutBtn = document.getElementById('auth-logout-btn');
@@ -232,13 +234,13 @@ export function initDom() {
   dom.authLoginForm = document.getElementById('auth-login-form');
   dom.authRegisterForm = document.getElementById('auth-register-form');
   dom.authError = document.getElementById('auth-error');
-  dom.authLoginUsername = document.getElementById('auth-login-username');
-  dom.authLoginPassword = document.getElementById('auth-login-password');
+  dom.authLoginUsername = document.getElementById('auth-login-username') as HTMLInputElement | null;
+  dom.authLoginPassword = document.getElementById('auth-login-password') as HTMLInputElement | null;
   dom.authLoginSubmit = document.getElementById('auth-login-submit');
-  dom.authRegUsername = document.getElementById('auth-reg-username');
-  dom.authRegDisplayName = document.getElementById('auth-reg-display-name');
-  dom.authRegPassword = document.getElementById('auth-reg-password');
-  dom.authRegConfirm = document.getElementById('auth-reg-confirm');
+  dom.authRegUsername = document.getElementById('auth-reg-username') as HTMLInputElement | null;
+  dom.authRegDisplayName = document.getElementById('auth-reg-display-name') as HTMLInputElement | null;
+  dom.authRegPassword = document.getElementById('auth-reg-password') as HTMLInputElement | null;
+  dom.authRegConfirm = document.getElementById('auth-reg-confirm') as HTMLInputElement | null;
   dom.authRegSubmit = document.getElementById('auth-reg-submit');
   dom.authBackBtn = document.getElementById('auth-back-btn');
   dom.lobbyListPanel = document.getElementById('lobby-list-panel');
@@ -259,7 +261,7 @@ export function initDom() {
   dom.statsCardTab = document.getElementById('stats-card-tab');
   dom.statsCardPreview = document.getElementById('stats-card-preview');
   dom.statsCardThemes = document.getElementById('stats-card-themes');
-  dom.statsCardDownloadBtn = document.getElementById('stats-card-download-btn');
+  dom.statsCardDownloadBtn = document.getElementById('stats-card-download-btn') as HTMLButtonElement | null;
   dom.lobbyProfileBar = document.getElementById('lobby-profile-bar');
   dom.lobbyProfileIcon = document.getElementById('lobby-profile-icon');
   dom.lobbyProfileName = document.getElementById('lobby-profile-name');
@@ -267,7 +269,7 @@ export function initDom() {
   dom.lobbyProfileAuth = document.getElementById('lobby-profile-auth');
   dom.lobbyProfileEditor = document.getElementById('lobby-profile-editor');
   dom.lobbyEditorIconPicker = document.getElementById('lobby-editor-icon-picker');
-  dom.lobbyEditorNameInput = document.getElementById('lobby-editor-name-input');
+  dom.lobbyEditorNameInput = document.getElementById('lobby-editor-name-input') as HTMLInputElement | null;
   dom.lobbyEditorSaveBtn = document.getElementById('lobby-editor-save-btn');
   dom.lobbyProfileLoginBtn = document.getElementById('lobby-profile-login-btn');
   dom.lobbyProfileLogoutBtn = document.getElementById('lobby-profile-logout-btn');
@@ -279,8 +281,8 @@ export function initDom() {
   dom.onlineCountEl = document.getElementById('online-count');
   dom.chatPanel = document.getElementById('chat-panel');
   dom.chatMessages = document.getElementById('chat-messages');
-  dom.chatInput = document.getElementById('chat-input');
-  dom.chatSendBtn = document.getElementById('chat-send-btn');
+  dom.chatInput = document.getElementById('chat-input') as HTMLInputElement | null;
+  dom.chatSendBtn = document.getElementById('chat-send-btn') as HTMLButtonElement | null;
   dom.chatToggleBtn = document.getElementById('chat-toggle-btn');
   dom.chatHandle = document.getElementById('chat-handle');
   dom.chatBadge = document.getElementById('chat-badge');

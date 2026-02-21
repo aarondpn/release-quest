@@ -1,22 +1,20 @@
-import { dom, clientState } from './state.js';
-import { STANDARD_ICONS, PREMIUM_AVATARS, PREMIUM_IDS, isPremium, renderIcon } from './avatars.js';
+import { dom, clientState } from './state.ts';
+import { STANDARD_ICONS, PREMIUM_AVATARS, PREMIUM_IDS, isPremium, renderIcon } from './avatars.ts';
+import type { SendMessageFn, LobbyListEntry } from './client-types.ts';
 
-function escapeHtml(s) {
+function escapeHtml(s: string): string {
   const d = document.createElement('div');
   d.textContent = s;
   return d.innerHTML;
 }
 
-// sendMessage is injected lazily to avoid circular dependency with network.js
-let _sendMessage = null;
-export function initLobbySend(fn) { _sendMessage = fn; }
+let _sendMessage: SendMessageFn | null = null;
+export function initLobbySend(fn: SendMessageFn): void { _sendMessage = fn; }
 
-export function showLobbyBrowser() {
-  dom.lobbyBrowser.classList.remove('hidden');
-  dom.lobbyError.classList.add('hidden');
-  // Collapse editor on re-show
+export function showLobbyBrowser(): void {
+  dom.lobbyBrowser!.classList.remove('hidden');
+  dom.lobbyError!.classList.add('hidden');
   if (dom.lobbyProfileEditor) dom.lobbyProfileEditor.classList.add('collapsed');
-  // Reset to lobbies tab
   if (dom.lobbyListPanel) dom.lobbyListPanel.classList.remove('hidden');
   if (dom.leaderboardPanel) dom.leaderboardPanel.classList.add('hidden');
   if (dom.replaysPanel) dom.replaysPanel.classList.add('hidden');
@@ -30,19 +28,19 @@ export function showLobbyBrowser() {
   }
 }
 
-export function hideLobbyBrowser() {
-  dom.lobbyBrowser.classList.add('hidden');
+export function hideLobbyBrowser(): void {
+  dom.lobbyBrowser!.classList.add('hidden');
 }
 
-export function renderLobbyList(lobbies) {
+export function renderLobbyList(lobbies: LobbyListEntry[]): void {
   clientState.lobbies = lobbies;
   if (!lobbies || lobbies.length === 0) {
-    dom.lobbyList.innerHTML = '<div class="lobby-list-empty">No lobbies yet. Create one!</div>';
+    dom.lobbyList!.innerHTML = '<div class="lobby-list-empty">No lobbies yet. Create one!</div>';
     return;
   }
-  dom.lobbyList.innerHTML = lobbies.map(l => {
+  dom.lobbyList!.innerHTML = lobbies.map(l => {
     const full = l.player_count >= l.max_players;
-    const difficulty = (l.settings && l.settings.difficulty) || 'medium';
+    const difficulty = (l.settings && l.settings.difficulty as string) || 'medium';
     const statusClass = l.started ? 'lobby-list-status-playing' : 'lobby-list-status-waiting';
     const statusLabel = l.started ? 'In Game' : 'Waiting';
     const difficultyLabel = difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
@@ -72,11 +70,10 @@ export function renderLobbyList(lobbies) {
     '</div>';
   }).join('');
 
-  // Attach join handlers
-  dom.lobbyList.querySelectorAll('.lobby-join-area').forEach(area => {
-    const btn = area.querySelector('.lobby-join-btn');
+  dom.lobbyList!.querySelectorAll<HTMLElement>('.lobby-join-area').forEach(area => {
+    const btn = area.querySelector<HTMLButtonElement>('.lobby-join-btn');
     if (btn && !btn.disabled) {
-      const lobbyId = parseInt(area.dataset.lobbyId, 10);
+      const lobbyId = parseInt(area.dataset.lobbyId!, 10);
       const hasPassword = area.dataset.hasPassword === '1';
 
       btn.addEventListener('click', () => {
@@ -88,9 +85,9 @@ export function renderLobbyList(lobbies) {
       });
     }
 
-    const spectateBtn = area.querySelector('.lobby-spectate-btn');
+    const spectateBtn = area.querySelector<HTMLElement>('.lobby-spectate-btn');
     if (spectateBtn) {
-      const lobbyId = parseInt(spectateBtn.dataset.lobbyId, 10);
+      const lobbyId = parseInt(spectateBtn.dataset.lobbyId!, 10);
       const hasPassword = spectateBtn.dataset.hasPassword === '1';
 
       spectateBtn.addEventListener('click', () => {
@@ -104,55 +101,52 @@ export function renderLobbyList(lobbies) {
   });
 }
 
-function showInlinePasswordPrompt(area, lobbyId) {
-  // Replace join button with password input + confirm
+function showInlinePasswordPrompt(area: HTMLElement, lobbyId: number): void {
   area.innerHTML =
     '<div class="lobby-password-prompt">' +
       '<input class="lobby-password-join-input" type="password" placeholder="Password" maxlength="32" autocomplete="off">' +
       '<button class="btn btn-small lobby-password-confirm-btn">GO</button>' +
       '<button class="btn btn-small btn-cancel lobby-password-cancel-btn">\u2715</button>' +
     '</div>';
-  const input = area.querySelector('.lobby-password-join-input');
-  const confirmBtn = area.querySelector('.lobby-password-confirm-btn');
-  const cancelBtn = area.querySelector('.lobby-password-cancel-btn');
+  const input = area.querySelector<HTMLInputElement>('.lobby-password-join-input')!;
+  const confirmBtn = area.querySelector<HTMLButtonElement>('.lobby-password-confirm-btn')!;
+  const cancelBtn = area.querySelector<HTMLButtonElement>('.lobby-password-cancel-btn')!;
   input.focus();
 
-  function submitPassword() {
+  function submitPassword(): void {
     const password = input.value;
     if (_sendMessage) _sendMessage({ type: 'join-lobby', lobbyId, password });
   }
 
   confirmBtn.addEventListener('click', submitPassword);
-  input.addEventListener('keydown', (e) => {
+  input.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.key === 'Enter') submitPassword();
     if (e.key === 'Escape') cancelBtn.click();
   });
   cancelBtn.addEventListener('click', () => {
-    // Re-render the lobby list to restore the join button
     renderLobbyList(clientState.lobbies);
   });
 }
 
-function showInlineSpectatePasswordPrompt(area, lobbyId) {
-  const joinArea = area;
-  joinArea.innerHTML =
+function showInlineSpectatePasswordPrompt(area: HTMLElement, lobbyId: number): void {
+  area.innerHTML =
     '<div class="lobby-password-prompt">' +
       '<input class="lobby-password-join-input" type="password" placeholder="Password" maxlength="32" autocomplete="off">' +
       '<button class="btn btn-small lobby-password-confirm-btn">GO</button>' +
       '<button class="btn btn-small btn-cancel lobby-password-cancel-btn">\u2715</button>' +
     '</div>';
-  const input = joinArea.querySelector('.lobby-password-join-input');
-  const confirmBtn = joinArea.querySelector('.lobby-password-confirm-btn');
-  const cancelBtn = joinArea.querySelector('.lobby-password-cancel-btn');
+  const input = area.querySelector<HTMLInputElement>('.lobby-password-join-input')!;
+  const confirmBtn = area.querySelector<HTMLButtonElement>('.lobby-password-confirm-btn')!;
+  const cancelBtn = area.querySelector<HTMLButtonElement>('.lobby-password-cancel-btn')!;
   input.focus();
 
-  function submitPassword() {
+  function submitPassword(): void {
     const password = input.value;
     if (_sendMessage) _sendMessage({ type: 'join-spectate', lobbyId, password });
   }
 
   confirmBtn.addEventListener('click', submitPassword);
-  input.addEventListener('keydown', (e) => {
+  input.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.key === 'Enter') submitPassword();
     if (e.key === 'Escape') cancelBtn.click();
   });
@@ -161,51 +155,48 @@ function showInlineSpectatePasswordPrompt(area, lobbyId) {
   });
 }
 
-export function joinLobbyWithPassword(lobbyId, password) {
+export function joinLobbyWithPassword(lobbyId: number, password: string): void {
   if (_sendMessage) _sendMessage({ type: 'join-lobby', lobbyId, password });
 }
 
-export function joinLobbyByCodeWithPassword(code, password) {
+export function joinLobbyByCodeWithPassword(code: string, password: string): void {
   if (_sendMessage) _sendMessage({ type: 'join-lobby-by-code', code, password });
 }
 
-export function showLobbyError(message) {
-  dom.lobbyError.textContent = message;
-  dom.lobbyError.classList.remove('hidden');
-  setTimeout(() => dom.lobbyError.classList.add('hidden'), 4000);
+export function showLobbyError(message: string): void {
+  dom.lobbyError!.textContent = message;
+  dom.lobbyError!.classList.remove('hidden');
+  setTimeout(() => dom.lobbyError!.classList.add('hidden'), 4000);
 }
 
 // ── Lobby Profile Bar ──
 
-export function updateLobbyProfileBar() {
+export function updateLobbyProfileBar(): void {
   if (!dom.lobbyProfileIcon) return;
 
-  // Update icon + name
   dom.lobbyProfileIcon.innerHTML = renderIcon(clientState.myIcon || STANDARD_ICONS[0], 24);
-  dom.lobbyProfileName.textContent = clientState.myName || 'Anon';
+  dom.lobbyProfileName!.textContent = clientState.myName || 'Anon';
 
-  // Update auth state
   if (clientState.isLoggedIn && clientState.authUser) {
-    dom.lobbyProfileGuestView.classList.add('hidden');
-    dom.lobbyProfileLoggedInView.classList.remove('hidden');
-    dom.lobbyProfileAuthName.textContent = clientState.authUser.username;
+    dom.lobbyProfileGuestView!.classList.add('hidden');
+    dom.lobbyProfileLoggedInView!.classList.remove('hidden');
+    dom.lobbyProfileAuthName!.textContent = clientState.authUser.username;
   } else {
-    dom.lobbyProfileGuestView.classList.remove('hidden');
-    dom.lobbyProfileLoggedInView.classList.add('hidden');
-    dom.lobbyProfileAuthName.textContent = '';
+    dom.lobbyProfileGuestView!.classList.remove('hidden');
+    dom.lobbyProfileLoggedInView!.classList.add('hidden');
+    dom.lobbyProfileAuthName!.textContent = '';
   }
 }
 
-let _lobbyEditorSelectedIcon = null;
+let _lobbyEditorSelectedIcon: string | null = null;
 
-export function buildLobbyIconPicker() {
+export function buildLobbyIconPicker(): void {
   if (!dom.lobbyEditorIconPicker) return;
   dom.lobbyEditorIconPicker.innerHTML = '';
   const current = clientState.selectedIcon;
   _lobbyEditorSelectedIcon = current;
   const isAuth = clientState.isLoggedIn;
 
-  // Standard section
   const stdLabel = document.createElement('div');
   stdLabel.className = 'icon-picker-label';
   stdLabel.textContent = 'PICK YOUR HUNTER';
@@ -217,14 +208,13 @@ export function buildLobbyIconPicker() {
     el.dataset.icon = icon;
     el.textContent = icon;
     el.addEventListener('click', () => {
-      dom.lobbyEditorIconPicker.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
+      dom.lobbyEditorIconPicker!.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
       el.classList.add('selected');
       _lobbyEditorSelectedIcon = icon;
     });
-    dom.lobbyEditorIconPicker.appendChild(el);
+    dom.lobbyEditorIconPicker!.appendChild(el);
   });
 
-  // Premium section
   const premLabel = document.createElement('div');
   premLabel.className = 'icon-picker-label icon-picker-premium-label';
   premLabel.textContent = 'MEMBERS ONLY';
@@ -249,28 +239,26 @@ export function buildLobbyIconPicker() {
         el.addEventListener('animationend', () => el.classList.remove('locked-shake'), { once: true });
         return;
       }
-      dom.lobbyEditorIconPicker.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
+      dom.lobbyEditorIconPicker!.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
       el.classList.add('selected');
       _lobbyEditorSelectedIcon = id;
     });
-    dom.lobbyEditorIconPicker.appendChild(el);
+    dom.lobbyEditorIconPicker!.appendChild(el);
   });
 
-  // If selected icon isn't valid for current auth state, reset
   if (isPremium(current) && !isAuth) {
     _lobbyEditorSelectedIcon = STANDARD_ICONS[0];
-    const first = dom.lobbyEditorIconPicker.querySelector('.icon-option[data-icon="' + STANDARD_ICONS[0] + '"]');
+    const first = dom.lobbyEditorIconPicker.querySelector<HTMLElement>('.icon-option[data-icon="' + STANDARD_ICONS[0] + '"]');
     if (first) first.classList.add('selected');
   }
 }
 
-export function toggleLobbyEditor() {
+export function toggleLobbyEditor(): void {
   const editor = dom.lobbyProfileEditor;
   if (!editor) return;
   const isCollapsed = editor.classList.contains('collapsed');
   if (isCollapsed) {
-    // Populate editor with current values
-    dom.lobbyEditorNameInput.value = clientState.myName || '';
+    dom.lobbyEditorNameInput!.value = clientState.myName || '';
     buildLobbyIconPicker();
     editor.classList.remove('collapsed');
   } else {
@@ -278,22 +266,20 @@ export function toggleLobbyEditor() {
   }
 }
 
-export function saveLobbyProfile() {
-  const name = dom.lobbyEditorNameInput.value.trim().slice(0, 16) || clientState.myName || 'Anon';
+export function saveLobbyProfile(): void {
+  const name = dom.lobbyEditorNameInput!.value.trim().slice(0, 16) || clientState.myName || 'Anon';
   const icon = _lobbyEditorSelectedIcon || clientState.selectedIcon;
 
   clientState.myName = name;
   clientState.myIcon = icon;
   clientState.selectedIcon = icon;
 
-  // Also update the name-entry input to stay in sync
-  dom.nameInput.value = name;
+  dom.nameInput!.value = name;
 
-  // Update name-entry icon picker selection too
   if (typeof window._buildIconPicker === 'function') window._buildIconPicker();
 
   if (_sendMessage) _sendMessage({ type: 'set-name', name, icon });
 
-  dom.lobbyProfileEditor.classList.add('collapsed');
+  dom.lobbyProfileEditor!.classList.add('collapsed');
   updateLobbyProfileBar();
 }

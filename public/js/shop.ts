@@ -1,16 +1,14 @@
-import { dom, clientState } from './state.js';
-import { sendMessage } from './network.js';
-import { hideAllScreens, showLiveDashboard } from './hud.js';
+import { dom, clientState } from './state.ts';
+import { sendMessage } from './network.ts';
+import { hideAllScreens, showLiveDashboard } from './hud.ts';
+import type { ActiveBuff, ShopItem } from './client-types.ts';
 
-let shopTimerRaf = null;
+let shopTimerRaf: number | null = null;
 let shopEndTime = 0;
 
-// Track active buffs for the local player: [ { itemId, icon, name } ]
-let activeBuffs = [];
+let activeBuffs: ActiveBuff[] = [];
 
-// ── Pixel-art SVG icons for shop items (32×32 grid) ──
-
-const SHOP_ITEM_SVGS = {
+const SHOP_ITEM_SVGS: Record<string, string> = {
   'healing-patch': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
     <rect x="10" y="4" width="12" height="24" rx="2" fill="#f0d0b0"/>
     <rect x="10" y="4" width="12" height="24" rx="2" fill="none" stroke="#c09070" stroke-width="1"/>
@@ -82,31 +80,35 @@ const SHOP_ITEM_SVGS = {
   </svg>`,
 };
 
-function getItemSvg(itemId) {
+function getItemSvg(itemId: string): string | null {
   return SHOP_ITEM_SVGS[itemId] || null;
 }
 
-export function openShop(msg) {
+function escapeHtml(s: string): string {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+export function openShop(msg: Record<string, any>): void {
   hideAllScreens();
-  // Clear previous level's buffs (matches server-side clearLevelBuffs)
   activeBuffs = [];
   renderBuffHud();
   if (dom.arena) dom.arena.classList.remove('cursor-enlarged');
   if (!dom.shopScreen) return;
 
-  const myScore = msg.playerScores[clientState.myId] || 0;
-  document.getElementById('shop-player-score').textContent = myScore;
+  const myScore = msg.playerScores[clientState.myId!] || 0;
+  document.getElementById('shop-player-score')!.textContent = String(myScore);
   clientState.shopPlayerScore = myScore;
 
-  const container = document.getElementById('shop-items');
+  const container = document.getElementById('shop-items')!;
   container.innerHTML = '';
 
-  const items = msg.items || [];
+  const items: ShopItem[] = msg.items || [];
   for (const item of items) {
     const card = document.createElement('div');
     card.className = 'shop-item-card';
     card.dataset.itemId = item.id;
-    // Check if already owned from previous purchase
     const alreadyOwned = activeBuffs.some(b => b.itemId === item.id);
     const canAfford = myScore >= item.cost && !alreadyOwned;
     if (!canAfford && !alreadyOwned) card.classList.add('cannot-afford');
@@ -128,8 +130,8 @@ export function openShop(msg) {
       '</div>';
 
     if (!alreadyOwned) {
-      const buyBtn = card.querySelector('.shop-buy-btn');
-      buyBtn.addEventListener('click', (e) => {
+      const buyBtn = card.querySelector<HTMLButtonElement>('.shop-buy-btn')!;
+      buyBtn.addEventListener('click', (e: MouseEvent) => {
         e.stopPropagation();
         sendMessage({ type: 'shop-buy', itemId: item.id });
       });
@@ -138,19 +140,16 @@ export function openShop(msg) {
     container.appendChild(card);
   }
 
-  // Feed
-  const feed = document.getElementById('shop-feed');
+  const feed = document.getElementById('shop-feed')!;
   feed.innerHTML = '';
 
-  // Ready button
-  const readyBtn = document.getElementById('shop-ready-btn');
+  const readyBtn = document.getElementById('shop-ready-btn') as HTMLButtonElement;
   readyBtn.disabled = false;
   readyBtn.textContent = 'READY';
   readyBtn.classList.remove('shop-ready-active');
 
-  // Remove old listener (clone trick)
-  const newBtn = readyBtn.cloneNode(true);
-  readyBtn.parentNode.replaceChild(newBtn, readyBtn);
+  const newBtn = readyBtn.cloneNode(true) as HTMLButtonElement;
+  readyBtn.parentNode!.replaceChild(newBtn, readyBtn);
   newBtn.addEventListener('click', () => {
     sendMessage({ type: 'shop-ready' });
     newBtn.disabled = true;
@@ -158,21 +157,19 @@ export function openShop(msg) {
     newBtn.classList.add('shop-ready-active');
   });
 
-  // Timer bar
   shopEndTime = Date.now() + msg.duration;
-  const fill = document.getElementById('shop-timer-fill');
+  const fill = document.getElementById('shop-timer-fill')!;
   fill.style.width = '100%';
   animateTimer();
 
   dom.shopScreen.classList.remove('hidden');
 }
 
-function animateTimer() {
+function animateTimer(): void {
   if (shopTimerRaf) cancelAnimationFrame(shopTimerRaf);
   const fill = document.getElementById('shop-timer-fill');
   if (!fill) return;
 
-  // Use CSS transition for smooth countdown
   const duration = Math.max(0, shopEndTime - Date.now());
   fill.style.transition = 'none';
   fill.style.width = '100%';
@@ -182,40 +179,34 @@ function animateTimer() {
   });
 }
 
-export function handleShopBuyResult(msg) {
-  // Apply bigger-cursor buff visually
+export function handleShopBuyResult(msg: Record<string, any>): void {
   if (msg.playerId === clientState.myId && msg.itemId === 'bigger-cursor') {
     if (dom.arena) dom.arena.classList.add('cursor-enlarged');
   }
 
-  // Track buff for local player (non-instant items)
   if (msg.playerId === clientState.myId && msg.itemId !== 'healing-patch') {
     activeBuffs.push({ itemId: msg.itemId, icon: msg.itemIcon, name: msg.itemName });
     renderBuffHud();
   }
 
-  // Update local score display if it was us
   if (msg.playerId === clientState.myId) {
     clientState.shopPlayerScore = msg.playerScore;
     const scoreEl = document.getElementById('shop-player-score');
-    if (scoreEl) scoreEl.textContent = msg.playerScore;
+    if (scoreEl) scoreEl.textContent = String(msg.playerScore);
 
-    // Gray out the bought item
-    const card = document.querySelector('.shop-item-card[data-item-id="' + msg.itemId + '"]');
+    const card = document.querySelector<HTMLElement>('.shop-item-card[data-item-id="' + msg.itemId + '"]');
     if (card) {
       card.classList.add('shop-item-bought');
-      const btn = card.querySelector('.shop-buy-btn');
+      const btn = card.querySelector<HTMLButtonElement>('.shop-buy-btn');
       if (btn) {
         btn.disabled = true;
         btn.textContent = 'BOUGHT';
       }
     }
 
-    // Update affordability of remaining items
     updateAffordability(msg.playerScore);
   }
 
-  // Add to feed
   const feed = document.getElementById('shop-feed');
   if (feed) {
     const entry = document.createElement('div');
@@ -231,7 +222,7 @@ export function handleShopBuyResult(msg) {
   }
 }
 
-export function handleShopReady(msg) {
+export function handleShopReady(msg: Record<string, any>): void {
   const feed = document.getElementById('shop-feed');
   if (feed && msg.playerId !== clientState.myId) {
     const player = clientState.players[msg.playerId];
@@ -244,7 +235,7 @@ export function handleShopReady(msg) {
   }
 }
 
-export function closeShop() {
+export function closeShop(): void {
   if (shopTimerRaf) {
     cancelAnimationFrame(shopTimerRaf);
     shopTimerRaf = null;
@@ -252,23 +243,19 @@ export function closeShop() {
   if (dom.shopScreen) dom.shopScreen.classList.add('hidden');
 }
 
-/** Clear buffs that expire at phase end (called on level-start) */
-export function clearBuffs() {
+export function clearBuffs(): void {
   activeBuffs = [];
   renderBuffHud();
   if (dom.arena) dom.arena.classList.remove('cursor-enlarged');
 }
 
-/** Clear everything on game reset / leave */
-export function clearAllShopState() {
+export function clearAllShopState(): void {
   activeBuffs = [];
   renderBuffHud();
   if (dom.arena) dom.arena.classList.remove('cursor-enlarged');
 }
 
-// ── Buff HUD rendering ──
-
-function renderBuffHud() {
+function renderBuffHud(): void {
   const container = document.getElementById('hud-buffs');
   if (!container) return;
 
@@ -288,12 +275,12 @@ function renderBuffHud() {
   }).join('');
 }
 
-function updateAffordability(score) {
-  const cards = document.querySelectorAll('.shop-item-card:not(.shop-item-bought)');
+function updateAffordability(score: number): void {
+  const cards = document.querySelectorAll<HTMLElement>('.shop-item-card:not(.shop-item-bought)');
   for (const card of cards) {
-    const btn = card.querySelector('.shop-buy-btn');
+    const btn = card.querySelector<HTMLButtonElement>('.shop-buy-btn');
     if (!btn) continue;
-    const cost = parseInt(btn.textContent);
+    const cost = parseInt(btn.textContent!);
     if (score < cost) {
       card.classList.add('cannot-afford');
       btn.disabled = true;
@@ -302,10 +289,4 @@ function updateAffordability(score) {
       btn.disabled = false;
     }
   }
-}
-
-function escapeHtml(s) {
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
 }

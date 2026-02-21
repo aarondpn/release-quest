@@ -1,35 +1,36 @@
-import { LOGICAL_W, LOGICAL_H } from './config.js';
-import { dom, clientState } from './state.js';
-import { logicalToPixel } from './coordinates.js';
-import { updateHUD, updatePlayerCount, hideAllScreens, showStartScreen, showGameOverScreen, showWinScreen, showLevelScreen, updateLobbyRoster, updateLobbyRolePicker, updateLobbyPlayerRoleBadge, updateLiveDashboard, showLiveDashboard, hideLiveDashboard, updateStartButtonState } from './hud.js';
-import { createBugElement, removeBugElement, clearAllBugs, showSquashEffect, removeMergeTether, removePipelineTether, rebuildPipelineTether } from './bugs.js';
-import { createBossElement, updateBossHp, removeBossElement, showBossHitEffect, formatTime, setBossPhase, setBossShield, shrinkBoss, anchorBoss } from './boss.js';
-import { addRemoteCursor, removeRemoteCursor, updateRemoteCursor, clearRemoteCursors } from './players.js';
-import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, showLevelFlash, showEscalationWarning, showBossRegenNumber, showHeisenbugFleeEffect, showFeaturePenaltyEffect, showDuckBuffOverlay, removeDuckBuffOverlay, showHammerStunOverlay, removeHammerStunOverlay, showMergeResolvedEffect, showPipelineChainResolvedEffect, showPipelineChainResetEffect, showBreakpointHitEffect, showPhaseTransitionFlash, showBlockedText, showScreenWipeFlash } from './vfx.js';
-import { showLobbyBrowser, hideLobbyBrowser, renderLobbyList, showLobbyError, buildLobbyIconPicker, joinLobbyWithPassword, joinLobbyByCodeWithPassword } from './lobby-ui.js';
-import { updateAuthUI, hideAuthOverlay, showAuthError } from './auth-ui.js';
-import { isPremium, STANDARD_ICONS } from './avatars.js';
-import { renderLeaderboard } from './leaderboard-ui.js';
-import { renderRecordingsList, handleRecordingShared, handleRecordingUnshared, requestRecordings } from './replays-ui.js';
-import { handleMyStats, requestMyStats } from './stats-card-ui.js';
-import { startPlayback } from './playback.js';
-import { showError, ERROR_LEVELS } from './error-handler.js';
-import { handleChatBroadcast, showChat, hideChat, clearChat } from './chat.js';
-import { openShop, handleShopBuyResult, handleShopReady, closeShop, clearAllShopState } from './shop.js';
-import { handleQuestsData, handleQuestProgress, handleBalanceData, requestQuests, resetQuestState } from './quests-ui.js';
+import { LOGICAL_W, LOGICAL_H } from './config.ts';
+import { dom, clientState } from './state.ts';
+import { logicalToPixel } from './coordinates.ts';
+import { updateHUD, updatePlayerCount, hideAllScreens, showStartScreen, showGameOverScreen, showWinScreen, showLevelScreen, updateLobbyRoster, updateLobbyRolePicker, updateLobbyPlayerRoleBadge, updateLiveDashboard, showLiveDashboard, hideLiveDashboard, updateStartButtonState } from './hud.ts';
+import { createBugElement, removeBugElement, clearAllBugs, showSquashEffect, removeMergeTether, removePipelineTether, rebuildPipelineTether } from './bugs.ts';
+import { createBossElement, updateBossHp, removeBossElement, showBossHitEffect, formatTime, setBossPhase, setBossShield, shrinkBoss, anchorBoss } from './boss.ts';
+import { addRemoteCursor, removeRemoteCursor, updateRemoteCursor, clearRemoteCursors } from './players.ts';
+import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, showLevelFlash, showEscalationWarning, showBossRegenNumber, showHeisenbugFleeEffect, showFeaturePenaltyEffect, showDuckBuffOverlay, removeDuckBuffOverlay, showHammerStunOverlay, removeHammerStunOverlay, showMergeResolvedEffect, showPipelineChainResolvedEffect, showPipelineChainResetEffect, showBreakpointHitEffect, showPhaseTransitionFlash, showBlockedText, showScreenWipeFlash } from './vfx.ts';
+import { showLobbyBrowser, hideLobbyBrowser, renderLobbyList, showLobbyError, buildLobbyIconPicker, joinLobbyByCodeWithPassword } from './lobby-ui.ts';
+import { updateAuthUI, hideAuthOverlay, showAuthError } from './auth-ui.ts';
+import { isPremium, STANDARD_ICONS } from './avatars.ts';
+import { renderLeaderboard } from './leaderboard-ui.ts';
+import { renderRecordingsList, handleRecordingShared, handleRecordingUnshared, requestRecordings } from './replays-ui.ts';
+import { handleMyStats, requestMyStats } from './stats-card-ui.ts';
+import { startPlayback } from './playback.ts';
+import { showError, ERROR_LEVELS } from './error-handler.ts';
+import { handleChatBroadcast, showChat, hideChat, clearChat } from './chat.ts';
+import { openShop, handleShopBuyResult, handleShopReady, closeShop, clearAllShopState } from './shop.ts';
+import { handleQuestsData, handleQuestProgress, handleBalanceData, requestQuests, resetQuestState } from './quests-ui.ts';
+import type { SendMessageFn } from './client-types.ts';
 
-function updateQaHitbox() {
-  const myPlayer = clientState.players[clientState.myId];
+function updateQaHitbox(): void {
+  const myPlayer = clientState.players[clientState.myId!];
   const isQa = myPlayer?.role === 'qa';
   document.body.classList.toggle('qa-hitbox-active', isQa);
   if (dom.arena) dom.arena.classList.toggle('qa-cursor', isQa);
 }
 
 // Cursor batching: buffer incoming positions and flush once per frame
-const pendingCursors = {};
-let cursorRafId = null;
+const pendingCursors: Record<string, { x: number; y: number }> = {};
+let cursorRafId: number | null = null;
 
-function flushCursors() {
+function flushCursors(): void {
   for (const playerId in pendingCursors) {
     const pos = pendingCursors[playerId];
     updateRemoteCursor(playerId, pos.x, pos.y);
@@ -38,16 +39,15 @@ function flushCursors() {
   cursorRafId = null;
 }
 
-function queueCursorUpdate(playerId, x, y) {
+function queueCursorUpdate(playerId: string, x: number, y: number): void {
   pendingCursors[playerId] = { x, y };
   if (!cursorRafId) {
     cursorRafId = requestAnimationFrame(flushCursors);
   }
 }
 
-export function sendMessage(msg) {
+export const sendMessage: SendMessageFn = (msg) => {
   try {
-    // During playback, only allow replay-related messages
     if (clientState.isPlayback) {
       if (msg.type !== 'get-recordings') return;
     }
@@ -58,17 +58,17 @@ export function sendMessage(msg) {
     console.error('Error sending message:', err);
     showError('Failed to send message to server', ERROR_LEVELS.ERROR);
   }
-}
+};
 
-export function connect() {
+export function connect(): void {
   try {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     clientState.ws = new WebSocket(proto + '://' + location.host + location.pathname);
 
     clientState.ws.onopen = () => {
       try {
-        dom.connStatus.textContent = 'CONNECTED';
-        dom.connStatus.className = 'conn-status connected';
+        dom.connStatus!.textContent = 'CONNECTED';
+        dom.connStatus!.className = 'conn-status connected';
       } catch (err) {
         console.error('Error handling WebSocket open:', err);
       }
@@ -81,8 +81,8 @@ export function connect() {
 
     clientState.ws.onclose = () => {
       try {
-        dom.connStatus.textContent = 'DISCONNECTED';
-        dom.connStatus.className = 'conn-status disconnected';
+        dom.connStatus!.textContent = 'DISCONNECTED';
+        dom.connStatus!.className = 'conn-status disconnected';
         clientState.currentLobbyId = null;
         showError('Disconnected from server. Reconnecting...', ERROR_LEVELS.WARNING);
         setTimeout(connect, 2000);
@@ -91,11 +91,11 @@ export function connect() {
       }
     };
 
-    clientState.ws.onmessage = (event) => {
+    clientState.ws.onmessage = (event: MessageEvent) => {
       try {
-        let msg;
-        try { 
-          msg = JSON.parse(event.data); 
+        let msg: Record<string, any>;
+        try {
+          msg = JSON.parse(event.data);
         } catch (parseErr) {
           console.error('Failed to parse message:', parseErr);
           return;
@@ -113,7 +113,7 @@ export function connect() {
   }
 }
 
-function handleMessage(msg) {
+function handleMessage(msg: Record<string, any>): void {
   try {
     handleMessageInternal(msg);
   } catch (err) {
@@ -122,7 +122,7 @@ function handleMessage(msg) {
   }
 }
 
-export function handleMessageInternal(msg) {
+export function handleMessageInternal(msg: Record<string, any>): void {
   switch (msg.type) {
 
     case 'auth-result': {
@@ -134,44 +134,37 @@ export function handleMessageInternal(msg) {
           localStorage.removeItem('rq_session_token');
           localStorage.removeItem('rq_guest_token');
           localStorage.removeItem('rq_guest_joined');
-          // Reset name/icon to the fresh random identity from server
           if (msg.name) {
             clientState.myName = msg.name;
-            dom.nameInput.value = msg.name;
+            dom.nameInput!.value = msg.name;
           }
           if (msg.icon) {
             clientState.myIcon = msg.icon;
             clientState.selectedIcon = msg.icon;
           } else if (isPremium(clientState.selectedIcon)) {
-            // Fallback: reset premium icon to standard
             clientState.selectedIcon = STANDARD_ICONS[0];
             clientState.myIcon = STANDARD_ICONS[0];
           }
-          // Update icon picker selection
-          dom.iconPicker.querySelectorAll('.icon-option').forEach(o => {
+          dom.iconPicker!.querySelectorAll<HTMLElement>('.icon-option').forEach(o => {
             o.classList.toggle('selected', o.dataset.icon === clientState.myIcon);
           });
-          // Leave current lobby if in one
           if (clientState.currentLobbyId) {
             sendMessage({ type: 'leave-lobby' });
           }
-          // Return to initial name-entry screen
           clientState.hasJoined = false;
           hideLobbyBrowser();
           hideAllScreens();
           hideLiveDashboard();
-          dom.nameEntry.classList.remove('hidden');
-          dom.nameInput.value = clientState.myName;
-          dom.nameInput.focus();
-          document.getElementById('hud-leave-btn').classList.add('hidden');
-          // Create a new guest session after logout
+          dom.nameEntry!.classList.remove('hidden');
+          dom.nameInput!.value = clientState.myName!;
+          dom.nameInput!.focus();
+          document.getElementById('hud-leave-btn')!.classList.add('hidden');
           sendMessage({ type: 'resume-guest' });
           resetQuestState();
           updateAuthUI();
           if (typeof window._buildIconPicker === 'function') window._buildIconPicker();
           buildLobbyIconPicker();
         } else {
-          // login, register, or resume
           localStorage.removeItem('rq_guest_token');
           localStorage.removeItem('rq_guest_joined');
           if (msg.token) {
@@ -184,34 +177,27 @@ export function handleMessageInternal(msg) {
           clientState.isLoggedIn = true;
           hideAuthOverlay();
 
-          // Update client name/icon from account
           if (msg.user.displayName) {
             clientState.myName = msg.user.displayName;
-            dom.nameInput.value = msg.user.displayName;
+            dom.nameInput!.value = msg.user.displayName;
           }
           if (msg.user.icon) {
             clientState.myIcon = msg.user.icon;
             clientState.selectedIcon = msg.user.icon;
           }
-          // Update UI after name/icon are set so profile bar shows correct values
           updateAuthUI();
-          // Rebuild icon picker to unlock premium section
           if (typeof window._buildIconPicker === 'function') window._buildIconPicker();
 
-          // Auto-join for logged-in users who haven't entered yet
           if (!clientState.hasJoined) {
             if (typeof window._submitJoin === 'function') window._submitJoin();
           }
 
-          // If already in lobby, tell server about updated name/icon from account
           if (clientState.hasJoined && (msg.action === 'login' || msg.action === 'register')) {
             sendMessage({ type: 'set-name', name: clientState.myName, icon: clientState.myIcon });
           }
 
-          // Request quests on login
           requestQuests();
 
-          // Refresh stats/replays if currently visible
           if (dom.statsCardPanel && !dom.statsCardPanel.classList.contains('hidden')) {
             requestMyStats();
           }
@@ -221,20 +207,16 @@ export function handleMessageInternal(msg) {
         }
       } else {
         if (msg.action === 'resume') {
-          // Stale token — clear it silently
           localStorage.removeItem('rq_session_token');
           clientState.authToken = null;
           clientState.authUser = null;
           clientState.isLoggedIn = false;
           updateAuthUI();
-          // Rebuild icon picker to lock premium section
           if (typeof window._buildIconPicker === 'function') window._buildIconPicker();
-          // Show name-entry for guest flow if they haven't joined yet
           if (!clientState.hasJoined) {
-            dom.nameEntry.classList.remove('hidden');
-            dom.nameInput.focus();
+            dom.nameEntry!.classList.remove('hidden');
+            dom.nameInput!.focus();
           }
-          // Fall back to guest session resume
           const guestToken = localStorage.getItem('rq_guest_token');
           if (guestToken) {
             sendMessage({ type: 'resume-guest', token: guestToken });
@@ -251,26 +233,23 @@ export function handleMessageInternal(msg) {
     case 'guest-session': {
       if (msg.success && msg.token) {
         localStorage.setItem('rq_guest_token', msg.token);
-        // Restore name/icon from guest session
         if (msg.name) {
           clientState.myName = msg.name;
-          dom.nameInput.value = msg.name;
+          dom.nameInput!.value = msg.name;
         }
         if (msg.icon) {
           clientState.myIcon = msg.icon;
           clientState.selectedIcon = msg.icon;
-          dom.iconPicker.querySelectorAll('.icon-option').forEach(o => {
+          dom.iconPicker!.querySelectorAll<HTMLElement>('.icon-option').forEach(o => {
             o.classList.toggle('selected', o.dataset.icon === msg.icon);
           });
         }
-        // Auto-join for returning guests who had previously clicked Play
         if (msg.resumed && !clientState.hasJoined && localStorage.getItem('rq_guest_joined')) {
           if (typeof window._submitJoin === 'function') window._submitJoin();
         }
-        // Show name entry if guest hasn't joined yet
         if (!clientState.hasJoined && !clientState.isLoggedIn && !localStorage.getItem('rq_guest_joined')) {
-          dom.nameEntry.classList.remove('hidden');
-          dom.nameInput.focus();
+          dom.nameEntry!.classList.remove('hidden');
+          dom.nameInput!.focus();
         }
       }
       break;
@@ -294,7 +273,7 @@ export function handleMessageInternal(msg) {
 
       if (msg.icon) {
         clientState.selectedIcon = msg.icon;
-        dom.iconPicker.querySelectorAll('.icon-option').forEach(o => {
+        dom.iconPicker!.querySelectorAll<HTMLElement>('.icon-option').forEach(o => {
           o.classList.toggle('selected', o.dataset.icon === msg.icon);
         });
       }
@@ -303,29 +282,24 @@ export function handleMessageInternal(msg) {
       updatePlayerCount();
 
       if (!clientState.hasJoined) {
-        // If we have a saved token (user or guest), keep name-entry hidden
-        // while we wait for the resume result; otherwise show it immediately
         const savedToken = localStorage.getItem('rq_session_token');
         const savedGuestToken = localStorage.getItem('rq_guest_token');
         if (!savedToken && !savedGuestToken) {
-          dom.nameEntry.classList.remove('hidden');
-          dom.nameInput.focus();
+          dom.nameEntry!.classList.remove('hidden');
+          dom.nameInput!.focus();
         }
         hideLobbyBrowser();
       } else {
-        dom.nameEntry.classList.add('hidden');
-        // Re-send name and show lobby browser
+        dom.nameEntry!.classList.add('hidden');
         sendMessage({ type: 'set-name', name: clientState.myName, icon: clientState.myIcon });
         showLobbyBrowser();
       }
 
-      // Attempt session resume from localStorage
       const savedToken = localStorage.getItem('rq_session_token');
       if (savedToken) {
         sendMessage({ type: 'resume-session', token: savedToken });
       } else {
         updateAuthUI();
-        // No user session — attempt guest session resume
         const guestToken = localStorage.getItem('rq_guest_token');
         if (guestToken) {
           sendMessage({ type: 'resume-guest', token: guestToken });
@@ -334,11 +308,9 @@ export function handleMessageInternal(msg) {
         }
       }
 
-      // Check for shared replay URL, then invite URL
       checkReplayUrl();
       checkJoinUrl();
 
-      // If reconnecting and we have a pending invite code, join immediately
       if (clientState.hasJoined && clientState.pendingJoinCode) {
         sendMessage({ type: 'join-lobby-by-code', code: clientState.pendingJoinCode });
         clientState.pendingJoinCode = null;
@@ -346,16 +318,13 @@ export function handleMessageInternal(msg) {
       break;
     }
 
-    // ── Lobby messages ──
-
     case 'lobby-list': {
       renderLobbyList(msg.lobbies);
       break;
     }
 
     case 'lobby-created': {
-      // Auto-join the lobby we just created, including password if one was set
-      const joinMsg = { type: 'join-lobby', lobbyId: msg.lobby.id };
+      const joinMsg: Record<string, unknown> = { type: 'join-lobby', lobbyId: msg.lobby.id };
       if (clientState.pendingLobbyPassword) {
         joinMsg.password = clientState.pendingLobbyPassword;
       }
@@ -371,12 +340,11 @@ export function handleMessageInternal(msg) {
       clientState.hasCustomSettings = msg.hasCustomSettings || false;
       hideLobbyBrowser();
       showChat();
-      document.getElementById('hud-leave-btn').classList.remove('hidden');
+      document.getElementById('hud-leave-btn')!.classList.remove('hidden');
 
-      // Load game state from lobby
       clientState.players = {};
       if (msg.players) {
-        msg.players.forEach(p => {
+        msg.players.forEach((p: any) => {
           clientState.players[p.id] = p;
           if (p.id !== clientState.myId) addRemoteCursor(p.id, p.name, p.color, p.icon);
         });
@@ -386,18 +354,14 @@ export function handleMessageInternal(msg) {
 
       clearAllBugs();
       if (msg.bugs) {
-        msg.bugs.forEach(b => createBugElement(b.id, b.x, b.y, b));
+        msg.bugs.forEach((b: any) => createBugElement(b.id, b.x, b.y, b));
       }
 
       removeDuckElement();
-      if (msg.rubberDuck) {
-        createDuckElement(msg.rubberDuck);
-      }
+      if (msg.rubberDuck) createDuckElement(msg.rubberDuck);
 
       removeHammerElement();
-      if (msg.hotfixHammer) {
-        createHammerElement(msg.hotfixHammer);
-      }
+      if (msg.hotfixHammer) createHammerElement(msg.hotfixHammer);
 
       removeBossElement();
       if (msg.boss) {
@@ -409,7 +373,7 @@ export function handleMessageInternal(msg) {
       }
 
       updateHUD(msg.score, msg.level, msg.hp);
-      if (msg.phase === 'boss') dom.levelEl.textContent = 'BOSS';
+      if (msg.phase === 'boss') dom.levelEl!.textContent = 'BOSS';
       clientState.currentPhase = msg.phase;
 
       if (msg.phase === 'lobby') { showStartScreen(); updateLobbyRolePicker(); hideLiveDashboard(); }
@@ -430,7 +394,7 @@ export function handleMessageInternal(msg) {
 
       clientState.players = {};
       if (msg.players) {
-        msg.players.forEach(p => {
+        msg.players.forEach((p: any) => {
           clientState.players[p.id] = p;
           addRemoteCursor(p.id, p.name, p.color, p.icon);
         });
@@ -439,7 +403,7 @@ export function handleMessageInternal(msg) {
 
       clearAllBugs();
       if (msg.bugs) {
-        msg.bugs.forEach(b => createBugElement(b.id, b.x, b.y, b));
+        msg.bugs.forEach((b: any) => createBugElement(b.id, b.x, b.y, b));
       }
 
       removeDuckElement();
@@ -458,7 +422,7 @@ export function handleMessageInternal(msg) {
       }
 
       updateHUD(msg.score, msg.level, msg.hp);
-      if (msg.phase === 'boss') dom.levelEl.textContent = 'BOSS';
+      if (msg.phase === 'boss') dom.levelEl!.textContent = 'BOSS';
       clientState.currentPhase = msg.phase;
 
       if (msg.phase === 'lobby') { showStartScreen(); hideLiveDashboard(); }
@@ -473,7 +437,7 @@ export function handleMessageInternal(msg) {
     }
 
     case 'spectator-count': {
-      if (dom.spectatorCount) dom.spectatorCount.textContent = msg.count;
+      if (dom.spectatorCount) dom.spectatorCount.textContent = String(msg.count);
       const hudItem = document.getElementById('hud-spectators-item');
       if (hudItem) hudItem.classList.toggle('hidden', msg.count === 0);
       break;
@@ -526,18 +490,15 @@ export function handleMessageInternal(msg) {
       hideLiveDashboard();
       updateHUD(0, 1, 100);
       updatePlayerCount();
-      document.getElementById('hud-leave-btn').classList.add('hidden');
+      document.getElementById('hud-leave-btn')!.classList.add('hidden');
       showLobbyBrowser();
       break;
     }
 
     case 'lobby-error': {
-      // If not in a lobby, show the lobby browser so the error is visible
-      // (e.g. invite link to a full/missing lobby)
       if (!clientState.currentLobbyId) {
         showLobbyBrowser();
       }
-      // Handle password-protected lobby prompts for join-by-code
       if (msg.needsPassword && msg.code) {
         showPasswordModal(msg.code, msg.message !== 'This lobby requires a password' ? msg.message : null);
         break;
@@ -545,8 +506,6 @@ export function handleMessageInternal(msg) {
       showLobbyError(msg.message);
       break;
     }
-
-    // ── Player messages ──
 
     case 'player-joined': {
       const p = msg.player;
@@ -583,8 +542,6 @@ export function handleMessageInternal(msg) {
       break;
     }
 
-    // ── Game messages ──
-
     case 'game-start': {
       hideAllScreens();
       clearAllBugs();
@@ -596,7 +553,7 @@ export function handleMessageInternal(msg) {
       clearAllShopState();
       updateHUD(msg.score, msg.level, msg.hp);
       if (msg.players) {
-        msg.players.forEach(p => { if (clientState.players[p.id]) clientState.players[p.id].score = p.score; });
+        msg.players.forEach((p: any) => { if (clientState.players[p.id]) clientState.players[p.id].score = p.score; });
       }
       updateQaHitbox();
       showLiveDashboard();
@@ -614,7 +571,7 @@ export function handleMessageInternal(msg) {
       showLevelFlash();
       if (msg.level >= 3) {
         hideAllScreens();
-        dom.bossScreen.classList.remove('hidden');
+        dom.bossScreen!.classList.remove('hidden');
       } else {
         showLevelScreen(msg.level + 1);
       }
@@ -630,25 +587,24 @@ export function handleMessageInternal(msg) {
       const el = clientState.bugs[msg.bugId];
       if (el) {
         const pos = logicalToPixel(msg.x, msg.y);
-        let dur;
+        let dur: number;
         if (el.classList.contains('infinite-loop')) {
-          dur = 50; // match server loopTickMs for tight orbit tracking
+          dur = 50;
         } else if (el.classList.contains('azubi')) {
-          dur = 150; // match server followInterval for smooth cursor tracking
+          dur = 150;
         } else if (el.classList.contains('pipeline-bug')) {
-          dur = 330; // fast tick for snake slither
-        } else if (dom.levelEl.textContent === 'BOSS') {
+          dur = 330;
+        } else if (dom.levelEl!.textContent === 'BOSS') {
           dur = 3500 * 0.4;
         } else {
-          const cfg = { 1: 5000, 2: 3800, 3: 2800 };
-          dur = (cfg[parseInt(dom.levelEl.textContent)] || 5000) * 0.4;
+          const cfg: Record<number, number> = { 1: 5000, 2: 3800, 3: 2800 };
+          dur = (cfg[parseInt(dom.levelEl!.textContent!)] || 5000) * 0.4;
         }
         el.style.transition = 'left ' + dur + 'ms linear, top ' + dur + 'ms linear';
         el.style.left = pos.x + 'px';
         el.style.top = pos.y + 'px';
         clientState.bugPositions[msg.bugId] = { x: msg.x, y: msg.y };
       }
-
       break;
     }
 
@@ -656,7 +612,7 @@ export function handleMessageInternal(msg) {
       const bugEl = clientState.bugs[msg.bugId];
       if (bugEl) {
         const rect = bugEl.getBoundingClientRect();
-        const arenaRect = dom.arena.getBoundingClientRect();
+        const arenaRect = dom.arena!.getBoundingClientRect();
         const lx = ((rect.left - arenaRect.left + rect.width / 2) / arenaRect.width) * LOGICAL_W;
         const ly = ((rect.top - arenaRect.top) / arenaRect.height) * LOGICAL_H;
         showSquashEffect(lx, ly, msg.playerColor);
@@ -676,60 +632,53 @@ export function handleMessageInternal(msg) {
     case 'bug-escaped': {
       removeBugElement(msg.bugId);
       updateHUD(undefined, undefined, msg.hp);
-      dom.arena.style.borderColor = 'var(--red)';
-      setTimeout(() => dom.arena.style.borderColor = '#2a2a4a', 300);
+      dom.arena!.style.borderColor = 'var(--red)';
+      setTimeout(() => { dom.arena!.style.borderColor = '#2a2a4a'; }, 300);
       showDamageVignette();
       shakeArena('light');
       break;
     }
 
-    // ── Memory Leak Growth ──
     case 'memory-leak-grow': {
       const bugEl = clientState.bugs[msg.bugId];
       if (bugEl) {
-        bugEl.dataset.growthStage = msg.growthStage;
+        bugEl.dataset.growthStage = String(msg.growthStage);
       }
       break;
     }
 
-    // ── Memory Leak Escaped ──
     case 'memory-leak-escaped': {
       removeBugElement(msg.bugId);
       updateHUD(undefined, undefined, msg.hp);
-      dom.arena.style.borderColor = 'var(--red)';
-      setTimeout(() => dom.arena.style.borderColor = '#2a2a4a', 300);
+      dom.arena!.style.borderColor = 'var(--red)';
+      setTimeout(() => { dom.arena!.style.borderColor = '#2a2a4a'; }, 300);
       showDamageVignette();
       shakeArena(msg.growthStage >= 2 ? 'medium' : 'light');
       break;
     }
 
-    // ── Memory Leak Hold Update ──
     case 'memory-leak-hold-update': {
       const bugEl = clientState.bugs[msg.bugId];
       if (!bugEl) break;
-      
-      let progressBar = bugEl.querySelector('.memory-leak-progress');
-      let countEl = bugEl.querySelector('.memory-leak-holder-count');
-      
-      // Create progress bar if it doesn't exist
+
+      let progressBar = bugEl.querySelector<HTMLElement>('.memory-leak-progress');
+      let countEl = bugEl.querySelector<HTMLElement>('.memory-leak-holder-count');
+
       if (!progressBar) {
         progressBar = document.createElement('div');
         progressBar.className = 'memory-leak-progress';
         progressBar.innerHTML = '<div class="memory-leak-progress-fill"></div>';
         bugEl.appendChild(progressBar);
         bugEl.classList.add('being-held');
-        
-        // Create holder count as a sibling (not inside progress bar to avoid overflow clipping)
+
         countEl = document.createElement('div');
         countEl.className = 'memory-leak-holder-count';
         bugEl.appendChild(countEl);
-        
-        // Store start time for this progress session
-        bugEl.dataset.holdStartTime = Date.now() - msg.elapsedTime;
-        bugEl.dataset.requiredTime = msg.requiredHoldTime;
+
+        bugEl.dataset.holdStartTime = String(Date.now() - msg.elapsedTime);
+        bugEl.dataset.requiredTime = String(msg.requiredHoldTime);
       }
-      
-      // Update holder count display
+
       if (countEl) {
         if (msg.holderCount > 1) {
           countEl.textContent = 'x' + msg.holderCount;
@@ -738,8 +687,7 @@ export function handleMessageInternal(msg) {
           countEl.style.display = 'none';
         }
       }
-      
-      // Handle dropout
+
       if (msg.dropOut && msg.holderCount === 0) {
         if (progressBar) progressBar.remove();
         if (countEl) countEl.remove();
@@ -748,39 +696,34 @@ export function handleMessageInternal(msg) {
         delete bugEl.dataset.requiredTime;
         break;
       }
-      
-      // Calculate and update progress with current holder count
-      const holdStartTime = parseInt(bugEl.dataset.holdStartTime);
-      const requiredTime = parseInt(bugEl.dataset.requiredTime);
+
+      const holdStartTime = parseInt(bugEl.dataset.holdStartTime!);
+      const requiredTime = parseInt(bugEl.dataset.requiredTime!);
       const effectiveRequiredTime = requiredTime / msg.holderCount;
       const elapsed = Date.now() - holdStartTime;
-      
-      // Update progress bar with smooth transition
-      const fill = progressBar.querySelector('.memory-leak-progress-fill');
+
+      const fill = progressBar!.querySelector<HTMLElement>('.memory-leak-progress-fill')!;
       const currentProgress = Math.min(100, (elapsed / effectiveRequiredTime) * 100);
       const remainingTime = Math.max(0, effectiveRequiredTime - elapsed);
-      
+
       fill.style.transition = `width ${remainingTime}ms linear`;
       fill.style.width = currentProgress + '%';
-      
-      // Animate to 100% from current position
+
       requestAnimationFrame(() => {
         fill.style.width = '100%';
       });
-      
+
       break;
     }
 
-    // ── Memory Leak Cleared ──
     case 'memory-leak-cleared': {
       const bugEl = clientState.bugs[msg.bugId];
       if (bugEl) {
         const rect = bugEl.getBoundingClientRect();
-        const arenaRect = dom.arena.getBoundingClientRect();
+        const arenaRect = dom.arena!.getBoundingClientRect();
         const lx = ((rect.left - arenaRect.left + rect.width / 2) / arenaRect.width) * LOGICAL_W;
         const ly = ((rect.top - arenaRect.top) / arenaRect.height) * LOGICAL_H;
-        
-        // Show effects for all holders
+
         if (msg.holders && msg.holders.length > 0) {
           for (const holderId of msg.holders) {
             const holderPlayer = clientState.players[holderId];
@@ -795,31 +738,26 @@ export function handleMessageInternal(msg) {
       removeBugElement(msg.bugId, true);
       updateHUD(msg.score);
 
-      // Update scores for all holders
       if (msg.players) {
         for (const [playerId, score] of Object.entries(msg.players)) {
           if (clientState.players[playerId]) {
-            clientState.players[playerId].score = score;
+            clientState.players[playerId].score = score as number;
           }
         }
       }
       break;
     }
 
-    // ── Heisenbug flee ──
     case 'bug-flee': {
       const bugEl = clientState.bugs[msg.bugId];
       if (bugEl) {
         showHeisenbugFleeEffect(bugEl);
-        // Instant teleport (no CSS transition)
         bugEl.style.transition = 'none';
         const pos = logicalToPixel(msg.x, msg.y);
         bugEl.style.left = pos.x + 'px';
         bugEl.style.top = pos.y + 'px';
         clientState.bugPositions[msg.bugId] = { x: msg.x, y: msg.y };
-        // Re-enable transition after a frame
         requestAnimationFrame(() => { bugEl.style.transition = ''; });
-        // Stabilized
         if (msg.fleesRemaining <= 0) {
           bugEl.classList.remove('heisenbug');
           bugEl.classList.add('heisenbug-stabilized');
@@ -828,12 +766,11 @@ export function handleMessageInternal(msg) {
       break;
     }
 
-    // ── Feature-not-a-bug squashed ──
     case 'feature-squashed': {
       const bugEl = clientState.bugs[msg.bugId];
       if (bugEl) {
         const rect = bugEl.getBoundingClientRect();
-        const arenaRect = dom.arena.getBoundingClientRect();
+        const arenaRect = dom.arena!.getBoundingClientRect();
         const lx = ((rect.left - arenaRect.left + rect.width / 2) / arenaRect.width) * LOGICAL_W;
         const ly = ((rect.top - arenaRect.top) / arenaRect.height) * LOGICAL_H;
         showFeaturePenaltyEffect(lx, ly);
@@ -845,27 +782,22 @@ export function handleMessageInternal(msg) {
       break;
     }
 
-    // ── Feature escaped peacefully ──
     case 'feature-escaped': {
       const bugEl = clientState.bugs[msg.bugId];
       if (bugEl) {
         bugEl.classList.add('feature-leaving');
-        setTimeout(() => {
-          removeBugElement(msg.bugId);
-        }, 500);
+        setTimeout(() => { removeBugElement(msg.bugId); }, 500);
       } else {
         removeBugElement(msg.bugId);
       }
       break;
     }
 
-    // ── Azubi escaped (harmless — just leaves) ──
     case 'azubi-escaped': {
       removeBugElement(msg.bugId);
       break;
     }
 
-    // ── Rubber duck ──
     case 'duck-spawn': {
       createDuckElement(msg.duck);
       break;
@@ -902,7 +834,6 @@ export function handleMessageInternal(msg) {
       break;
     }
 
-    // ── Hotfix Hammer ──
     case 'hammer-spawn': {
       createHammerElement(msg.hammer);
       break;
@@ -927,29 +858,23 @@ export function handleMessageInternal(msg) {
 
     case 'hammer-stun-expired': {
       removeHammerStunOverlay();
-      // Resume bug animations
       for (const bugId in clientState.bugs) {
         const bugEl = clientState.bugs[bugId];
-        if (bugEl) {
-          bugEl.classList.remove('stunned');
-        }
+        if (bugEl) bugEl.classList.remove('stunned');
       }
-      // Resume boss animation
       if (clientState.bossElement) {
         clientState.bossElement.classList.remove('stunned');
       }
       break;
     }
 
-    // ── Merge conflict ──
     case 'merge-conflict-resolved': {
       const bugEl1 = clientState.bugs[msg.bugId];
       const bugEl2 = clientState.bugs[msg.partnerId];
-      // Show merge effect at midpoint
       if (bugEl1 || bugEl2) {
         const ref = bugEl1 || bugEl2;
         const rect = ref.getBoundingClientRect();
-        const arenaRect = dom.arena.getBoundingClientRect();
+        const arenaRect = dom.arena!.getBoundingClientRect();
         const lx = ((rect.left - arenaRect.left + rect.width / 2) / arenaRect.width) * LOGICAL_W;
         const ly = ((rect.top - arenaRect.top) / arenaRect.height) * LOGICAL_H;
         showMergeResolvedEffect(lx, ly);
@@ -957,7 +882,6 @@ export function handleMessageInternal(msg) {
       }
       removeBugElement(msg.bugId, true);
       removeBugElement(msg.partnerId, true);
-      // Clean up tether
       if (clientState.mergeTethers) {
         for (const cid of Object.keys(clientState.mergeTethers)) {
           const t = clientState.mergeTethers[cid];
@@ -969,7 +893,7 @@ export function handleMessageInternal(msg) {
       updateHUD(msg.score);
       if (msg.players) {
         for (const [pid, score] of Object.entries(msg.players)) {
-          if (clientState.players[pid]) clientState.players[pid].score = score;
+          if (clientState.players[pid]) clientState.players[pid].score = score as number;
         }
       }
       updateLiveDashboard();
@@ -988,7 +912,6 @@ export function handleMessageInternal(msg) {
     case 'merge-conflict-escaped': {
       removeBugElement(msg.bugId);
       removeBugElement(msg.partnerId);
-      // Clean up tether
       if (clientState.mergeTethers) {
         for (const cid of Object.keys(clientState.mergeTethers)) {
           const t = clientState.mergeTethers[cid];
@@ -1003,12 +926,11 @@ export function handleMessageInternal(msg) {
       break;
     }
 
-    // ── Pipeline chain ──
     case 'pipeline-bug-squashed': {
       const bugEl = clientState.bugs[msg.bugId];
       if (bugEl) {
         const rect = bugEl.getBoundingClientRect();
-        const arenaRect = dom.arena.getBoundingClientRect();
+        const arenaRect = dom.arena!.getBoundingClientRect();
         const lx = ((rect.left - arenaRect.left + rect.width / 2) / arenaRect.width) * LOGICAL_W;
         const ly = ((rect.top - arenaRect.top) / arenaRect.height) * LOGICAL_H;
         showSquashEffect(lx, ly, msg.playerColor);
@@ -1016,7 +938,6 @@ export function handleMessageInternal(msg) {
         showImpactRing(lx, ly, '#a855f7');
       }
       removeBugElement(msg.bugId, true);
-      // Rebuild tether with one less node
       rebuildPipelineTether(msg.chainId);
       updateHUD(msg.score);
       if (clientState.players[msg.playerId]) {
@@ -1027,9 +948,7 @@ export function handleMessageInternal(msg) {
     }
 
     case 'pipeline-chain-resolved': {
-      // All bugs in chain squashed in order — show bonus effect
       removePipelineTether(msg.chainId);
-      // Find any remaining bug position for the effect, or use center
       showPipelineChainResolvedEffect();
       updateHUD(msg.score);
       if (clientState.players[msg.playerId]) {
@@ -1040,17 +959,15 @@ export function handleMessageInternal(msg) {
     }
 
     case 'pipeline-chain-reset': {
-      // Wrong order clicked — all bugs teleport to new positions
       for (const [bid, pos] of Object.entries(msg.positions)) {
         const bugEl = clientState.bugs[bid];
         if (bugEl) {
           bugEl.style.transition = 'none';
-          const pxPos = logicalToPixel(pos.x, pos.y);
+          const pxPos = logicalToPixel((pos as any).x, (pos as any).y);
           bugEl.style.left = pxPos.x + 'px';
           bugEl.style.top = pxPos.y + 'px';
-          clientState.bugPositions[bid] = { x: pos.x, y: pos.y };
+          clientState.bugPositions[bid] = { x: (pos as any).x, y: (pos as any).y };
           requestAnimationFrame(() => { bugEl.style.transition = ''; });
-          // Flash red to indicate error
           bugEl.classList.add('pipeline-reset');
           setTimeout(() => bugEl.classList.remove('pipeline-reset'), 500);
         }
@@ -1061,14 +978,12 @@ export function handleMessageInternal(msg) {
       break;
     }
 
-    // ── Infinite Loop ──
     case 'infinite-loop-squashed': {
       const bugEl = clientState.bugs[msg.bugId];
-      // Show themed breakpoint-hit effect at the breakpoint position
       const overlay = clientState.infiniteLoopOverlays && clientState.infiniteLoopOverlays[msg.bugId];
       if (overlay) {
         const bpRect = overlay.breakpoint.getBoundingClientRect();
-        const arenaRect = dom.arena.getBoundingClientRect();
+        const arenaRect = dom.arena!.getBoundingClientRect();
         const lx = ((bpRect.left - arenaRect.left + bpRect.width / 2) / arenaRect.width) * LOGICAL_W;
         const ly = ((bpRect.top - arenaRect.top + bpRect.height / 2) / arenaRect.height) * LOGICAL_H;
         showBreakpointHitEffect(lx, ly);
@@ -1077,7 +992,7 @@ export function handleMessageInternal(msg) {
         shakeArena('micro');
       } else if (bugEl) {
         const rect = bugEl.getBoundingClientRect();
-        const arenaRect = dom.arena.getBoundingClientRect();
+        const arenaRect = dom.arena!.getBoundingClientRect();
         const lx = ((rect.left - arenaRect.left + rect.width / 2) / arenaRect.width) * LOGICAL_W;
         const ly = ((rect.top - arenaRect.top) / arenaRect.height) * LOGICAL_H;
         showBreakpointHitEffect(lx, ly);
@@ -1097,7 +1012,7 @@ export function handleMessageInternal(msg) {
       const overlay = clientState.infiniteLoopOverlays && clientState.infiniteLoopOverlays[msg.bugId];
       if (overlay) {
         const bpRect = overlay.breakpoint.getBoundingClientRect();
-        const arenaRect = dom.arena.getBoundingClientRect();
+        const arenaRect = dom.arena!.getBoundingClientRect();
         const x = bpRect.left - arenaRect.left + bpRect.width / 2;
         const y = bpRect.top - arenaRect.top + bpRect.height / 2;
         const missText = document.createElement('div');
@@ -1105,7 +1020,7 @@ export function handleMessageInternal(msg) {
         missText.textContent = 'MISS!';
         missText.style.left = x + 'px';
         missText.style.top = y + 'px';
-        dom.arena.appendChild(missText);
+        dom.arena!.appendChild(missText);
         setTimeout(() => missText.remove(), 900);
       }
       break;
@@ -1121,8 +1036,6 @@ export function handleMessageInternal(msg) {
       shakeArena('medium');
       break;
     }
-
-    // ── Shop messages ──
 
     case 'shop-open': {
       openShop(msg);
@@ -1158,7 +1071,12 @@ export function handleMessageInternal(msg) {
       hideLiveDashboard();
       shakeArena('heavy');
       if (msg.players) {
-        msg.players.forEach(p => { if (clientState.players[p.id]) { clientState.players[p.id].score = p.score; clientState.players[p.id].bugsSquashed = p.bugsSquashed; } });
+        msg.players.forEach((p: any) => {
+          if (clientState.players[p.id]) {
+            clientState.players[p.id].score = p.score;
+            clientState.players[p.id].bugsSquashed = p.bugsSquashed;
+          }
+        });
       }
       showGameOverScreen(msg.score, msg.level, msg.players || []);
       break;
@@ -1173,7 +1091,7 @@ export function handleMessageInternal(msg) {
 
     case 'boss-spawn': {
       hideAllScreens();
-      dom.levelEl.textContent = 'BOSS';
+      dom.levelEl!.textContent = 'BOSS';
       createBossElement(msg.boss.x, msg.boss.y, msg.boss.hp, msg.boss.maxHp, msg.timeRemaining, msg.boss);
       clientState.bossPhase = msg.boss.phase || 1;
       clientState.bossPhaseName = msg.boss.phaseName || 'The Sprint';
@@ -1243,7 +1161,7 @@ export function handleMessageInternal(msg) {
     case 'boss-hit-blocked': {
       if (clientState.bossElement) {
         const rect = clientState.bossElement.getBoundingClientRect();
-        const arenaRect = dom.arena.getBoundingClientRect();
+        const arenaRect = dom.arena!.getBoundingClientRect();
         const lx = ((rect.left - arenaRect.left + rect.width / 2) / arenaRect.width) * LOGICAL_W;
         const ly = ((rect.top - arenaRect.top) / arenaRect.height) * LOGICAL_H;
         showBlockedText(lx, ly);
@@ -1277,7 +1195,12 @@ export function handleMessageInternal(msg) {
         showWinScreen(msg.score, msg.players || []);
       }
       if (msg.players) {
-        msg.players.forEach(p => { if (clientState.players[p.id]) { clientState.players[p.id].score = p.score; clientState.players[p.id].bugsSquashed = p.bugsSquashed; } });
+        msg.players.forEach((p: any) => {
+          if (clientState.players[p.id]) {
+            clientState.players[p.id].score = p.score;
+            clientState.players[p.id].bugsSquashed = p.bugsSquashed;
+          }
+        });
       }
       updateHUD(msg.score);
       updateLiveDashboard();
@@ -1362,7 +1285,7 @@ export function handleMessageInternal(msg) {
 
 // ── Duck element helpers ──
 
-function createDuckElement(duck) {
+function createDuckElement(duck: { x: number; y: number }): void {
   removeDuckElement();
   const el = document.createElement('div');
   el.className = 'rubber-duck';
@@ -1370,7 +1293,7 @@ function createDuckElement(duck) {
   const pos = logicalToPixel(duck.x, duck.y);
   el.style.left = pos.x + 'px';
   el.style.top = pos.y + 'px';
-  el.addEventListener('click', (e) => {
+  el.addEventListener('click', (e: MouseEvent) => {
     try {
       e.stopPropagation();
       sendMessage({ type: 'click-duck' });
@@ -1379,11 +1302,11 @@ function createDuckElement(duck) {
       showError('Error clicking duck', ERROR_LEVELS.ERROR);
     }
   });
-  dom.arena.appendChild(el);
+  dom.arena!.appendChild(el);
   clientState.duckElement = el;
 }
 
-function removeDuckElement() {
+function removeDuckElement(): void {
   if (clientState.duckElement) {
     clientState.duckElement.remove();
     clientState.duckElement = null;
@@ -1394,7 +1317,7 @@ function removeDuckElement() {
 
 // ── Hammer element helpers ──
 
-function createHammerElement(hammer) {
+function createHammerElement(hammer: { x: number; y: number }): void {
   removeHammerElement();
   const el = document.createElement('div');
   el.className = 'hotfix-hammer';
@@ -1402,7 +1325,7 @@ function createHammerElement(hammer) {
   const pos = logicalToPixel(hammer.x, hammer.y);
   el.style.left = pos.x + 'px';
   el.style.top = pos.y + 'px';
-  el.addEventListener('click', (e) => {
+  el.addEventListener('click', (e: MouseEvent) => {
     try {
       e.stopPropagation();
       sendMessage({ type: 'click-hammer' });
@@ -1411,11 +1334,11 @@ function createHammerElement(hammer) {
       showError('Error clicking hammer', ERROR_LEVELS.ERROR);
     }
   });
-  dom.arena.appendChild(el);
+  dom.arena!.appendChild(el);
   clientState.hammerElement = el;
 }
 
-function removeHammerElement() {
+function removeHammerElement(): void {
   if (clientState.hammerElement) {
     clientState.hammerElement.remove();
     clientState.hammerElement = null;
@@ -1424,37 +1347,30 @@ function removeHammerElement() {
   if (existing) existing.remove();
 }
 
-function showHammerShockwave(playerColor) {
-  // Create expanding ring shockwave
+function showHammerShockwave(playerColor: string): void {
   const shockwave = document.createElement('div');
   shockwave.className = 'hammer-shockwave';
   shockwave.style.borderColor = playerColor;
-  dom.arena.appendChild(shockwave);
+  dom.arena!.appendChild(shockwave);
   setTimeout(() => shockwave.remove(), 800);
-  
-  // Stun all bugs visually
+
   for (const bugId in clientState.bugs) {
     const bugEl = clientState.bugs[bugId];
-    if (bugEl) {
-      bugEl.classList.add('stunned');
-    }
+    if (bugEl) bugEl.classList.add('stunned');
   }
-  
-  // Stun boss visually
+
   if (clientState.bossElement) {
     clientState.bossElement.classList.add('stunned');
   }
-  
-  // Screen shake
+
   shakeArena('medium');
 }
 
-function checkReplayUrl() {
+function checkReplayUrl(): void {
   const params = new URLSearchParams(location.search);
   const token = params.get('replay');
   if (!token || !/^[a-f0-9]{32}$/.test(token)) return;
 
-  // Hide the name entry screen immediately so it doesn't cover the arena
   if (dom.nameEntry) dom.nameEntry.classList.add('hidden');
 
   fetch('/api/replay/' + token)
@@ -1466,7 +1382,6 @@ function checkReplayUrl() {
       if (recording) {
         startPlayback(recording);
       } else {
-        // Token was invalid — restore normal UI
         if (!clientState.hasJoined && dom.nameEntry) dom.nameEntry.classList.remove('hidden');
       }
     })
@@ -1476,14 +1391,13 @@ function checkReplayUrl() {
     });
 }
 
-function checkJoinUrl() {
+function checkJoinUrl(): void {
   const params = new URLSearchParams(location.search);
   const code = params.get('join');
   if (!code || !/^[A-Za-z0-9]{6}$/.test(code)) return;
 
   clientState.pendingJoinCode = code.toUpperCase();
 
-  // Clean the URL to prevent re-triggering on refresh
   const url = new URL(location.href);
   url.searchParams.delete('join');
   history.replaceState(null, '', url.pathname + url.search);
@@ -1491,12 +1405,12 @@ function checkJoinUrl() {
 
 // ── Password modal for invite code joins ──
 
-function showPasswordModal(code, errorMsg) {
-  const modal = document.getElementById('password-modal');
-  const input = document.getElementById('password-modal-input');
-  const error = document.getElementById('password-modal-error');
-  const submitBtn = document.getElementById('password-modal-submit');
-  const cancelBtn = document.getElementById('password-modal-cancel');
+function showPasswordModal(code: string, errorMsg: string | null): void {
+  const modal = document.getElementById('password-modal')!;
+  const input = document.getElementById('password-modal-input') as HTMLInputElement;
+  const error = document.getElementById('password-modal-error')!;
+  const submitBtn = document.getElementById('password-modal-submit')!;
+  const cancelBtn = document.getElementById('password-modal-cancel')!;
 
   modal.classList.remove('hidden');
   input.value = '';
@@ -1509,14 +1423,14 @@ function showPasswordModal(code, errorMsg) {
     error.classList.add('hidden');
   }
 
-  function cleanup() {
+  function cleanup(): void {
     modal.classList.add('hidden');
     submitBtn.replaceWith(submitBtn.cloneNode(true));
     cancelBtn.replaceWith(cancelBtn.cloneNode(true));
     input.replaceWith(input.cloneNode(true));
   }
 
-  function submit() {
+  function submit(): void {
     const password = input.value;
     if (!password) {
       error.textContent = 'Please enter a password';
@@ -1528,7 +1442,7 @@ function showPasswordModal(code, errorMsg) {
   }
 
   submitBtn.addEventListener('click', submit);
-  input.addEventListener('keydown', (e) => {
+  input.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.key === 'Enter') submit();
     if (e.key === 'Escape') cleanup();
   });

@@ -1,13 +1,41 @@
-import { renderIcon } from './avatars.js';
+import { renderIcon } from './avatars.ts';
+import type { ClientPlayer } from './client-types.ts';
 
 const ROW_HEIGHT = 80;
 
+export interface WalkoutPlayer {
+  name: string;
+  icon: string;
+  color?: string;
+  score: number;
+  bugsSquashed?: number;
+}
+
+interface Sparkle {
+  x: number; y: number;
+  vx: number; vy: number;
+  life: number; age: number;
+  size: number;
+  color: string;
+}
+
+interface ConfettiPiece {
+  x: number; y: number;
+  vx: number; vy: number;
+  rotation: number;
+  rotSpeed: number;
+  w: number; h: number;
+  color: string;
+  life: number; age: number;
+  gravity: number;
+  wobble: number;
+  wobbleSpeed: number;
+}
+
 /**
  * Show a slot-machine "Player of the Match" reveal animation.
- * @param {object[]} playerList - All players [{ name, icon, color, score, bugsSquashed }]
- * @param {() => void} onComplete - Called when dismissed
  */
-export function showWalkout(playerList, onComplete) {
+export function showWalkout(playerList: WalkoutPlayer[], onComplete: () => void): void {
   const sorted = playerList.slice().sort((a, b) => b.score - a.score);
   const mvp = sorted[0];
   const numPlayers = sorted.length;
@@ -23,15 +51,15 @@ export function showWalkout(playerList, onComplete) {
   let running = true;
   let phase = 0;
   let clickReady = false;
-  const timers = [];
-  let sparkles = [];
-  let confettiPieces = [];
-  let sparkleCtx = null;
-  let confettiCtx = null;
+  const timers: ReturnType<typeof setTimeout>[] = [];
+  let sparkles: Sparkle[] = [];
+  let confettiPieces: ConfettiPiece[] = [];
+  let sparkleCtx: CanvasRenderingContext2D | null = null;
+  let confettiCtx: CanvasRenderingContext2D | null = null;
   let lastParticleTime = 0;
 
-  function schedule(fn, ms) { timers.push(setTimeout(fn, ms)); }
-  function wait(ms) { return new Promise(r => { timers.push(setTimeout(r, ms)); }); }
+  function schedule(fn: () => void, ms: number): void { timers.push(setTimeout(fn, ms)); }
+  function wait(ms: number): Promise<void> { return new Promise(r => { timers.push(setTimeout(r, ms)); }); }
 
   // ── Build DOM ──
   const overlay = document.createElement('div');
@@ -135,7 +163,7 @@ export function showWalkout(playerList, onComplete) {
     }
   });
 
-  function dismiss() {
+  function dismiss(): void {
     if (!running) return;
     running = false;
     timers.forEach(clearTimeout);
@@ -146,7 +174,7 @@ export function showWalkout(playerList, onComplete) {
     }, 300);
   }
 
-  function skipToEnd() {
+  function skipToEnd(): void {
     phase = 10;
     titleEl.classList.add('visible');
     reelFrame.classList.add('visible', 'walkout-reel-glow', 'walkout-reel-expand');
@@ -157,7 +185,7 @@ export function showWalkout(playerList, onComplete) {
     mvpCard.classList.add('visible');
     // Set final counter values
     mvpCard.querySelectorAll('.walkout-stat-value').forEach(el => {
-      el.textContent = parseInt(el.dataset.target) || 0;
+      (el as HTMLElement).textContent = String(parseInt((el as HTMLElement).dataset.target || '0') || 0);
     });
     continueEl.classList.add('visible');
     resizeCanvases();
@@ -165,7 +193,7 @@ export function showWalkout(playerList, onComplete) {
   }
 
   // ── Canvas sizing ──
-  function resizeCanvases() {
+  function resizeCanvases(): void {
     confettiCanvas.width = window.innerWidth;
     confettiCanvas.height = window.innerHeight;
     sparkleCanvas.width = reelFrame.offsetWidth;
@@ -173,7 +201,7 @@ export function showWalkout(playerList, onComplete) {
   }
 
   // ── Particle loop ──
-  function particleLoop(time) {
+  function particleLoop(time: number): void {
     if (!running) return;
     const dt = Math.min((time - lastParticleTime) / 1000, 0.05);
     lastParticleTime = time;
@@ -183,7 +211,7 @@ export function showWalkout(playerList, onComplete) {
   }
 
   // ── Sparkle system ──
-  function spawnSparkles(cx, cy, count) {
+  function spawnSparkles(cx: number, cy: number, count: number): void {
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = 30 + Math.random() * 100;
@@ -197,7 +225,7 @@ export function showWalkout(playerList, onComplete) {
     }
   }
 
-  function tickSparkles(dt) {
+  function tickSparkles(dt: number): void {
     if (!sparkleCtx) return;
     const w = sparkleCanvas.width, h = sparkleCanvas.height;
     sparkleCtx.clearRect(0, 0, w, h);
@@ -226,7 +254,7 @@ export function showWalkout(playerList, onComplete) {
   }
 
   // ── Confetti system ──
-  function spawnConfetti(count) {
+  function spawnConfetti(count: number): void {
     const w = confettiCanvas.width, h = confettiCanvas.height;
     const cx = w / 2, cy = h * 0.42;
     const colors = ['#ffe66d', '#fff5b0', '#ffd700', '#4ecdc4', '#a855f7', '#ff6b6b'];
@@ -249,7 +277,7 @@ export function showWalkout(playerList, onComplete) {
     }
   }
 
-  function tickConfetti(dt) {
+  function tickConfetti(dt: number): void {
     if (!confettiCtx) return;
     confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
     for (let i = confettiPieces.length - 1; i >= 0; i--) {
@@ -275,15 +303,15 @@ export function showWalkout(playerList, onComplete) {
   }
 
   // ── Reel spin physics ──
-  function spinReel() {
+  function spinReel(): Promise<void> {
     return new Promise(resolve => {
       const k = 1.5;
       const v0 = targetY * k;
-      let startTime = null;
+      let startTime: number | null = null;
       let bouncePhase = false;
       let bounceStart = 0;
 
-      function tick(timestamp) {
+      function tick(timestamp: number): void {
         if (!running) { resolve(); return; }
         if (!startTime) startTime = timestamp;
         const elapsed = (timestamp - startTime) / 1000;
@@ -314,20 +342,20 @@ export function showWalkout(playerList, onComplete) {
   }
 
   // ── Counter animation ──
-  function animateCounter(el, target, duration) {
+  function animateCounter(el: HTMLElement, target: number, duration: number): void {
     const start = performance.now();
-    function tick(now) {
+    function tick(now: number): void {
       const t = Math.min((now - start) / duration, 1);
       const eased = 1 - Math.pow(1 - t, 3);
-      el.textContent = Math.round(eased * target);
+      el.textContent = String(Math.round(eased * target));
       if (t < 1 && running) requestAnimationFrame(tick);
-      else el.textContent = target;
+      else el.textContent = String(target);
     }
     requestAnimationFrame(tick);
   }
 
   // ── Flash effect ──
-  function doFlash() {
+  function doFlash(): void {
     flashEl.style.transition = 'none';
     flashEl.style.opacity = '0.75';
     void flashEl.offsetWidth;
@@ -336,13 +364,13 @@ export function showWalkout(playerList, onComplete) {
   }
 
   // ── Highlight winner row ──
-  function highlightWinner() {
+  function highlightWinner(): void {
     const rows = reelStrip.querySelectorAll('.walkout-reel-name');
     if (rows[targetSlot]) rows[targetSlot].classList.add('winner');
   }
 
   // ── Main sequence ──
-  async function run() {
+  async function run(): Promise<void> {
     resizeCanvases();
     sparkleCtx = sparkleCanvas.getContext('2d');
     confettiCtx = confettiCanvas.getContext('2d');
@@ -405,7 +433,7 @@ export function showWalkout(playerList, onComplete) {
     phase = 8;
     const statEls = mvpCard.querySelectorAll('.walkout-stat-value');
     statEls.forEach(el => {
-      animateCounter(el, parseInt(el.dataset.target) || 0, 900);
+      animateCounter(el as HTMLElement, parseInt((el as HTMLElement).dataset.target || '0') || 0, 900);
     });
     await wait(900);
     if (!running) return;
@@ -426,7 +454,7 @@ export function showWalkout(playerList, onComplete) {
   run();
 }
 
-function escapeText(s) {
+function escapeText(s: string): string {
   const d = document.createElement('div');
   d.textContent = s;
   return d.innerHTML;
