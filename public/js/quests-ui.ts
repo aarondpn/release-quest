@@ -1,4 +1,5 @@
 import { clientState, dom } from './state.ts';
+import { showToast } from './utils.ts';
 import type { SendMessageFn, QuestEntry, QuestData } from './client-types.ts';
 
 let _sendMessage: SendMessageFn | null = null;
@@ -238,14 +239,5 @@ function showQuestCompletionToast(update: Record<string, any>): void {
     '<span class="quest-toast-text">QUEST COMPLETE!</span>' +
     '<span class="quest-toast-reward">+' + update.reward + ' ' + COIN_SVG_TOAST + '</span>';
 
-  document.body.appendChild(toast);
-
-  requestAnimationFrame(() => {
-    toast.classList.add('quest-toast-show');
-  });
-
-  setTimeout(() => {
-    toast.classList.add('quest-toast-hide');
-    toast.addEventListener('animationend', () => toast.remove());
-  }, 3500);
+  showToast(toast, 3500);
 }

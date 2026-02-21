@@ -304,3 +304,16 @@ export function initDom(): void {
   dom.shopBalanceAmount = document.getElementById('shop-balance-amount');
   dom.shopGuestLock = document.getElementById('shop-guest-lock');
 }
+
+/**
+ * Switch between lobby browser tabs (lobbies, leaderboard, replays, stats card, shop).
+ * Hides all panels, deactivates all tabs, then shows/activates the given panel and tab.
+ */
+export function activateLobbyTab(activePanel: HTMLElement | null, activeTab: HTMLElement | null): void {
+  const panels = [dom.lobbyListPanel, dom.leaderboardPanel, dom.replaysPanel, dom.statsCardPanel, dom.shopPanel];
+  const tabs = [dom.lobbiesTab, dom.leaderboardTab, dom.replaysTab, dom.statsCardTab, dom.shopTab];
+  for (const p of panels) if (p) p.classList.add('hidden');
+  for (const t of tabs) if (t) t.classList.remove('active');
+  if (activePanel) activePanel.classList.remove('hidden');
+  if (activeTab) activeTab.classList.add('active');
+}

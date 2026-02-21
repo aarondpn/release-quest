@@ -1,15 +1,10 @@
-import { dom, clientState } from './state.ts';
+import { dom, clientState, activateLobbyTab } from './state.ts';
 import { renderIcon, isPremium, isShopAvatar, PREMIUM_AVATARS, SHOP_AVATARS } from './avatars.ts';
+import { escapeHtml } from './utils.ts';
 import type { SendMessageFn, StatsData } from './client-types.ts';
 
 let _sendMessage: SendMessageFn | null = null;
 export function initStatsCardSend(fn: SendMessageFn): void { _sendMessage = fn; }
-
-function escapeHtml(s: string): string {
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
-}
 
 interface Theme {
   label: string;
@@ -86,16 +81,7 @@ export function handleMyStats(stats: StatsData | null): void {
 }
 
 export function showStatsCardTab(): void {
-  if (dom.lobbyListPanel) dom.lobbyListPanel.classList.add('hidden');
-  if (dom.leaderboardPanel) dom.leaderboardPanel.classList.add('hidden');
-  if (dom.replaysPanel) dom.replaysPanel.classList.add('hidden');
-  if (dom.shopPanel) dom.shopPanel.classList.add('hidden');
-  if (dom.statsCardPanel) dom.statsCardPanel.classList.remove('hidden');
-  if (dom.lobbiesTab) dom.lobbiesTab.classList.remove('active');
-  if (dom.leaderboardTab) dom.leaderboardTab.classList.remove('active');
-  if (dom.replaysTab) dom.replaysTab.classList.remove('active');
-  if (dom.shopTab) dom.shopTab.classList.remove('active');
-  if (dom.statsCardTab) dom.statsCardTab.classList.add('active');
+  activateLobbyTab(dom.statsCardPanel, dom.statsCardTab);
   requestMyStats();
 }
 

@@ -13,7 +13,6 @@ export const handleGetShopCatalog: MessageHandler = async ({ ws, pid, playerInfo
       rotationEndUtc: rotation.rotationEndUtc,
       owned: [],
       balance: 0,
-      isGuest: true,
       isNewRotation: false,
     });
     return;
@@ -34,7 +33,6 @@ export const handleGetShopCatalog: MessageHandler = async ({ ws, pid, playerInfo
       rotationEndUtc: rotation.rotationEndUtc,
       owned,
       balance,
-      isGuest: false,
       isNewRotation: seenRotation !== rotation.rotationEndUtc,
     });
   } catch {
@@ -44,7 +42,6 @@ export const handleGetShopCatalog: MessageHandler = async ({ ws, pid, playerInfo
       rotationEndUtc: rotation.rotationEndUtc,
       owned: [],
       balance: 0,
-      isGuest: false,
       isNewRotation: true,
     });
   }

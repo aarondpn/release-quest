@@ -1,6 +1,7 @@
 import { dom, clientState } from './state.ts';
 import { renderIcon } from './avatars.ts';
 import { showWalkout } from './walkout.ts';
+import { escapeHtml } from './utils.ts';
 import type { WalkoutPlayer } from './walkout.ts';
 import type { SendMessageFn } from './client-types.ts';
 
@@ -31,12 +32,6 @@ const ROLE_DEFS: RoleDef[] = [
   { id: 'architect',name: 'Architect',icon: '🏗️', description: 'Solo merge conflicts; free pipeline reset' },
 ];
 const ROLE_MAP: Record<string, RoleDef> = Object.fromEntries(ROLE_DEFS.map(r => [r.id, r]));
-
-function escapeHtml(s: string): string {
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
-}
 
 export function updateHUD(score?: number, level?: number | string, hp?: number): void {
   if (score !== undefined) dom.scoreEl!.textContent = String(score);

@@ -90,8 +90,12 @@ function mulberry32(seed: number): () => number {
   };
 }
 
+let _cachedRotation: { items: CosmeticShopItem[]; rotationEndUtc: string } | null = null;
+let _cachedRotationWeek = -1;
+
 export function getWeeklyRotation(): { items: CosmeticShopItem[]; rotationEndUtc: string } {
   const { weekEnd, weekNumber } = getWeekBoundaries();
+  if (_cachedRotation && _cachedRotationWeek === weekNumber) return _cachedRotation;
   const rng = mulberry32(weekNumber);
   // Fisher-Yates shuffle on the full catalog
   const pool = [...COSMETIC_SHOP_CATALOG];
@@ -99,7 +103,9 @@ export function getWeeklyRotation(): { items: CosmeticShopItem[]; rotationEndUtc
     const j = Math.floor(rng() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
-  return { items: pool.slice(0, ROTATION_SIZE), rotationEndUtc: weekEnd.toISOString() };
+  _cachedRotation = { items: pool.slice(0, ROTATION_SIZE), rotationEndUtc: weekEnd.toISOString() };
+  _cachedRotationWeek = weekNumber;
+  return _cachedRotation;
 }
 
 // Difficulty presets

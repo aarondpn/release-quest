@@ -1,12 +1,7 @@
 import { dom, clientState } from './state.ts';
 import { logicalToPixel } from './coordinates.ts';
 import { renderIcon } from './avatars.ts';
-
-function escapeHtml(s: string): string {
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
-}
+import { escapeHtml } from './utils.ts';
 
 export function addRemoteCursor(playerId: string, name: string, color: string, icon: string): void {
   if (playerId === clientState.myId) return;

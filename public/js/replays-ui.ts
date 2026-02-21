@@ -1,17 +1,12 @@
-import { dom, clientState } from './state.ts';
+import { dom, clientState, activateLobbyTab } from './state.ts';
 import { startPlayback } from './playback.ts';
 import { showError, ERROR_LEVELS } from './error-handler.ts';
 import { renderIcon } from './avatars.ts';
+import { escapeHtml } from './utils.ts';
 import type { SendMessageFn } from './client-types.ts';
 
 let _sendMessage: SendMessageFn | null = null;
 export function initReplaysSend(fn: SendMessageFn): void { _sendMessage = fn; }
-
-function escapeHtml(s: string): string {
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
-}
 
 interface RecordingListItem {
   id: number;
@@ -167,15 +162,6 @@ export function handleRecordingUnshared(_msg: Record<string, unknown>): void {
 }
 
 export function showReplaysTab(): void {
-  if (dom.lobbyListPanel) dom.lobbyListPanel.classList.add('hidden');
-  if (dom.leaderboardPanel) dom.leaderboardPanel.classList.add('hidden');
-  if (dom.statsCardPanel) dom.statsCardPanel.classList.add('hidden');
-  if (dom.shopPanel) dom.shopPanel.classList.add('hidden');
-  if (dom.replaysPanel) dom.replaysPanel.classList.remove('hidden');
-  if (dom.lobbiesTab) dom.lobbiesTab.classList.remove('active');
-  if (dom.leaderboardTab) dom.leaderboardTab.classList.remove('active');
-  if (dom.statsCardTab) dom.statsCardTab.classList.remove('active');
-  if (dom.shopTab) dom.shopTab.classList.remove('active');
-  if (dom.replaysTab) dom.replaysTab.classList.add('active');
+  activateLobbyTab(dom.replaysPanel, dom.replaysTab);
   requestRecordings();
 }

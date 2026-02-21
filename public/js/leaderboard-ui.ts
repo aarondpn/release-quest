@@ -1,15 +1,10 @@
-import { dom } from './state.ts';
+import { dom, activateLobbyTab } from './state.ts';
 import { renderIcon } from './avatars.ts';
+import { escapeHtml } from './utils.ts';
 import type { SendMessageFn, LeaderboardEntry } from './client-types.ts';
 
 let _sendMessage: SendMessageFn | null = null;
 export function initLeaderboardSend(fn: SendMessageFn): void { _sendMessage = fn; }
-
-function escapeHtml(s: string): string {
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
-}
 
 export function requestLeaderboard(): void {
   if (_sendMessage) _sendMessage({ type: 'get-leaderboard' });
@@ -38,28 +33,10 @@ export function renderLeaderboard(entries: LeaderboardEntry[]): void {
 }
 
 export function showLeaderboardTab(): void {
-  dom.lobbyListPanel!.classList.add('hidden');
-  dom.leaderboardPanel!.classList.remove('hidden');
-  if (dom.replaysPanel) dom.replaysPanel.classList.add('hidden');
-  if (dom.statsCardPanel) dom.statsCardPanel.classList.add('hidden');
-  if (dom.shopPanel) dom.shopPanel.classList.add('hidden');
-  dom.lobbiesTab!.classList.remove('active');
-  dom.leaderboardTab!.classList.add('active');
-  if (dom.replaysTab) dom.replaysTab.classList.remove('active');
-  if (dom.statsCardTab) dom.statsCardTab.classList.remove('active');
-  if (dom.shopTab) dom.shopTab.classList.remove('active');
+  activateLobbyTab(dom.leaderboardPanel, dom.leaderboardTab);
   requestLeaderboard();
 }
 
 export function showLobbiesTab(): void {
-  dom.leaderboardPanel!.classList.add('hidden');
-  dom.lobbyListPanel!.classList.remove('hidden');
-  if (dom.replaysPanel) dom.replaysPanel.classList.add('hidden');
-  if (dom.statsCardPanel) dom.statsCardPanel.classList.add('hidden');
-  if (dom.shopPanel) dom.shopPanel.classList.add('hidden');
-  dom.leaderboardTab!.classList.remove('active');
-  dom.lobbiesTab!.classList.add('active');
-  if (dom.replaysTab) dom.replaysTab.classList.remove('active');
-  if (dom.statsCardTab) dom.statsCardTab.classList.remove('active');
-  if (dom.shopTab) dom.shopTab.classList.remove('active');
+  activateLobbyTab(dom.lobbyListPanel, dom.lobbiesTab);
 }

@@ -11,18 +11,18 @@ function px(svg: string): string {
   );
 }
 
-export interface PremiumAvatar {
+export interface Avatar {
   name: string;
   svg: string;
+  rarity?: string;
 }
 
-export interface ShopAvatar {
-  name: string;
-  rarity: string;
-  svg: string;
-}
+/** @deprecated Use Avatar instead */
+export type PremiumAvatar = Avatar;
+/** @deprecated Use Avatar instead */
+export type ShopAvatar = Avatar;
 
-export const PREMIUM_AVATARS: Record<string, PremiumAvatar> = {
+export const PREMIUM_AVATARS: Record<string, Avatar> = {
   'av:knight': {
     name: 'Pixel Knight',
     svg: px(
@@ -92,7 +92,7 @@ export function isShopAvatar(icon: string | null | undefined): boolean {
 
 // ── Shop pixel-art SVG avatars (purchased with Byte Coins) ──
 
-export const SHOP_AVATARS: Record<string, ShopAvatar> = {
+export const SHOP_AVATARS: Record<string, Avatar> = {
   'shop:cyborg': {
     name: 'Neon Cyborg',
     rarity: 'rare',
@@ -411,23 +411,114 @@ export const COIN_SVG = '<svg class="byte-coin-svg" width="10" height="10" viewB
  * @param icon - emoji character, premium ID "av:knight", or shop ID "shop:robot"
  * @param sizePx - rendered size in CSS pixels
  */
-export function renderIcon(icon: string, sizePx: number): string {
-  if (isPremium(icon)) {
-    const av = PREMIUM_AVATARS[icon];
-    if (av) {
-      return '<img class="avatar-icon avatar-premium" src="' + av.svg +
-        '" width="' + sizePx + '" height="' + sizePx +
-        '" alt="' + av.name + '" style="vertical-align:middle;image-rendering:pixelated">';
-    }
-    return '<span class="avatar-icon" style="font-size:' + sizePx + 'px;line-height:1;vertical-align:middle">?</span>';
+/**
+ * Build icon picker content (standard, premium, shop sections) into the given container.
+ * Returns the resolved selected icon (reset to default if selected shop avatar is unowned).
+ */
+export function buildIconPickerContent(
+  container: HTMLElement,
+  current: string | null,
+  owned: ReadonlySet<string>,
+  getPrice: (id: string) => number | null | string,
+  onSelect: (id: string) => void,
+): string | null {
+  // Standard section
+  const stdLabel = document.createElement('div');
+  stdLabel.className = 'icon-picker-label';
+  stdLabel.textContent = 'PICK YOUR HUNTER';
+  container.appendChild(stdLabel);
+
+  STANDARD_ICONS.forEach(icon => {
+    const el = document.createElement('div');
+    el.className = 'icon-option' + (current === icon ? ' selected' : '');
+    el.dataset.icon = icon;
+    el.textContent = icon;
+    el.addEventListener('click', () => {
+      container.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+      onSelect(icon);
+    });
+    container.appendChild(el);
+  });
+
+  // Premium section
+  const premLabel = document.createElement('div');
+  premLabel.className = 'icon-picker-label icon-picker-premium-label';
+  premLabel.textContent = 'MEMBERS ONLY';
+  container.appendChild(premLabel);
+
+  PREMIUM_IDS.forEach(id => {
+    const av = PREMIUM_AVATARS[id];
+    const el = document.createElement('div');
+    el.className = 'icon-option icon-option-premium' + (current === id ? ' selected' : '');
+    el.dataset.icon = id;
+    el.innerHTML = '<img src="' + av.svg + '" width="28" height="28" alt="' + av.name + '" style="image-rendering:pixelated">';
+    el.addEventListener('click', () => {
+      container.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+      onSelect(id);
+    });
+    container.appendChild(el);
+  });
+
+  // Shop section
+  if (SHOP_IDS.length > 0) {
+    const shopLabel = document.createElement('div');
+    shopLabel.className = 'icon-picker-label icon-picker-shop-label';
+    shopLabel.innerHTML = COIN_SVG + ' SHOP EXCLUSIVES';
+    container.appendChild(shopLabel);
+
+    SHOP_IDS.forEach(id => {
+      const av = SHOP_AVATARS[id];
+      const isOwned = owned.has(id);
+      const el = document.createElement('div');
+      el.className = 'icon-option icon-option-shop icon-option-rarity-' + (av.rarity || '') +
+        (current === id ? ' selected' : '') +
+        (!isOwned ? ' locked' : '');
+      el.dataset.icon = id;
+      el.innerHTML = '<img src="' + av.svg + '" width="28" height="28" alt="' + av.name + '" style="image-rendering:pixelated">';
+      if (!isOwned) {
+        const lock = document.createElement('div');
+        lock.className = 'icon-lock-overlay icon-lock-coin';
+        lock.innerHTML = COIN_SVG_SMALL + (getPrice(id) ?? '?');
+        el.appendChild(lock);
+      }
+      el.addEventListener('click', () => {
+        if (!isOwned) {
+          el.classList.add('locked-shake');
+          el.addEventListener('animationend', () => el.classList.remove('locked-shake'), { once: true });
+          return;
+        }
+        container.querySelectorAll('.icon-option').forEach(o => o.classList.remove('selected'));
+        el.classList.add('selected');
+        onSelect(id);
+      });
+      container.appendChild(el);
+    });
   }
-  if (isShopAvatar(icon)) {
-    const av = SHOP_AVATARS[icon];
-    if (av) {
-      return '<img class="avatar-icon avatar-shop avatar-rarity-' + av.rarity + '" src="' + av.svg +
-        '" width="' + sizePx + '" height="' + sizePx +
-        '" alt="' + av.name + '" style="vertical-align:middle;image-rendering:pixelated">';
-    }
+
+  // If selected icon is a shop avatar the user doesn't own, reset
+  if (isShopAvatar(current) && !owned.has(current!)) {
+    const fallback = STANDARD_ICONS[0];
+    const first = container.querySelector<HTMLElement>('.icon-option[data-icon="' + fallback + '"]');
+    if (first) first.classList.add('selected');
+    return fallback;
+  }
+  return current;
+}
+
+export function renderIcon(icon: string, sizePx: number): string {
+  const av = isPremium(icon) ? PREMIUM_AVATARS[icon]
+    : isShopAvatar(icon) ? SHOP_AVATARS[icon]
+    : null;
+  if (av) {
+    const cls = 'avatar-icon' + (isPremium(icon) ? ' avatar-premium' : ' avatar-shop') +
+      (av.rarity ? ' avatar-rarity-' + av.rarity : '');
+    return '<img class="' + cls + '" src="' + av.svg +
+      '" width="' + sizePx + '" height="' + sizePx +
+      '" alt="' + av.name + '" style="vertical-align:middle;image-rendering:pixelated">';
+  }
+  if (isPremium(icon) || isShopAvatar(icon)) {
     return '<span class="avatar-icon" style="font-size:' + sizePx + 'px;line-height:1;vertical-align:middle">?</span>';
   }
   // Standard emoji — use textContent trick for safe HTML

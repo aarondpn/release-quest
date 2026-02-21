@@ -1,5 +1,6 @@
-import { dom, clientState } from './state.ts';
+import { dom, clientState, activateLobbyTab } from './state.ts';
 import { SHOP_AVATARS, renderIcon, COIN_SVG } from './avatars.ts';
+import { escapeHtml, showToast } from './utils.ts';
 import type { SendMessageFn } from './client-types.ts';
 
 interface ShopCatalogItem {
@@ -14,7 +15,6 @@ let _sendMessage: SendMessageFn | null = null;
 let _shopItems: ShopCatalogItem[] = [];
 let _rotationEndUtc: string | null = null;
 let _ownedItems: Set<string> = new Set();
-let _shopBalance = 0;
 let _rotationTimerId: ReturnType<typeof setInterval> | null = null;
 let _isNewRotation = false;
 
@@ -28,11 +28,11 @@ export function handleShopCatalog(msg: Record<string, unknown>): void {
   _shopItems = (msg.rotatingItems || []) as ShopCatalogItem[];
   _rotationEndUtc = (msg.rotationEndUtc as string) || null;
   _ownedItems = new Set((msg.owned || []) as string[]);
-  _shopBalance = (msg.balance as number) ?? 0;
+  clientState.byteCoinsBalance = (msg.balance as number) ?? 0;
   // Only show badge if server says new AND shop is not currently open
   const shopVisible = dom.shopPanel && !dom.shopPanel.classList.contains('hidden');
   if (!shopVisible) _isNewRotation = !!msg.isNewRotation;
-  if (dom.shopBalanceAmount) dom.shopBalanceAmount.textContent = _shopBalance.toLocaleString();
+  if (dom.shopBalanceAmount) dom.shopBalanceAmount.textContent = clientState.byteCoinsBalance.toLocaleString();
   renderShopGrid();
   startRotationTimer();
   updateShopNewBadge();
@@ -41,14 +41,11 @@ export function handleShopCatalog(msg: Record<string, unknown>): void {
 export function handleShopPurchaseResult(msg: Record<string, unknown>): void {
   if (msg.success) {
     _ownedItems.add(msg.itemId as string);
-    _shopBalance = msg.newBalance as number;
-    if (dom.shopBalanceAmount) dom.shopBalanceAmount.textContent = _shopBalance.toLocaleString();
-    // Update global balance
     clientState.byteCoinsBalance = msg.newBalance as number;
-    const qtBal = document.getElementById('qt-balance');
-    if (qtBal) qtBal.textContent = (msg.newBalance as number).toLocaleString();
-    const profBal = document.getElementById('profile-coin-balance');
-    if (profBal) profBal.textContent = (msg.newBalance as number).toLocaleString();
+    const formatted = clientState.byteCoinsBalance.toLocaleString();
+    if (dom.shopBalanceAmount) dom.shopBalanceAmount.textContent = formatted;
+    if (dom.qtBalance) dom.qtBalance.textContent = formatted;
+    if (dom.profileCoinBalance) dom.profileCoinBalance.textContent = formatted;
     renderShopGrid();
     showPurchaseToast(msg.itemId as string);
   } else {
@@ -66,13 +63,7 @@ function showPurchaseToast(itemId: string): void {
     '<span class="quest-toast-icon">' + (av ? renderIcon(itemId, 20) : '') + '</span>' +
     '<span class="quest-toast-text">PURCHASED!</span>' +
     '<span class="quest-toast-reward">' + escapeHtml(item.name) + '</span>';
-  document.body.appendChild(toast);
-  requestAnimationFrame(() => toast.classList.add('quest-toast-show'));
-  setTimeout(() => {
-    toast.classList.add('quest-toast-hide');
-    toast.addEventListener('animationend', () => toast.remove());
-    setTimeout(() => { if (toast.parentNode) toast.remove(); }, 2000);
-  }, 3500);
+  showToast(toast, 3500);
 }
 
 function showPurchaseError(error: string): void {
@@ -81,24 +72,12 @@ function showPurchaseError(error: string): void {
   toast.innerHTML =
     '<span class="quest-toast-icon">&#x26A0;</span>' +
     '<span class="quest-toast-text">' + escapeHtml(error) + '</span>';
-  document.body.appendChild(toast);
-  requestAnimationFrame(() => toast.classList.add('quest-toast-show'));
-  setTimeout(() => {
-    toast.classList.add('quest-toast-hide');
-    toast.addEventListener('animationend', () => toast.remove());
-    setTimeout(() => { if (toast.parentNode) toast.remove(); }, 2000);
-  }, 3000);
-}
-
-function escapeHtml(s: string): string {
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
+  showToast(toast, 3000);
 }
 
 function renderItemCard(item: ShopCatalogItem, isGuest: boolean): string {
   const owned = _ownedItems.has(item.id);
-  const canAfford = _shopBalance >= item.price;
+  const canAfford = (clientState.byteCoinsBalance ?? 0) >= item.price;
   const av = SHOP_AVATARS[item.id];
   const iconHtml = av ? renderIcon(item.id, 40) : '';
   const safeId = escapeHtml(item.id);
@@ -238,18 +217,7 @@ function markShopSeen(): void {
 }
 
 export function showShopTab(): void {
-  // Hide all other panels
-  if (dom.lobbyListPanel) dom.lobbyListPanel.classList.add('hidden');
-  if (dom.leaderboardPanel) dom.leaderboardPanel.classList.add('hidden');
-  if (dom.replaysPanel) dom.replaysPanel.classList.add('hidden');
-  if (dom.statsCardPanel) dom.statsCardPanel.classList.add('hidden');
-  if (dom.shopPanel) dom.shopPanel.classList.remove('hidden');
-  // Deactivate all other tabs
-  if (dom.lobbiesTab) dom.lobbiesTab.classList.remove('active');
-  if (dom.leaderboardTab) dom.leaderboardTab.classList.remove('active');
-  if (dom.replaysTab) dom.replaysTab.classList.remove('active');
-  if (dom.statsCardTab) dom.statsCardTab.classList.remove('active');
-  if (dom.shopTab) dom.shopTab.classList.add('active');
+  activateLobbyTab(dom.shopPanel, dom.shopTab);
   markShopSeen();
   requestShopCatalog();
 }
@@ -260,8 +228,8 @@ export function hideShopPanel(): void {
   stopRotationTimer();
 }
 
-export function getOwnedShopItems(): Set<string> {
-  return new Set(_ownedItems);
+export function getOwnedShopItems(): ReadonlySet<string> {
+  return _ownedItems;
 }
 
 export function getShopItemPrice(itemId: string): number | null {
