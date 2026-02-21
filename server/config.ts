@@ -43,14 +43,6 @@ export const COLORS = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#a855f7', '#ff9ff3', '#
 export const ICONS = ['\u{1F431}', '\u{1F436}', '\u{1F430}', '\u{1F98A}', '\u{1F438}', '\u{1F427}', '\u{1F43C}', '\u{1F428}'];
 export const PREMIUM_ICON_IDS = ['av:knight', 'av:ninja', 'av:mage'];
 
-// Legacy premium IDs that moved to shop — used for backward-compat rendering and validation
-export const LEGACY_ICON_MAP: Record<string, string> = {
-  'av:cyborg': 'shop:cyborg',
-  'av:phoenix': 'shop:phoenix_bird',
-  'av:samurai': 'shop:samurai',
-  'av:reaper': 'shop:reaper',
-  'av:dragon': 'shop:dragon',
-};
 
 export const COSMETIC_SHOP_CATALOG: CosmeticShopItem[] = [
   { id: 'shop:robot', name: 'Pixel Robot', category: 'avatar', price: 100, description: 'A friendly 8-bit robot companion', rarity: 'common' },
@@ -72,7 +64,7 @@ export const COSMETIC_SHOP_CATALOG: CosmeticShopItem[] = [
 
 export const COSMETIC_SHOP_MAP = new Map(COSMETIC_SHOP_CATALOG.map(item => [item.id, item]));
 export const SHOP_ICON_IDS = COSMETIC_SHOP_CATALOG.map(item => item.id);
-export const ALL_ICONS = [...ICONS, ...PREMIUM_ICON_IDS, ...SHOP_ICON_IDS, ...Object.keys(LEGACY_ICON_MAP)];
+export const ALL_ICONS = [...ICONS, ...PREMIUM_ICON_IDS, ...SHOP_ICON_IDS];
 
 const ROTATION_SIZE = 4;
 

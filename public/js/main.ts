@@ -1,5 +1,5 @@
 import { CURSOR_THROTTLE_MS } from './config.ts';
-import { STANDARD_ICONS, PREMIUM_AVATARS, PREMIUM_IDS, isPremium, isShopAvatar, renderIcon, SHOP_AVATARS, SHOP_IDS, LEGACY_ICON_MAP, COIN_SVG_SMALL, COIN_SVG } from './avatars.ts';
+import { STANDARD_ICONS, PREMIUM_AVATARS, PREMIUM_IDS, isPremium, isShopAvatar, renderIcon, SHOP_AVATARS, SHOP_IDS, COIN_SVG_SMALL, COIN_SVG } from './avatars.ts';
 import { getOwnedShopItems, getShopItemPrice } from './cosmetic-shop-ui.ts';
 import { clientState, dom, initDom } from './state.ts';
 import { pixelToLogical } from './coordinates.ts';
@@ -148,12 +148,7 @@ export function buildIconPicker(): void {
     });
   }
 
-  // If selected icon isn't valid, reset
-  if (isPremium(current) && LEGACY_ICON_MAP[current!]) {
-    clientState.selectedIcon = STANDARD_ICONS[0];
-    const first = dom.iconPicker!.querySelector<HTMLElement>('.icon-option[data-icon="' + STANDARD_ICONS[0] + '"]');
-    if (first) first.classList.add('selected');
-  }
+  // If selected icon is a shop avatar the user doesn't own, reset
   if (isShopAvatar(current)) {
     const owned = getOwnedShopItems();
     if (!owned.has(current!)) {

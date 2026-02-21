@@ -46,6 +46,19 @@ export async function initialize(): Promise<void> {
   // Track which shop rotation the user last viewed
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS shop_seen_rotation VARCHAR(32)`);
 
+  // Migrate legacy premium icons that moved to the shop
+  await pool.query(`
+    UPDATE users SET icon = CASE icon
+      WHEN 'av:cyborg' THEN 'shop:cyborg'
+      WHEN 'av:phoenix' THEN 'shop:phoenix_bird'
+      WHEN 'av:samurai' THEN 'shop:samurai'
+      WHEN 'av:reaper' THEN 'shop:reaper'
+      WHEN 'av:dragon' THEN 'shop:dragon'
+      ELSE icon
+    END
+    WHERE icon IN ('av:cyborg', 'av:phoenix', 'av:samurai', 'av:reaper', 'av:dragon')
+  `);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS sessions (
       token VARCHAR(64) PRIMARY KEY,

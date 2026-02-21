@@ -81,14 +81,6 @@ export const PREMIUM_AVATARS: Record<string, PremiumAvatar> = {
 
 export const PREMIUM_IDS: string[] = Object.keys(PREMIUM_AVATARS);
 
-// Legacy premium IDs that moved to the shop
-export const LEGACY_ICON_MAP: Record<string, string> = {
-  'av:cyborg': 'shop:cyborg',
-  'av:phoenix': 'shop:phoenix_bird',
-  'av:samurai': 'shop:samurai',
-  'av:reaper': 'shop:reaper',
-  'av:dragon': 'shop:dragon',
-};
 
 export function isPremium(icon: string | null | undefined): boolean {
   return typeof icon === 'string' && icon.startsWith('av:');
@@ -427,9 +419,6 @@ export function renderIcon(icon: string, sizePx: number): string {
         '" width="' + sizePx + '" height="' + sizePx +
         '" alt="' + av.name + '" style="vertical-align:middle;image-rendering:pixelated">';
     }
-    // Check legacy map for premium icons that moved to shop
-    const shopId = LEGACY_ICON_MAP[icon];
-    if (shopId) return renderIcon(shopId, sizePx);
     return '<span class="avatar-icon" style="font-size:' + sizePx + 'px;line-height:1;vertical-align:middle">?</span>';
   }
   if (isShopAvatar(icon)) {
