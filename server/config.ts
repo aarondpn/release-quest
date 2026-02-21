@@ -56,7 +56,7 @@ export const COSMETIC_SHOP_CATALOG: CosmeticShopItem[] = [
   { id: 'shop:robot', name: 'Pixel Robot', category: 'avatar', price: 50, description: 'A friendly 8-bit robot companion', rarity: 'common' },
   { id: 'shop:alien', name: 'Neon Alien', category: 'avatar', price: 50, description: 'Visitor from a neon galaxy', rarity: 'common' },
   { id: 'shop:witch', name: 'Glitch Witch', category: 'avatar', price: 75, description: 'Casts spells in binary', rarity: 'common' },
-  { id: 'shop:pirate', name: 'Data Pirate', category: 'avatar', price: 75, description: 'Plunders data on the high seas', rarity: 'rare' },
+  { id: 'shop:pirate', name: 'Data Pirate', category: 'avatar', price: 75, description: 'Plunders data on the high seas', rarity: 'common' },
   { id: 'shop:cyborg', name: 'Neon Cyborg', category: 'avatar', price: 100, description: 'Half human, half machine', rarity: 'rare' },
   { id: 'shop:phoenix_bird', name: 'Pixel Phoenix', category: 'avatar', price: 100, description: 'Rises from the ashes of failed builds', rarity: 'rare' },
   { id: 'shop:samurai', name: 'Neon Samurai', category: 'avatar', price: 125, description: 'Slices through spaghetti code', rarity: 'rare' },

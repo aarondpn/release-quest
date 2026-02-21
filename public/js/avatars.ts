@@ -268,7 +268,7 @@ export const SHOP_AVATARS: Record<string, ShopAvatar> = {
   },
   'shop:pirate': {
     name: 'Data Pirate',
-    rarity: 'rare',
+    rarity: 'common',
     svg: px(
       '<rect x="8" y="4" width="16" height="4" fill="#5d4037"/>' +
       '<rect x="6" y="2" width="20" height="2" fill="#4e342e"/>' +
@@ -408,6 +408,11 @@ export const SHOP_AVATARS: Record<string, ShopAvatar> = {
 };
 
 export const SHOP_IDS: string[] = Object.keys(SHOP_AVATARS);
+
+// Shared Byte Coin SVG markup (small inline variant)
+export const COIN_SVG_SMALL = '<svg class="byte-coin-svg" width="8" height="8" viewBox="0 0 16 16" fill="none"><rect x="4" y="1" width="8" height="14" rx="1" fill="#ffe66d"/><rect x="3" y="2" width="1" height="12" fill="#ffe66d"/><rect x="12" y="2" width="1" height="12" fill="#ffe66d"/><rect x="6" y="3" width="4" height="2" fill="#ffd700"/><rect x="6" y="7" width="4" height="2" fill="#ffd700"/><rect x="6" y="11" width="4" height="2" fill="#ffd700"/></svg>';
+
+export const COIN_SVG = '<svg class="byte-coin-svg" width="10" height="10" viewBox="0 0 16 16" fill="none"><rect x="4" y="1" width="8" height="14" rx="1" fill="#ffe66d"/><rect x="3" y="2" width="1" height="12" fill="#ffe66d"/><rect x="12" y="2" width="1" height="12" fill="#ffe66d"/><rect x="6" y="3" width="4" height="2" fill="#ffd700"/><rect x="6" y="7" width="4" height="2" fill="#ffd700"/><rect x="6" y="11" width="4" height="2" fill="#ffd700"/><rect x="5" y="1" width="6" height="1" fill="#fff8c4" opacity="0.6"/></svg>';
 
 /**
  * Return safe HTML for an icon (emoji, premium, or shop SVG).

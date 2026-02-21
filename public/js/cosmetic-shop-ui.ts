@@ -1,5 +1,5 @@
 import { dom, clientState } from './state.ts';
-import { SHOP_AVATARS, renderIcon } from './avatars.ts';
+import { SHOP_AVATARS, renderIcon, COIN_SVG } from './avatars.ts';
 import type { SendMessageFn } from './client-types.ts';
 
 interface ShopCatalogItem {
@@ -19,8 +19,6 @@ let _shopBalance = 0;
 let _rotationTimerId: ReturnType<typeof setInterval> | null = null;
 let _isNewRotation = false;
 
-const COIN_SVG = '<svg class="byte-coin-svg" width="10" height="10" viewBox="0 0 16 16" fill="none"><rect x="4" y="1" width="8" height="14" rx="1" fill="#ffe66d"/><rect x="3" y="2" width="1" height="12" fill="#ffe66d"/><rect x="12" y="2" width="1" height="12" fill="#ffe66d"/><rect x="6" y="3" width="4" height="2" fill="#ffd700"/><rect x="6" y="7" width="4" height="2" fill="#ffd700"/><rect x="6" y="11" width="4" height="2" fill="#ffd700"/><rect x="5" y="1" width="6" height="1" fill="#fff8c4" opacity="0.6"/></svg>';
-
 export function initShopSend(fn: SendMessageFn): void { _sendMessage = fn; }
 
 export function requestShopCatalog(): void {
@@ -39,7 +37,7 @@ export function handleShopCatalog(msg: Record<string, unknown>): void {
     _rotationEndUtc = null;
   }
   _ownedItems = new Set((msg.owned || []) as string[]);
-  _shopBalance = (msg.balance as number) || 0;
+  _shopBalance = (msg.balance as number) ?? 0;
   // Only show badge if server says new AND shop is not currently open
   const shopVisible = dom.shopPanel && !dom.shopPanel.classList.contains('hidden');
   if (!shopVisible) _isNewRotation = !!msg.isNewRotation;
@@ -83,6 +81,7 @@ function showPurchaseToast(itemId: string): void {
   setTimeout(() => {
     toast.classList.add('quest-toast-hide');
     toast.addEventListener('animationend', () => toast.remove());
+    setTimeout(() => { if (toast.parentNode) toast.remove(); }, 2000);
   }, 3500);
 }
 
@@ -97,6 +96,7 @@ function showPurchaseError(error: string): void {
   setTimeout(() => {
     toast.classList.add('quest-toast-hide');
     toast.addEventListener('animationend', () => toast.remove());
+    setTimeout(() => { if (toast.parentNode) toast.remove(); }, 2000);
   }, 3000);
 }
 
@@ -111,6 +111,8 @@ function renderItemCard(item: ShopCatalogItem, isGuest: boolean): string {
   const canAfford = _shopBalance >= item.price;
   const av = SHOP_AVATARS[item.id];
   const iconHtml = av ? renderIcon(item.id, 40) : '';
+  const safeId = escapeHtml(item.id);
+  const safeRarity = escapeHtml(item.rarity);
 
   let actionHtml: string;
   if (isGuest) {
@@ -118,16 +120,16 @@ function renderItemCard(item: ShopCatalogItem, isGuest: boolean): string {
   } else if (owned) {
     actionHtml = '<span class="shop-owned-badge">OWNED</span>';
   } else {
-    actionHtml = '<button class="btn btn-small shop-buy-btn' + (canAfford ? '' : ' shop-buy-disabled') + '" data-item-id="' + item.id + '">' +
+    actionHtml = '<button class="btn btn-small shop-buy-btn' + (canAfford ? '' : ' shop-buy-disabled') + '" data-item-id="' + safeId + '">' +
       item.price + ' ' + COIN_SVG + '</button>';
   }
 
-  return '<div class="shop-item-card shop-rarity-' + item.rarity + (owned ? ' shop-item-owned' : '') + '" data-item-id="' + item.id + '">' +
+  return '<div class="shop-item-card shop-rarity-' + safeRarity + (owned ? ' shop-item-owned' : '') + '" data-item-id="' + safeId + '">' +
     '<div class="shop-item-preview">' + iconHtml + '</div>' +
     '<div class="shop-item-info">' +
       '<div class="shop-item-name">' + escapeHtml(item.name) + '</div>' +
       '<div class="shop-item-desc">' + escapeHtml(item.description) + '</div>' +
-      '<div class="shop-item-rarity shop-rarity-tag-' + item.rarity + '">' + item.rarity.toUpperCase() + '</div>' +
+      '<div class="shop-item-rarity shop-rarity-tag-' + safeRarity + '">' + safeRarity.toUpperCase() + '</div>' +
     '</div>' +
     '<div class="shop-item-action">' + actionHtml + '</div>' +
   '</div>';
@@ -279,5 +281,11 @@ export function hideShopPanel(): void {
 }
 
 export function getOwnedShopItems(): Set<string> {
-  return _ownedItems;
+  return new Set(_ownedItems);
+}
+
+export function getShopItemPrice(itemId: string): number | null {
+  const allItems = [..._permanentItems, ..._rotatingItems];
+  const item = allItems.find(i => i.id === itemId);
+  return item ? item.price : null;
 }

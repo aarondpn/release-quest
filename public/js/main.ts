@@ -1,6 +1,6 @@
 import { CURSOR_THROTTLE_MS } from './config.ts';
-import { STANDARD_ICONS, PREMIUM_AVATARS, PREMIUM_IDS, isPremium, isShopAvatar, renderIcon, SHOP_AVATARS, SHOP_IDS, LEGACY_ICON_MAP } from './avatars.ts';
-import { getOwnedShopItems } from './cosmetic-shop-ui.ts';
+import { STANDARD_ICONS, PREMIUM_AVATARS, PREMIUM_IDS, isPremium, isShopAvatar, renderIcon, SHOP_AVATARS, SHOP_IDS, LEGACY_ICON_MAP, COIN_SVG_SMALL, COIN_SVG } from './avatars.ts';
+import { getOwnedShopItems, getShopItemPrice } from './cosmetic-shop-ui.ts';
 import { clientState, dom, initDom } from './state.ts';
 import { pixelToLogical } from './coordinates.ts';
 import { updateHUD, initHudSend } from './hud.ts';
@@ -115,7 +115,7 @@ export function buildIconPicker(): void {
   if (SHOP_IDS.length > 0) {
     const shopLabel = document.createElement('div');
     shopLabel.className = 'icon-picker-label icon-picker-shop-label';
-    shopLabel.innerHTML = '<svg class="byte-coin-svg" width="10" height="10" viewBox="0 0 16 16" fill="none"><rect x="4" y="1" width="8" height="14" rx="1" fill="#ffe66d"/><rect x="3" y="2" width="1" height="12" fill="#ffe66d"/><rect x="12" y="2" width="1" height="12" fill="#ffe66d"/><rect x="6" y="3" width="4" height="2" fill="#ffd700"/><rect x="6" y="7" width="4" height="2" fill="#ffd700"/><rect x="6" y="11" width="4" height="2" fill="#ffd700"/><rect x="5" y="1" width="6" height="1" fill="#fff8c4" opacity="0.6"/></svg> SHOP EXCLUSIVES';
+    shopLabel.innerHTML = COIN_SVG + ' SHOP EXCLUSIVES';
     dom.iconPicker!.appendChild(shopLabel);
 
     const owned = getOwnedShopItems();
@@ -131,8 +131,7 @@ export function buildIconPicker(): void {
       if (!isOwned) {
         const lock = document.createElement('div');
         lock.className = 'icon-lock-overlay icon-lock-coin';
-        const prices: Record<string, number> = { 'shop:robot': 50, 'shop:alien': 50, 'shop:witch': 75, 'shop:pirate': 75, 'shop:cyborg': 100, 'shop:phoenix_bird': 100, 'shop:samurai': 125, 'shop:astronaut': 100, 'shop:vampire': 100, 'shop:reaper': 150, 'shop:dragon': 175, 'shop:demon': 150, 'shop:angel': 150, 'shop:kraken': 200, 'shop:phoenix_gold': 250 };
-        lock.innerHTML = '<svg class="byte-coin-svg" width="8" height="8" viewBox="0 0 16 16" fill="none"><rect x="4" y="1" width="8" height="14" rx="1" fill="#ffe66d"/><rect x="3" y="2" width="1" height="12" fill="#ffe66d"/><rect x="12" y="2" width="1" height="12" fill="#ffe66d"/><rect x="6" y="3" width="4" height="2" fill="#ffd700"/><rect x="6" y="7" width="4" height="2" fill="#ffd700"/><rect x="6" y="11" width="4" height="2" fill="#ffd700"/></svg>' + (prices[id] || '?');
+        lock.innerHTML = COIN_SVG_SMALL + (getShopItemPrice(id) ?? '?');
         el.appendChild(lock);
       }
       el.addEventListener('click', () => {

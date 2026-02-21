@@ -62,10 +62,37 @@ export const handleShopSeen: MessageHandler = async ({ pid, playerInfo }) => {
   await db.setShopSeenRotation(info.userId, rotation.rotationEndUtc);
 };
 
-export const handleShopPurchase: MessageHandler = ({ ws, msg, pid, playerInfo }) => {
+const purchaseRateBuckets = new Map<string, number[]>();
+const PURCHASE_RATE_MAX = 3;
+const PURCHASE_RATE_WINDOW_MS = 10_000;
+
+function isPurchaseRateLimited(pid: string): boolean {
+  const now = Date.now();
+  let bucket = purchaseRateBuckets.get(pid);
+  if (!bucket) {
+    bucket = [];
+    purchaseRateBuckets.set(pid, bucket);
+  }
+  while (bucket.length > 0 && bucket[0] <= now - PURCHASE_RATE_WINDOW_MS) {
+    bucket.shift();
+  }
+  if (bucket.length >= PURCHASE_RATE_MAX) return true;
+  bucket.push(now);
+  return false;
+}
+
+export function cleanupPurchaseRateLimit(pid: string): void {
+  purchaseRateBuckets.delete(pid);
+}
+
+export const handleShopPurchase: MessageHandler = async ({ ws, msg, pid, playerInfo }) => {
   const info = playerInfo.get(pid);
   if (!info?.userId) {
     network.send(ws, { type: 'shop-purchase-result', success: false, error: 'Not logged in' });
+    return;
+  }
+  if (isPurchaseRateLimited(pid)) {
+    network.send(ws, { type: 'shop-purchase-result', success: false, error: 'Too many requests' });
     return;
   }
   const itemId = String(msg.itemId || '');
@@ -84,7 +111,8 @@ export const handleShopPurchase: MessageHandler = ({ ws, msg, pid, playerInfo })
       return;
     }
   }
-  db.purchaseItem(info.userId, itemId, item.category, item.price).then(result => {
+  try {
+    const result = await db.purchaseItem(info.userId, itemId, item.category, item.price);
     if (!result.success) {
       network.send(ws, { type: 'shop-purchase-result', success: false, error: result.error });
       return;
@@ -95,7 +123,7 @@ export const handleShopPurchase: MessageHandler = ({ ws, msg, pid, playerInfo })
       itemId,
       newBalance: result.newBalance,
     });
-  }).catch(() => {
+  } catch {
     network.send(ws, { type: 'shop-purchase-result', success: false, error: 'Purchase failed' });
-  });
+  }
 };
