@@ -2,7 +2,7 @@ import { MAX_LEVEL, getDifficultyConfig } from './config.ts';
 import { createLobbyLogger } from './logger.ts';
 import * as boss from './boss.ts';
 import { startLevel } from './game.ts';
-import type { GameContext, ShopItemConfig } from './types.ts';
+import type { GameContext, ShopItem } from './types.ts';
 
 interface ShopItemDef {
   id: string;
@@ -78,7 +78,7 @@ const SHOP_ITEMS: ShopItemDef[] = [
   },
 ];
 
-export function getShopItems(difficulty: string): ShopItemConfig[] {
+export function getShopItems(difficulty: string): ShopItem[] {
   const isHard = difficulty === 'hard';
   return SHOP_ITEMS.map(item => ({
     id: item.id,

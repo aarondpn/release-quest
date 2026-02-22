@@ -1,25 +1,20 @@
 // Client-side type definitions
 
+// Re-export wire-format types from shared so existing client consumers need no changes
+export type {
+  GamePhase, WirePlayer, BugVariant, ShopItem, RubberDuck, HotfixHammer,
+  LeaderboardEntry, StatsData, AuthUser, QuestEntry, RecordingEvent, MouseMoveEvent,
+} from '../../shared/types.ts';
+
+import type { WirePlayer, BugVariant, QuestEntry, RecordingEvent, MouseMoveEvent, AuthUser } from '../../shared/types.ts';
+
 export type SendMessageFn = (msg: Record<string, unknown>) => void;
 
-export interface ClientPlayer {
-  id: string;
-  name: string;
-  color: string;
-  icon: string;
-  score: number;
+export interface ClientPlayer extends Omit<WirePlayer, 'bugsSquashed' | 'isGuest'> {
   bugsSquashed?: number;
   isGuest?: boolean;
-  role?: string | null;
   x?: number;
   y?: number;
-}
-
-export interface AuthUser {
-  id: number;
-  username: string;
-  displayName: string;
-  icon: string;
 }
 
 export interface LobbyListEntry {
@@ -61,19 +56,6 @@ export interface DifficultyPreset {
   };
 }
 
-export interface QuestEntry {
-  id: number;
-  type: 'daily' | 'weekly';
-  title: string;
-  description: string;
-  icon: string;
-  progress: number;
-  target: number;
-  reward: number;
-  completed: boolean;
-  claimed?: boolean;
-}
-
 export interface QuestData {
   quests: QuestEntry[];
   balance: number;
@@ -90,18 +72,6 @@ export interface RecordingPlayerEntry {
   score: number;
 }
 
-export interface RecordingEvent {
-  t: number;
-  msg: Record<string, unknown>;
-}
-
-export interface MouseMoveEntry {
-  t: number;
-  playerId: string;
-  x: number;
-  y: number;
-}
-
 export interface PlaybackRecording {
   id: number;
   duration_ms: number;
@@ -110,7 +80,7 @@ export interface PlaybackRecording {
   difficulty: string;
   players?: RecordingPlayerEntry[];
   events: RecordingEvent[];
-  mouseMovements?: MouseMoveEntry[];
+  mouseMovements?: MouseMoveEvent[];
 }
 
 export interface MergeTether {
@@ -130,31 +100,6 @@ export interface PipelineTether {
   svg: SVGSVGElement;
   lines: PipelineSegment[];
   bugIds: string[];
-}
-
-export interface BugVariant {
-  isHeisenbug?: boolean;
-  isMemoryLeak?: boolean;
-  growthStage?: number;
-  isFeature?: boolean;
-  eagleEye?: boolean;
-  mergeConflict?: string;
-  mergeSide?: 'left' | 'right';
-  mergePartner?: string;
-  isPipeline?: boolean;
-  chainId?: string;
-  chainIndex?: number;
-  chainLength?: number;
-  isInfiniteLoop?: boolean;
-  loopCenterX?: number;
-  loopCenterY?: number;
-  loopRadiusX?: number;
-  loopRadiusY?: number;
-  loopAngle?: number;
-  loopSpeed?: number;
-  breakpointAngle?: number;
-  loopTickMs?: number;
-  isAzubi?: boolean;
 }
 
 export interface InfiniteLoopOverlay {
@@ -360,50 +305,10 @@ export interface DomRefs {
   shopGuestLock: HTMLElement | null;
 }
 
-export interface LeaderboardEntry {
-  display_name: string;
-  icon: string;
-  games_played: number;
-  games_won: number;
-  games_lost: number;
-  total_score: number;
-  highest_score: number;
-  bugs_squashed: number;
-}
-
-export interface StatsData {
-  games_played: number;
-  games_won: number;
-  games_lost: number;
-  total_score: number;
-  highest_score: number;
-  bugs_squashed: number;
-}
-
-export interface ShopItem {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  cost: number;
-}
-
-export interface ActiveBuff {
+export interface ActiveBuffDisplay {
   itemId: string;
   icon: string;
   name: string;
-}
-
-export interface RubberDuck {
-  id: string;
-  x: number;
-  y: number;
-}
-
-export interface HotfixHammer {
-  id: string;
-  x: number;
-  y: number;
 }
 
 declare global {

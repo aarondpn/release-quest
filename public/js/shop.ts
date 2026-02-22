@@ -2,12 +2,12 @@ import { dom, clientState } from './state.ts';
 import { sendMessage } from './network.ts';
 import { hideAllScreens, showLiveDashboard } from './hud.ts';
 import { escapeHtml } from './utils.ts';
-import type { ActiveBuff, ShopItem } from './client-types.ts';
+import type { ActiveBuffDisplay, ShopItem } from './client-types.ts';
 
 let shopTimerRaf: number | null = null;
 let shopEndTime = 0;
 
-let activeBuffs: ActiveBuff[] = [];
+let activeBuffs: ActiveBuffDisplay[] = [];
 
 const SHOP_ITEM_SVGS: Record<string, string> = {
   'healing-patch': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">

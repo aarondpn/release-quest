@@ -3,21 +3,19 @@
 import type { GameEventBus } from './event-bus.ts';
 import type { ZodType } from 'zod';
 
-export type GamePhase = 'lobby' | 'playing' | 'shopping' | 'boss' | 'gameover' | 'win';
+// Re-export wire-format types from shared so existing server consumers need no changes
+export type {
+  GamePhase, WirePlayer, BugVariant, ShopItem, RubberDuck, HotfixHammer,
+  LeaderboardEntry, StatsData, AuthUser, QuestEntry, RecordingEvent, MouseMoveEvent,
+} from '../shared/types.ts';
+
+import type { GamePhase, WirePlayer, ShopItem, RubberDuck, HotfixHammer, AuthUser, RecordingEvent } from '../shared/types.ts';
 
 export interface ActiveBuff {
   itemId: string;
   playerId: string;
   expiresAtPhaseEnd: boolean;
   source?: string;  // e.g. 'shop', 'powerup', 'boss-drop' — defaults to 'shop'
-}
-
-export interface ShopItemConfig {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  cost: number;
 }
 
 export type CleanupHook = () => void;
@@ -42,17 +40,9 @@ export interface MatchLog {
   close(): void;
 }
 
-export interface PlayerData {
-  id: string;
-  name: string;
-  color: string;
-  icon: string;
+export interface PlayerData extends WirePlayer {
   x: number;
   y: number;
-  score: number;
-  bugsSquashed: number;
-  isGuest: boolean;
-  role?: string | null;
 }
 
 export interface PlayerInfo {
@@ -175,20 +165,8 @@ export interface BossTypePluginInterface {
   schemas?: Record<string, ZodType>;
 }
 
-export interface RubberDuck {
-  id: string;
-  x: number;
-  y: number;
-}
-
 export interface DuckBuff {
   expiresAt: number;
-}
-
-export interface HotfixHammer {
-  id: string;
-  x: number;
-  y: number;
 }
 
 export interface GameState {
@@ -354,7 +332,7 @@ export interface DifficultyConfig {
   };
   shop: {
     duration: number;
-    items: ShopItemConfig[];
+    items: ShopItem[];
   };
   powerups: {
     rubberDuckIntervalMin: number;
@@ -468,24 +446,6 @@ export interface DbSessionRow {
   icon: string;
 }
 
-export interface LeaderboardEntry {
-  display_name: string;
-  icon: string;
-  games_played: number;
-  games_won: number;
-  games_lost: number;
-  total_score: number;
-  highest_score: number;
-  bugs_squashed: number;
-}
-
-export interface AuthUser {
-  id: number;
-  username: string;
-  displayName: string;
-  icon: string;
-}
-
 export type AuthSuccess = {
   user: AuthUser;
   token: string;
@@ -501,18 +461,6 @@ export type AuthError = {
 export type AuthResult = AuthSuccess | AuthError;
 
 // Recording types
-
-export interface RecordingEvent {
-  t: number;
-  msg: Record<string, unknown>;
-}
-
-export interface MouseMoveEvent {
-  t: number;
-  playerId: string;
-  x: number;
-  y: number;
-}
 
 export interface RecordingBuffer {
   startTime: number;
