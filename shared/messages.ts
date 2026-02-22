@@ -5,7 +5,7 @@
 import type {
   AuthUser, BugVariant, ShopItem, LeaderboardEntry, StatsData,
   QuestEntry, GamePhase, WirePlayer, RubberDuck, HotfixHammer,
-  GameMode, RoguelikeMap, MapNodeType,
+  GameMode, RoguelikeMap, MapNodeType, EventDefinition,
 } from './types.ts';
 
 // ─── Client → Server messages ────────────────────────────────────────────────
@@ -276,6 +276,11 @@ export interface MapVoteMsg {
   nodeId: string;
 }
 
+export interface EventVoteMsg {
+  type: 'event-vote';
+  optionId: string;
+}
+
 export interface DevCommandMsg {
   type: 'dev-command';
   command: string;
@@ -321,6 +326,7 @@ export type ClientMessage =
   | ShopSeenMsg
   | ShopPurchaseMsg
   | MapVoteMsg
+  | EventVoteMsg
   | DevCommandMsg;
 
 // ─── Server → Client messages ────────────────────────────────────────────────
@@ -1076,6 +1082,31 @@ export interface MapNodeSelectedMsg {
   nodeType: MapNodeType;
 }
 
+// Event nodes
+
+export interface EventShowMsg {
+  type: 'event-show';
+  event: EventDefinition;
+  soloMode: boolean;
+}
+
+export interface EventVoteUpdateMsg {
+  type: 'event-vote-update';
+  votes: Record<string, string>;
+  timeRemaining: number;
+}
+
+export interface EventResolvedMsg {
+  type: 'event-resolved';
+  eventId: string;
+  chosenOptionId: string;
+  hpChange?: number;
+  scoreChange?: number;
+  newHp?: number;
+  newScore?: number;
+  modifierSummary?: string;
+}
+
 export type ServerMessage =
   // Connection
   | WelcomeMsg
@@ -1186,4 +1217,8 @@ export type ServerMessage =
   | RoguelikeMapMsg
   | MapViewMsg
   | MapVoteUpdateMsg
-  | MapNodeSelectedMsg;
+  | MapNodeSelectedMsg
+  // Events
+  | EventShowMsg
+  | EventVoteUpdateMsg
+  | EventResolvedMsg;

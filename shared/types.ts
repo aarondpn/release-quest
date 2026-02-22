@@ -2,7 +2,7 @@
 // Both server/types.ts and public/js/client-types.ts re-export these so
 // existing consumer imports remain unchanged.
 
-export type GamePhase = 'lobby' | 'playing' | 'shopping' | 'boss' | 'gameover' | 'win' | 'map_view';
+export type GamePhase = 'lobby' | 'playing' | 'shopping' | 'boss' | 'gameover' | 'win' | 'map_view' | 'event';
 
 export type MapNodeType = 'bug_level' | 'elite' | 'shop' | 'event' | 'rest' | 'mini_boss' | 'boss';
 export type GameMode = 'classic' | 'roguelike';
@@ -26,6 +26,17 @@ export interface RoguelikeMap {
 
 export interface EventOption { id: string; label: string; description: string; icon: string; }
 export interface EventDefinition { id: string; title: string; description: string; icon: string; options: EventOption[]; }
+
+export interface EventModifiers {
+  bugsTotalMultiplier?: number;
+  escapeTimeOffset?: number;
+  spawnRateMultiplier?: number;
+  scoreMultiplier?: number;
+  hpChange?: number;
+  scoreChange?: number;
+  grantEagleEye?: boolean;
+  onlyNormalBugs?: boolean;
+}
 
 /** Fields sent over the wire for every player. */
 export interface WirePlayer {

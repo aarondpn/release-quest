@@ -8,11 +8,12 @@ export type {
   GamePhase, WirePlayer, BugVariant, ShopItem, RubberDuck, HotfixHammer,
   LeaderboardEntry, StatsData, AuthUser, QuestEntry, RecordingEvent, MouseMoveEvent,
   MapNodeType, GameMode, MapNode, RoguelikeMap, EventOption, EventDefinition,
+  EventModifiers,
 } from '../shared/types.ts';
 
 export type { ClientMessage, ServerMessage } from '../shared/messages.ts';
 
-import type { GamePhase, WirePlayer, ShopItem, RubberDuck, HotfixHammer, AuthUser, RecordingEvent, GameMode, RoguelikeMap } from '../shared/types.ts';
+import type { GamePhase, WirePlayer, ShopItem, RubberDuck, HotfixHammer, AuthUser, RecordingEvent, GameMode, RoguelikeMap, EventModifiers } from '../shared/types.ts';
 
 export interface ActiveBuff {
   itemId: string;
@@ -196,6 +197,9 @@ export interface GameState {
   roguelikeMap?: RoguelikeMap;
   mapVotes?: Record<string, string>;
   voteDeadline?: number;
+  eventModifiers?: EventModifiers;
+  eventVotes?: Record<string, string>;
+  activeEventId?: string;
 }
 
 export interface GameCounters {

@@ -20,6 +20,7 @@ import { openShop, handleShopBuyResult, handleShopReady, closeShop, clearAllShop
 import { handleQuestsData, handleQuestProgress, handleBalanceData, requestQuests, resetQuestState } from './quests-ui.ts';
 import { handleShopCatalog, handleShopPurchaseResult, requestShopCatalog } from './cosmetic-shop-ui.ts';
 import { renderMap, updateVotes, highlightSelectedNode, showVoteTimer, hideVoteTimer, updateMapStats, initMapSend } from './roguelike-map-ui.ts';
+import { showEventScreen, updateEventVotes, updateEventTimer, resolveEvent } from './event-ui.ts';
 import type { SendMessageFn, ServerMessage } from './client-types.ts';
 
 function updateQaHitbox(): void {
@@ -394,6 +395,11 @@ export function handleMessageInternal(msg: ServerMessage): void {
         if (dom.mapScreen) dom.mapScreen.classList.remove('hidden');
         showLiveDashboard();
         // Available nodes will be sent via map-view message
+      }
+      else if (msg.phase === 'event') {
+        hideAllScreens();
+        // Event screen will be shown via event-show message
+        showLiveDashboard();
       }
       else if (msg.phase === 'shopping') { hideAllScreens(); showLiveDashboard(); }
       else { hideAllScreens(); showLiveDashboard(); }
@@ -1345,6 +1351,28 @@ export function handleMessageInternal(msg: ServerMessage): void {
       highlightSelectedNode(msg.nodeId);
       hideVoteTimer();
       // The screen will be hidden when the next phase starts (game-start, shop-open, boss-spawn)
+      break;
+    }
+
+    // Events
+
+    case 'event-show': {
+      hideAllScreens();
+      showEventScreen(msg.event, msg.soloMode);
+      showLiveDashboard();
+      break;
+    }
+
+    case 'event-vote-update': {
+      updateEventVotes(msg.votes, clientState.players);
+      updateEventTimer(msg.timeRemaining);
+      break;
+    }
+
+    case 'event-resolved': {
+      resolveEvent(msg);
+      if (msg.newHp !== undefined) updateHUD(msg.newScore, undefined, msg.newHp);
+      else if (msg.newScore !== undefined) updateHUD(msg.newScore);
       break;
     }
   }

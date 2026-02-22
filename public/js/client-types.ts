@@ -4,7 +4,7 @@
 export type {
   GamePhase, WirePlayer, BugVariant, ShopItem, RubberDuck, HotfixHammer,
   LeaderboardEntry, StatsData, AuthUser, QuestEntry, RecordingEvent, MouseMoveEvent,
-  GameMode, RoguelikeMap, MapNode, MapNodeType,
+  GameMode, RoguelikeMap, MapNode, MapNodeType, EventDefinition, EventModifiers,
 } from '../../shared/types.ts';
 
 export type { ClientMessage, ServerMessage, LobbyListEntry } from '../../shared/messages.ts';
@@ -184,6 +184,7 @@ export interface DomRefs {
   bossScreen: HTMLElement | null;
   shopScreen: HTMLElement | null;
   mapScreen: HTMLElement | null;
+  eventScreen: HTMLElement | null;
   nameEntry: HTMLElement | null;
   nameInput: HTMLInputElement | null;
   iconPicker: HTMLElement | null;

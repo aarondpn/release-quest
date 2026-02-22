@@ -6984,3 +6984,198 @@ body.qa-hitbox-active .arena .bug::before {
   text-align: center;
   margin-top: auto;
 }
+
+/* ══════════════════════════════════════════════════
+   EVENT SCREEN
+   ══════════════════════════════════════════════════ */
+
+#event-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 30, 0.92);
+}
+
+.event-card {
+  background: linear-gradient(135deg, #1a1a3e, #0d0d2b);
+  border: 2px solid #ffe66d;
+  border-radius: 16px;
+  padding: 28px 32px;
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 0 40px rgba(255, 230, 109, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  animation: event-card-enter 0.4s ease-out;
+}
+
+@keyframes event-card-enter {
+  from { opacity: 0; transform: scale(0.9) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.event-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  filter: drop-shadow(0 2px 8px rgba(255, 230, 109, 0.3));
+}
+
+.event-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  color: #ffe66d;
+  margin-bottom: 10px;
+  text-shadow: 0 0 10px rgba(255, 230, 109, 0.4);
+}
+
+.event-description {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #aaa;
+  line-height: 1.8;
+  margin-bottom: 20px;
+}
+
+.event-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.event-option-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  color: #ccc;
+}
+
+.event-option-btn:hover {
+  background: rgba(78, 205, 196, 0.1);
+  border-color: rgba(78, 205, 196, 0.4);
+  transform: translateX(4px);
+}
+
+.event-option-btn.my-vote {
+  background: rgba(78, 205, 196, 0.15);
+  border-color: #4ecdc4;
+  box-shadow: 0 0 12px rgba(78, 205, 196, 0.2);
+}
+
+.event-option-btn.chosen {
+  background: rgba(255, 230, 109, 0.15);
+  border-color: #ffe66d;
+  box-shadow: 0 0 16px rgba(255, 230, 109, 0.3);
+  animation: event-chosen-pulse 0.5s ease-out;
+}
+
+.event-option-btn.dimmed {
+  opacity: 0.35;
+}
+
+@keyframes event-chosen-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+.event-option-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.event-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.event-option-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: #fff;
+}
+
+.event-option-desc {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: #888;
+  line-height: 1.6;
+}
+
+.event-option-votes {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.event-vote-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: event-dot-pop 0.3s ease-out;
+}
+
+@keyframes event-dot-pop {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+
+.event-timer {
+  margin-bottom: 12px;
+}
+
+.event-timer-bar {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.event-timer-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4ecdc4, #ffe66d);
+  border-radius: 2px;
+  transition: width 1s linear;
+}
+
+.event-timer-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: #666;
+}
+
+.event-vote-status {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: #555;
+  min-height: 12px;
+}
+
+.event-result-banner {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: rgba(255, 230, 109, 0.1);
+  border: 1px solid rgba(255, 230, 109, 0.3);
+  border-radius: 8px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #ffe66d;
+  line-height: 1.8;
+  white-space: pre-line;
+  animation: event-result-enter 0.4s ease-out;
+}
+
+@keyframes event-result-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

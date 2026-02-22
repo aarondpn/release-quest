@@ -68,6 +68,7 @@ export const dom: DomRefs = {
   bossScreen: null,
   shopScreen: null,
   mapScreen: null,
+  eventScreen: null,
   nameEntry: null,
   nameInput: null,
   iconPicker: null,
@@ -198,6 +199,7 @@ export function initDom(): void {
   dom.bossScreen = document.getElementById('boss-screen');
   dom.shopScreen = document.getElementById('shop-screen');
   dom.mapScreen = document.getElementById('map-screen');
+  dom.eventScreen = document.getElementById('event-screen');
   dom.nameEntry = document.getElementById('name-entry');
   dom.nameInput = document.getElementById('name-input') as HTMLInputElement | null;
   dom.iconPicker = document.getElementById('icon-picker');

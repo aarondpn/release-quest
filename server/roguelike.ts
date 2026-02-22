@@ -5,6 +5,7 @@ import { startLevel } from './game.ts';
 import * as boss from './boss.ts';
 import * as shop from './shop.ts';
 import * as powerups from './powerups.ts';
+import * as events from './events.ts';
 import logger from './logger.ts';
 import type { GameContext } from './types.ts';
 
@@ -140,10 +141,9 @@ function navigateToNode(ctx: GameContext, nodeId: string): void {
   switch (node.type) {
     case 'bug_level':
     case 'elite':
-    case 'event':
     case 'rest':
     case 'mini_boss':
-      // For M1-2: elite/event/rest/mini_boss all behave like bug_level
+      // elite/rest/mini_boss behave like bug_level for now
       if (node.type !== 'bug_level') {
         logger.warn({ lobbyId: ctx.lobbyId, nodeType: node.type }, 'Unimplemented node type, treating as bug_level');
       }
@@ -163,6 +163,10 @@ function navigateToNode(ctx: GameContext, nodeId: string): void {
       powerups.startHammerSpawning(ctx);
       break;
 
+    case 'event':
+      events.showEvent(ctx, nodeId);
+      break;
+
     case 'shop':
       shop.openShop(ctx);
       break;
@@ -178,6 +182,12 @@ export function handleNodeComplete(ctx: GameContext): void {
   if (!state.roguelikeMap) return;
 
   const currentNode = state.roguelikeMap.nodes.find(n => n.id === state.roguelikeMap!.currentNodeId);
+
+  // Event modifiers expire after one combat — only clear after combat nodes
+  const combatTypes = new Set(['bug_level', 'elite', 'rest', 'mini_boss']);
+  if (currentNode && combatTypes.has(currentNode.type)) {
+    state.eventModifiers = undefined;
+  }
   if (!currentNode) {
     showMapView(ctx);
     return;

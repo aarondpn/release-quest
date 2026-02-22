@@ -15,7 +15,7 @@ import { handleDevCommand } from './dev.ts';
 import { handleSelectRole } from './role.ts';
 import { handleGetQuests, handleGetBalance } from './quests.ts';
 import { handleGetShopCatalog, handleShopPurchase, handleShopSeen } from './cosmetic-shop.ts';
-import { handleMapVote } from './roguelike.ts';
+import { handleMapVote, handleEventVote } from './roguelike.ts';
 import { getHandlers as getPluginHandlers, getSchemas as getPluginSchemas } from '../entity-types/index.ts';
 import { getBossHandlers, getBossSchemas } from '../boss-types/index.ts';
 
@@ -55,6 +55,7 @@ const staticHandlers: Record<string, MessageHandler> = {
   'shop-purchase': handleShopPurchase,
   'shop-seen': handleShopSeen,
   'map-vote': handleMapVote,
+  'event-vote': handleEventVote,
 };
 
 export const handlers: Record<string, MessageHandler> = {

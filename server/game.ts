@@ -219,4 +219,7 @@ export function resetToLobby(ctx: GameContext): void {
   state.roguelikeMap = undefined;
   state.mapVotes = undefined;
   state.voteDeadline = undefined;
+  state.eventModifiers = undefined;
+  state.eventVotes = undefined;
+  state.activeEventId = undefined;
 }

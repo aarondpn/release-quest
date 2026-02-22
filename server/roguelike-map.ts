@@ -32,10 +32,11 @@ const NODE_LABELS: Record<MapNodeType, string> = {
 };
 
 function pickNodeType(rng: () => number, row: number, totalRows: number): MapNodeType {
-  // For M1-2: only bug_level and shop. Future types stubbed but not placed.
   if (row === 0) return 'bug_level'; // row 0 always bug_level — no currency yet
   if (row === totalRows - 1) return 'bug_level'; // last gameplay row before boss
-  if (rng() < 0.25) return 'shop';
+  const roll = rng();
+  if (roll < 0.15) return 'event';
+  if (roll < 0.40) return 'shop';
   return 'bug_level';
 }
 
@@ -118,8 +119,9 @@ export function generateMap(seed: number, _difficulty: string = 'medium'): Rogue
     }
   }
 
-  // Break up consecutive shops: if a shop connects to another shop, convert the child to bug_level
+  // Break up consecutive shops/events: if same type connects to same type, convert child to bug_level
   breakConsecutiveShops(nodes);
+  breakConsecutiveEvents(nodes);
 
   // Validate: at least 1 shop reachable on every path from row 0 to boss
   validateShopAccess(nodes, rowNodes, rng);
@@ -134,6 +136,21 @@ function breakConsecutiveShops(nodes: MapNode[]): void {
     for (const connId of node.connections) {
       const child = nodeMap.get(connId)!;
       if (child.type === 'shop') {
+        child.type = 'bug_level';
+        child.label = NODE_LABELS.bug_level;
+        child.icon = NODE_ICONS.bug_level;
+      }
+    }
+  }
+}
+
+function breakConsecutiveEvents(nodes: MapNode[]): void {
+  const nodeMap = new Map(nodes.map(n => [n.id, n]));
+  for (const node of nodes) {
+    if (node.type !== 'event') continue;
+    for (const connId of node.connections) {
+      const child = nodeMap.get(connId)!;
+      if (child.type === 'event') {
         child.type = 'bug_level';
         child.label = NODE_LABELS.bug_level;
         child.icon = NODE_ICONS.bug_level;

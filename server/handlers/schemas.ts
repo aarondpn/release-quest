@@ -9,7 +9,7 @@ import type {
   ShopBuyMsg, ShopReadyMsg, SelectRoleMsg, ChatMessageMsg,
   GetLeaderboardMsg, GetMyStatsMsg, GetRecordingsMsg,
   ShareRecordingMsg, UnshareRecordingMsg, GetQuestsMsg, GetBalanceMsg,
-  GetShopCatalogMsg, ShopSeenMsg, ShopPurchaseMsg, MapVoteMsg, DevCommandMsg,
+  GetShopCatalogMsg, ShopSeenMsg, ShopPurchaseMsg, MapVoteMsg, EventVoteMsg, DevCommandMsg,
 } from '../../shared/messages.ts';
 
 // --- No-payload messages ---
@@ -226,6 +226,11 @@ const mapVoteSchema = z.object({
   nodeId: z.string().max(16),
 }) satisfies ZodType<MapVoteMsg>;
 
+const eventVoteSchema = z.object({
+  type: z.literal('event-vote'),
+  optionId: z.string().max(32),
+}) satisfies ZodType<EventVoteMsg>;
+
 // --- Dev mode ---
 
 const devCommandSchema = z.object({
@@ -276,4 +281,5 @@ export const staticSchemas: Record<string, ZodType> = {
   'shop-seen': shopSeenSchema,
   'shop-purchase': shopPurchaseSchema,
   'map-vote': mapVoteSchema,
+  'event-vote': eventVoteSchema,
 };
