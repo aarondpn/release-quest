@@ -27,7 +27,8 @@ export const handleRestVote: MessageHandler = ({ pid, msg, playerInfo }) => {
 export const handleMiniBossClick: MessageHandler = ({ pid, msg, playerInfo }) => {
   const ctx = getCtxForPlayer(pid, playerInfo);
   if (!ctx || ctx.state.gameMode !== 'roguelike') return;
-  miniBoss.handleMiniBossClick(ctx, pid, msg.entityId);
+  const clickPos = msg.x !== undefined && msg.y !== undefined ? { x: msg.x, y: msg.y } : undefined;
+  miniBoss.handleMiniBossClick(ctx, pid, msg.entityId, clickPos);
 };
 
 export const handleEncounterRewardContinue: MessageHandler = ({ pid, playerInfo }) => {

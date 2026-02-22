@@ -289,6 +289,8 @@ export interface RestVoteMsg {
 export interface MiniBossClickMsg {
   type: 'mini-boss-click';
   entityId: string;
+  x?: number;
+  y?: number;
 }
 
 export interface EncounterRewardContinueMsg {
@@ -1181,18 +1183,21 @@ export interface MiniBossSpawnMsg {
   description: string;
   timeLimit: number;
   entities: MiniBossEntity[];
+  extra?: Record<string, unknown>;
 }
 
 export interface MiniBossTickMsg {
   type: 'mini-boss-tick';
   timeRemaining: number;
   entities: MiniBossEntity[];
+  extra?: Record<string, unknown>;
 }
 
 export interface MiniBossEntityUpdateMsg {
   type: 'mini-boss-entity-update';
   entities: MiniBossEntity[];
   warning?: string;
+  extra?: Record<string, unknown>;
 }
 
 export interface MiniBossDefeatedMsg {

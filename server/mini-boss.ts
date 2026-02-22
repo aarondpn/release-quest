@@ -48,6 +48,7 @@ export function startMiniBoss(ctx: GameContext, nodeId: string): void {
     description: plugin.description,
     timeLimit: plugin.timeLimit,
     entities: mbState.entities,
+    extra: mbState.data._extra as Record<string, unknown> | undefined,
   });
 
   // Start tick timer (1s intervals)
@@ -56,14 +57,14 @@ export function startMiniBoss(ctx: GameContext, nodeId: string): void {
   }, 1000);
 }
 
-export function handleMiniBossClick(ctx: GameContext, pid: string, entityId: string): void {
+export function handleMiniBossClick(ctx: GameContext, pid: string, entityId: string, clickPos?: { x: number; y: number }): void {
   const { state } = ctx;
   if (state.phase !== 'mini_boss' || !state.miniBoss) return;
 
   const plugin = getMiniBossType(state.miniBoss.type);
   if (!plugin) return;
 
-  plugin.onClick(ctx, pid, entityId);
+  plugin.onClick(ctx, pid, entityId, clickPos);
 
   // Check victory after click
   if (plugin.checkVictory(ctx)) {
@@ -92,6 +93,7 @@ function miniBossTick(ctx: GameContext): void {
     type: 'mini-boss-tick',
     timeRemaining: state.miniBoss.timeRemaining,
     entities: state.miniBoss.entities,
+    extra: state.miniBoss.data._extra as Record<string, unknown> | undefined,
   });
 
   // Check timeout

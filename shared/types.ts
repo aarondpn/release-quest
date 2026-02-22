@@ -157,4 +157,6 @@ export interface MiniBossEntity {
   isOriginal?: boolean;
   spawnedAt?: number;
   frozen?: boolean;
+  label?: string;
+  variant?: string;
 }

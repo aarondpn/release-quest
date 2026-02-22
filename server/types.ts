@@ -196,7 +196,7 @@ export interface MiniBossPlugin {
   timeLimit: number;
   defeatPenalty: number;
   init(ctx: GameContext): MiniBossEntity[];
-  onClick(ctx: GameContext, pid: string, entityId: string): void;
+  onClick(ctx: GameContext, pid: string, entityId: string, clickPos?: { x: number; y: number }): void;
   onTick(ctx: GameContext): void;
   checkVictory(ctx: GameContext): boolean;
 }

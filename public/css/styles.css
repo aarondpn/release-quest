@@ -7475,125 +7475,577 @@ body.qa-hitbox-active .arena .bug::before {
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 20px;
+  padding: 16px 20px;
+  gap: 0;
 }
+
+/* ── Header ── */
 
 .mini-boss-header {
   text-align: center;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+  position: relative;
 }
 
 .mini-boss-icon {
-  font-size: 40px;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 6px;
+  filter: drop-shadow(0 0 12px rgba(168, 85, 247, 0.5));
+  animation: mb-icon-pulse 2s ease-in-out infinite;
+}
+
+.mini-boss-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes mb-icon-pulse {
+  0%, 100% { filter: drop-shadow(0 0 12px rgba(168, 85, 247, 0.5)); }
+  50% { filter: drop-shadow(0 0 20px rgba(255, 107, 107, 0.6)); }
+}
+
+.mini-boss-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
   margin-bottom: 4px;
 }
 
 .mini-boss-title {
   font-family: 'Press Start 2P', monospace;
-  font-size: 14px;
-  color: #e74c3c;
-  margin-bottom: 4px;
-  text-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+  font-size: 13px;
+  color: var(--red);
+  text-shadow:
+    0 0 10px rgba(255, 107, 107, 0.4),
+    0 0 30px rgba(255, 107, 107, 0.15);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.mini-boss-timer {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  border-radius: 4px;
+}
+
+.mini-boss-timer-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--red);
+  letter-spacing: 1px;
+}
+
+.mini-boss-timer-text.urgent {
+  color: #ff4444;
+  animation: mb-timer-urgent 0.3s steps(2) infinite;
+}
+
+@keyframes mb-timer-urgent {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 
 .mini-boss-desc {
   font-family: 'Press Start 2P', monospace;
   font-size: 7px;
-  color: #ddd;
+  color: var(--muted);
   line-height: 1.6;
-  margin-bottom: 8px;
+  max-width: 500px;
 }
 
-.mini-boss-timer {
-  display: inline-block;
-  padding: 4px 12px;
-  background: rgba(231, 76, 60, 0.2);
-  border: 1px solid rgba(231, 76, 60, 0.4);
-  border-radius: 8px;
-}
-
-.mini-boss-timer-text {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 12px;
-  color: #e74c3c;
-}
-
-.mini-boss-timer-text.urgent {
-  color: #ff4444;
-  animation: timer-pulse 0.5s ease-in-out infinite;
-}
-
-@keyframes timer-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
+/* ── Arena ── */
 
 .mini-boss-arena {
   position: relative;
   width: 100%;
-  max-width: 600px;
+  max-width: 620px;
   aspect-ratio: 8 / 5;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(168, 85, 247, 0.04) 0%, transparent 70%),
+    linear-gradient(180deg, rgba(15, 14, 23, 0.95) 0%, rgba(26, 26, 46, 0.6) 100%);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  border-radius: 8px;
   overflow: hidden;
+  box-shadow:
+    inset 0 0 60px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(168, 85, 247, 0.08);
 }
+
+/* Grid overlay inside arena */
+.mini-boss-arena::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(168, 85, 247, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168, 85, 247, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Danger border glow per boss type */
+.mini-boss-arena.arena-stack-overflow {
+  border-color: rgba(255, 107, 107, 0.25);
+  box-shadow:
+    inset 0 0 60px rgba(0, 0, 0, 0.4),
+    0 0 24px rgba(255, 107, 107, 0.1);
+}
+
+.mini-boss-arena.arena-race-condition {
+  border-color: rgba(78, 205, 196, 0.2);
+  box-shadow:
+    inset 0 0 60px rgba(0, 0, 0, 0.4),
+    0 0 24px rgba(78, 205, 196, 0.08);
+  cursor: pointer;
+}
+
+.mini-boss-arena.arena-deadlock {
+  border-color: rgba(168, 85, 247, 0.25);
+  box-shadow:
+    inset 0 0 60px rgba(0, 0, 0, 0.4),
+    0 0 24px rgba(168, 85, 247, 0.1);
+}
+
+/* ── Entities ── */
 
 .mini-boss-entity {
   position: absolute;
   transform: translate(-50%, -50%);
   cursor: pointer;
-  transition: left 0.3s ease, top 0.3s ease, opacity 0.3s ease;
+  transition:
+    left 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    top 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s ease,
+    filter 0.2s ease;
   text-align: center;
   user-select: none;
+  z-index: 1;
 }
 
-.mini-boss-entity:hover:not(.defeated) {
-  transform: translate(-50%, -50%) scale(1.15);
+.mini-boss-entity:hover:not(.defeated):not(.frozen) {
+  transform: translate(-50%, -50%) scale(1.12);
+  filter: brightness(1.2);
+}
+
+.mini-boss-entity:active:not(.defeated):not(.frozen) {
+  transform: translate(-50%, -50%) scale(0.95);
 }
 
 .mini-boss-entity.defeated {
-  opacity: 0.3;
+  opacity: 0.15;
   pointer-events: none;
-  filter: grayscale(1);
+  filter: grayscale(1) brightness(0.5);
 }
 
 .mini-boss-entity.frozen {
-  animation: entity-freeze 0.3s ease;
-  filter: brightness(0.6) saturate(0.5);
+  filter: brightness(0.5) saturate(0.3);
   pointer-events: none;
+  animation: mb-entity-freeze 0.15s steps(3) 3;
 }
 
-@keyframes entity-freeze {
+@keyframes mb-entity-freeze {
   0%, 100% { transform: translate(-50%, -50%); }
-  25% { transform: translate(-48%, -50%); }
-  75% { transform: translate(-52%, -50%); }
+  33% { transform: translate(-49%, -51%); }
+  66% { transform: translate(-51%, -49%); }
 }
 
-.mini-boss-entity.original {
-  filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6));
+.mini-boss-entity.entity-despawn {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.3);
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 .mini-boss-entity-icon {
-  font-size: 36px;
-  line-height: 1;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto;
+  line-height: 0;
 }
 
+.mini-boss-entity-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Entity labels */
+
+.mini-boss-entity-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--muted);
+  margin-top: 2px;
+  letter-spacing: 1px;
+}
+
+.mini-boss-entity-label.label-thread-a { color: var(--teal); }
+.mini-boss-entity-label.label-thread-b { color: var(--red); }
+
+/* Entity HP bar */
+
 .mini-boss-entity-hp {
-  width: 50px;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.15);
+  width: 48px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 2px;
-  margin: 4px auto 0;
+  margin: 3px auto 0;
   overflow: hidden;
+  position: relative;
 }
 
 .mini-boss-entity-hp-fill {
   height: 100%;
-  background: linear-gradient(90deg, #e74c3c, #2ecc71);
+  background: linear-gradient(90deg, var(--red), var(--teal));
   border-radius: 2px;
   transition: width 0.2s ease;
 }
+
+/* ── Variant: boss (Stack Overflow overheat CPU) ── */
+
+.mini-boss-entity.variant-boss {
+  filter: drop-shadow(0 0 10px rgba(255, 107, 107, 0.4));
+}
+
+.mini-boss-entity.variant-boss .mini-boss-entity-icon {
+  width: 56px;
+  height: 56px;
+  animation: mb-boss-hover 3s ease-in-out infinite;
+}
+
+@keyframes mb-boss-hover {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* ── Variant: coolant pickup ── */
+
+.mini-boss-entity.variant-coolant {
+  filter: drop-shadow(0 0 8px rgba(78, 205, 196, 0.5));
+  animation: mb-coolant-float 1.5s ease-in-out infinite;
+}
+
+.mini-boss-entity.variant-coolant .mini-boss-entity-icon {
+  width: 32px;
+  height: 32px;
+}
+
+@keyframes mb-coolant-float {
+  0%, 100% { transform: translate(-50%, -50%) rotate(0deg); }
+  25% { transform: translate(-50%, -54%) rotate(3deg); }
+  75% { transform: translate(-50%, -46%) rotate(-3deg); }
+}
+
+/* ── Variant: threads (Race Condition) ── */
+
+.mini-boss-entity.variant-thread-a {
+  filter: drop-shadow(0 0 10px rgba(78, 205, 196, 0.5));
+}
+
+.mini-boss-entity.variant-thread-a .mini-boss-entity-icon {
+  width: 52px;
+  height: 52px;
+  animation: mb-thread-a-spin 8s linear infinite;
+}
+
+@keyframes mb-thread-a-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.mini-boss-entity.variant-thread-b {
+  filter: drop-shadow(0 0 10px rgba(255, 107, 107, 0.5));
+}
+
+.mini-boss-entity.variant-thread-b .mini-boss-entity-icon {
+  width: 52px;
+  height: 52px;
+  animation: mb-thread-b-spin 8s linear infinite reverse;
+}
+
+@keyframes mb-thread-b-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Click ripple for race-condition arena */
+
+.mb-click-ripple {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  margin-left: -30px;
+  margin-top: -30px;
+  border-radius: 50%;
+  border: 2px solid rgba(168, 85, 247, 0.6);
+  animation: mb-ripple-expand 0.6s ease-out forwards;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes mb-ripple-expand {
+  0% { transform: scale(0.2); opacity: 1; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+/* Collision flash */
+
+.mini-boss-arena.collision-flash {
+  animation: mb-collision-flash 0.4s ease-out;
+}
+
+@keyframes mb-collision-flash {
+  0% {
+    box-shadow:
+      inset 0 0 80px rgba(255, 230, 109, 0.3),
+      0 0 40px rgba(255, 230, 109, 0.3);
+    border-color: rgba(255, 230, 109, 0.6);
+  }
+  100% {
+    box-shadow:
+      inset 0 0 60px rgba(0, 0, 0, 0.4),
+      0 0 24px rgba(78, 205, 196, 0.08);
+    border-color: rgba(78, 205, 196, 0.2);
+  }
+}
+
+/* ── Variant: lock (Deadlock) ── */
+
+.mini-boss-entity.variant-lock {
+  filter: drop-shadow(0 0 6px rgba(168, 85, 247, 0.3));
+  transition:
+    left 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    top 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.3s ease,
+    filter 0.3s ease,
+    transform 0.2s ease;
+}
+
+.mini-boss-entity.variant-lock .mini-boss-entity-icon {
+  width: 48px;
+  height: 48px;
+}
+
+/* Sequence highlight for deadlock */
+
+.mini-boss-entity.sequence-highlight {
+  filter: drop-shadow(0 0 16px rgba(255, 230, 109, 0.8));
+  transform: translate(-50%, -50%) scale(1.25);
+  z-index: 5;
+}
+
+.mini-boss-arena.showing-sequence .mini-boss-entity {
+  pointer-events: none;
+  opacity: 0.35;
+  filter: drop-shadow(0 0 4px rgba(168, 85, 247, 0.15)) brightness(0.6);
+}
+
+.mini-boss-arena.showing-sequence .mini-boss-entity.sequence-highlight {
+  opacity: 1;
+  filter: drop-shadow(0 0 20px rgba(255, 230, 109, 0.9)) brightness(1.1);
+}
+
+/* ── Heat Gauge (Stack Overflow) ── */
+
+.mini-boss-heat-gauge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 6px 14px;
+  background: rgba(255, 107, 107, 0.06);
+  border: 1px solid rgba(255, 107, 107, 0.12);
+  border-radius: 6px;
+  max-width: 360px;
+  width: 100%;
+}
+
+.heat-icon {
+  width: 14px;
+  height: 22px;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.heat-icon svg { width: 100%; height: 100%; }
+
+.heat-track {
+  flex: 1;
+  height: 10px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(255, 107, 107, 0.15);
+}
+
+.heat-segments {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  gap: 1px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.heat-segment {
+  flex: 1;
+  border-right: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+.heat-segment:last-child { border-right: none; }
+
+.heat-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b, #ef4444, #dc2626);
+  transition: width 0.12s ease;
+  z-index: 0;
+}
+
+.heat-fill.overheated {
+  background: #ef4444;
+  animation: mb-heat-overheated 0.2s steps(2) infinite;
+}
+
+@keyframes mb-heat-overheated {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.heat-threshold {
+  position: absolute;
+  right: 0;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--red);
+  z-index: 2;
+  box-shadow: 0 0 4px rgba(255, 107, 107, 0.6);
+}
+
+.heat-value {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--red);
+  min-width: 30px;
+  text-align: right;
+  letter-spacing: 0.5px;
+}
+
+.heat-lockout-badge {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: #0f0e17;
+  background: var(--red);
+  padding: 2px 6px;
+  border-radius: 2px;
+  letter-spacing: 1px;
+  animation: mb-heat-overheated 0.3s steps(2) infinite;
+}
+
+/* ── Boss HP (Deadlock) ── */
+
+.mini-boss-boss-hp {
+  margin-bottom: 10px;
+  padding: 6px 14px;
+  background: rgba(168, 85, 247, 0.06);
+  border: 1px solid rgba(168, 85, 247, 0.12);
+  border-radius: 6px;
+  max-width: 360px;
+  width: 100%;
+}
+
+.mb-hp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.mb-hp-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: var(--purple);
+  letter-spacing: 1px;
+}
+
+.mb-hp-round {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: var(--muted);
+  letter-spacing: 1px;
+}
+
+.mb-hp-track {
+  height: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(168, 85, 247, 0.15);
+}
+
+.mb-hp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #7c3aed, #a855f7, #c084fc);
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.mb-hp-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent);
+  border-radius: 2px 2px 0 0;
+}
+
+.mb-hp-stripe {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 3px,
+    rgba(0, 0, 0, 0.1) 3px,
+    rgba(0, 0, 0, 0.1) 6px
+  );
+  pointer-events: none;
+}
+
+.mb-hp-phase {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  margin-top: 4px;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.mb-hp-phase.phase-showing {
+  color: var(--yellow);
+  animation: mb-phase-blink 1s steps(2) infinite;
+}
+
+.mb-hp-phase.phase-input {
+  color: var(--teal);
+}
+
+@keyframes mb-phase-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ── Result Overlay ── */
 
 .mini-boss-result {
   position: absolute;
@@ -7601,61 +8053,87 @@ body.qa-hitbox-active .arena .bug::before {
   left: 50%;
   transform: translate(-50%, -50%);
   text-align: center;
-  padding: 20px 40px;
-  border-radius: 12px;
-  animation: mini-boss-result-enter 0.5s ease-out;
+  padding: 24px 40px;
+  border-radius: 8px;
+  animation: mb-result-enter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 10;
+  backdrop-filter: blur(4px);
 }
 
 .mini-boss-result.victory {
-  background: rgba(46, 204, 113, 0.2);
-  border: 2px solid rgba(46, 204, 113, 0.6);
+  background: rgba(78, 205, 196, 0.1);
+  border: 2px solid rgba(78, 205, 196, 0.5);
+  box-shadow: 0 0 40px rgba(78, 205, 196, 0.15);
 }
 
 .mini-boss-result.defeat {
-  background: rgba(231, 76, 60, 0.2);
-  border: 2px solid rgba(231, 76, 60, 0.6);
+  background: rgba(255, 107, 107, 0.1);
+  border: 2px solid rgba(255, 107, 107, 0.5);
+  box-shadow: 0 0 40px rgba(255, 107, 107, 0.15);
 }
 
 .mini-boss-result-icon {
-  font-size: 36px;
-  margin-bottom: 8px;
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 8px;
+}
+
+.mini-boss-result-icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 .mini-boss-result-text {
   font-family: 'Press Start 2P', monospace;
-  font-size: 14px;
+  font-size: 12px;
   color: #fff;
+  letter-spacing: 2px;
 }
 
 .mini-boss-result-hp {
   font-family: 'Press Start 2P', monospace;
-  font-size: 10px;
-  color: #e74c3c;
-  margin-top: 4px;
+  font-size: 9px;
+  color: var(--red);
+  margin-top: 6px;
 }
 
-@keyframes mini-boss-result-enter {
-  from { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+@keyframes mb-result-enter {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
   to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
+/* ── Warning Banner ── */
+
 .mini-boss-warning {
   position: absolute;
-  bottom: 20px;
+  bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 8px 16px;
-  background: rgba(231, 76, 60, 0.9);
-  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: rgba(255, 107, 107, 0.15);
+  border: 1px solid rgba(255, 107, 107, 0.4);
+  border-radius: 4px;
   font-family: 'Press Start 2P', monospace;
-  font-size: 7px;
-  color: #fff;
-  animation: mini-boss-warning-enter 0.3s ease-out;
+  font-size: 6px;
+  color: var(--red);
+  white-space: nowrap;
+  animation: mb-warning-enter 0.25s ease-out;
   z-index: 10;
+  backdrop-filter: blur(4px);
 }
 
-@keyframes mini-boss-warning-enter {
-  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+.mini-boss-warning .warning-icon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  color: var(--red);
+}
+
+@keyframes mb-warning-enter {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
   to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
@@ -7779,9 +8257,13 @@ body.qa-hitbox-active .arena .bug::before {
   .elite-banner-icon { font-size: 32px; }
   .elite-banner-title { font-size: 12px; }
 
-  #mini-boss-screen { padding: 10px; }
-  .mini-boss-icon { font-size: 28px; }
+  #mini-boss-screen { padding: 8px 10px; }
+  .mini-boss-icon { width: 36px; height: 36px; }
   .mini-boss-title { font-size: 10px; }
+  .mini-boss-entity-icon { width: 36px; height: 36px; }
+  .mini-boss-entity.variant-boss .mini-boss-entity-icon { width: 44px; height: 44px; }
+  .mini-boss-heat-gauge, .mini-boss-boss-hp { max-width: 280px; }
+  .mini-boss-arena { max-width: 100%; }
 
   .reward-card { padding: 16px 20px; min-width: auto; width: 90%; }
 }
