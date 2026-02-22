@@ -2,8 +2,8 @@ import logger from './logger.ts';
 import type { GamePhase, GameState, GameLifecycle, CleanupHook } from './types.ts';
 
 const VALID_TRANSITIONS: Record<GamePhase, GamePhase[]> = {
-  lobby:    ['playing', 'map_view'],
-  playing:  ['shopping', 'boss', 'gameover', 'lobby', 'map_view'],
+  lobby:    ['playing', 'map_view', 'mini_boss', 'boss'],
+  playing:  ['shopping', 'boss', 'gameover', 'lobby', 'map_view', 'mini_boss'],
   shopping: ['playing', 'boss', 'lobby', 'map_view'],
   boss:     ['gameover', 'win', 'lobby'],
   gameover: ['playing', 'lobby'],

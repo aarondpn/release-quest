@@ -547,17 +547,53 @@ fetch('/api/dev-mode')
     const panel = document.createElement('div');
     panel.id = 'dev-panel';
     panel.innerHTML = `
-      <div id="dev-panel-header">DEV</div>
+      <div id="dev-panel-header">PLAYGROUND</div>
       <div id="dev-panel-body" class="hidden">
-        <button class="dev-btn" data-cmd="skip-to-boss">Skip to Boss</button>
-        <div class="dev-level-btns">
-          <button class="dev-btn" data-cmd="skip-to-level" data-level="1">Lv 1</button>
-          <button class="dev-btn" data-cmd="skip-to-level" data-level="2">Lv 2</button>
-          <button class="dev-btn" data-cmd="skip-to-level" data-level="3">Lv 3</button>
+        <div class="dev-section">
+          <div class="dev-section-label">Mini-Bosses</div>
+          <div class="dev-grid">
+            <button class="dev-btn" data-cmd="spawn-mini-boss" data-target="stack-overflow">Stack Overflow</button>
+            <button class="dev-btn" data-cmd="spawn-mini-boss" data-target="race-condition">Race Condition</button>
+            <button class="dev-btn" data-cmd="spawn-mini-boss" data-target="deadlock">Deadlock</button>
+          </div>
         </div>
-        <div class="dev-hp-row">
-          <input type="number" id="dev-boss-hp" placeholder="Boss HP" min="0" />
-          <button class="dev-btn" data-cmd="set-boss-hp">Set</button>
+        <div class="dev-section">
+          <div class="dev-section-label">Elites</div>
+          <div class="dev-grid">
+            <button class="dev-btn" data-cmd="spawn-elite" data-target="super-heisenbug">Super-Heisenbug</button>
+            <button class="dev-btn" data-cmd="spawn-elite" data-target="mega-pipeline">Mega-Pipeline</button>
+            <button class="dev-btn" data-cmd="spawn-elite" data-target="memory-leak-cluster">Memory Leak</button>
+            <button class="dev-btn" data-cmd="spawn-elite" data-target="merge-conflict-chain">Merge Conflict</button>
+          </div>
+        </div>
+        <div class="dev-section">
+          <div class="dev-section-label">Encounters</div>
+          <div class="dev-grid">
+            <button class="dev-btn" data-cmd="spawn-boss">Boss Fight</button>
+            <button class="dev-btn" data-cmd="spawn-level" data-level="1">Level 1</button>
+            <button class="dev-btn" data-cmd="spawn-level" data-level="2">Level 2</button>
+            <button class="dev-btn" data-cmd="spawn-level" data-level="3">Level 3</button>
+          </div>
+        </div>
+        <div class="dev-section">
+          <div class="dev-section-label">Controls</div>
+          <div class="dev-hp-row">
+            <input type="number" id="dev-hp-input" placeholder="HP" min="1" max="150" />
+            <button class="dev-btn" data-cmd="set-hp">Set HP</button>
+          </div>
+          <div class="dev-hp-row">
+            <input type="number" id="dev-boss-hp" placeholder="Boss HP" min="0" />
+            <button class="dev-btn" data-cmd="set-boss-hp">Set</button>
+          </div>
+        </div>
+        <div class="dev-section">
+          <div class="dev-section-label">Classic</div>
+          <div class="dev-grid">
+            <button class="dev-btn" data-cmd="skip-to-boss">Skip to Boss</button>
+            <button class="dev-btn" data-cmd="skip-to-level" data-level="1">Lv 1</button>
+            <button class="dev-btn" data-cmd="skip-to-level" data-level="2">Lv 2</button>
+            <button class="dev-btn" data-cmd="skip-to-level" data-level="3">Lv 3</button>
+          </div>
         </div>
       </div>
     `;
@@ -571,12 +607,12 @@ fetch('/api/dev-mode')
       const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-cmd]');
       if (!btn) return;
       const cmd = btn.dataset.cmd!;
-      sendMessage({
-        type: 'dev-command',
-        command: cmd,
-        ...(cmd === 'skip-to-level' ? { level: parseInt(btn.dataset.level!) } : {}),
-        ...(cmd === 'set-boss-hp' ? { value: parseInt((document.getElementById('dev-boss-hp') as HTMLInputElement).value) || 1 } : {}),
-      });
+      const devMsg: any = { type: 'dev-command', command: cmd };
+      if (btn.dataset.target) devMsg.target = btn.dataset.target;
+      if (btn.dataset.level) devMsg.level = parseInt(btn.dataset.level);
+      if (cmd === 'set-boss-hp') devMsg.value = parseInt((document.getElementById('dev-boss-hp') as HTMLInputElement).value) || 1;
+      if (cmd === 'set-hp') devMsg.value = parseInt((document.getElementById('dev-hp-input') as HTMLInputElement).value) || 100;
+      sendMessage(devMsg);
     });
   })
   .catch(() => { /* dev-mode endpoint not available */ });

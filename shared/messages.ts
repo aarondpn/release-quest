@@ -302,6 +302,7 @@ export interface DevCommandMsg {
   command: string;
   level?: number;
   value?: number;
+  target?: string;
 }
 
 export type ClientMessage =
@@ -1018,6 +1019,10 @@ export interface DevErrorMsg {
   message: string;
 }
 
+export interface PlaygroundReadyMsg {
+  type: 'playground-ready';
+}
+
 // Quests
 
 export interface QuestsDataMsg {
@@ -1318,6 +1323,7 @@ export type ServerMessage =
   | ChatErrorMsg
   // Dev
   | DevErrorMsg
+  | PlaygroundReadyMsg
   // Quests
   | QuestsDataMsg
   | QuestProgressMsg

@@ -236,6 +236,7 @@ export interface GameState {
   restVotes?: Record<string, string>;
   eliteConfig?: EliteConfig;
   miniBoss?: MiniBossState;
+  playground?: boolean;
 }
 
 export interface GameCounters {

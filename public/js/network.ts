@@ -1312,6 +1312,21 @@ export function handleMessageInternal(msg: ServerMessage): void {
       break;
     }
 
+    case 'playground-ready': {
+      clearAllBugs();
+      removeBossElement();
+      removeDuckElement();
+      removeHammerElement();
+      removeDuckBuffOverlay();
+      removeHammerStunOverlay();
+      clearAllShopState();
+      hideAllScreens();
+      hideLiveDashboard();
+      showStartScreen();
+      updateHUD(0, 1, 100);
+      break;
+    }
+
     case 'quests-data': {
       handleQuestsData(msg);
       break;

@@ -12,7 +12,7 @@ import type { GameContext, EliteConfig, BugEntity, LevelConfigEntry } from './ty
 
 // ── Elite selection ──
 
-const ELITE_KEYS = Object.keys(ELITE_CONFIG.types);
+export const ELITE_KEYS = Object.keys(ELITE_CONFIG.types);
 
 export function pickElite(seed: number, nodeId: string): string {
   const combined = seed + hashString(nodeId);
@@ -27,11 +27,22 @@ export function startElite(ctx: GameContext, nodeId: string): void {
   if (!state.roguelikeMap) return;
 
   const eliteType = pickElite(state.roguelikeMap.seed, nodeId);
-  const typeDef = ELITE_CONFIG.types[eliteType];
-  if (!typeDef) return;
-
   const node = state.roguelikeMap.nodes.find(n => n.id === nodeId);
   state.level = node ? node.row + 1 : 1;
+
+  startEliteInternal(ctx, eliteType);
+}
+
+export function startEliteDirect(ctx: GameContext, eliteType: string): void {
+  const { state } = ctx;
+  state.level = 1;
+  startEliteInternal(ctx, eliteType);
+}
+
+function startEliteInternal(ctx: GameContext, eliteType: string): void {
+  const { state } = ctx;
+  const typeDef = ELITE_CONFIG.types[eliteType];
+  if (!typeDef) return;
 
   const eliteConfig: EliteConfig = {
     eliteType,
@@ -142,6 +153,14 @@ function completeElite(ctx: GameContext): void {
 
   state.eliteConfig = undefined;
 
+  if (state.playground) {
+    ctx.timers.lobby.setTimeout('playgroundReturn', () => {
+      ctx.lifecycle.transition(state, 'lobby');
+      ctx.events.emit({ type: 'playground-ready' });
+    }, 1500);
+    return;
+  }
+
   const delay = soloMode ? 100 : 5000;
   ctx.timers.lobby.setTimeout('eliteRewardDone', () => {
     roguelike.handleNodeComplete(ctx);
@@ -155,9 +174,16 @@ export function handleEncounterRewardContinue(ctx: GameContext): void {
 
   ctx.timers.lobby.clear('eliteRewardDone');
   ctx.timers.lobby.clear('miniBossRewardDone');
+  ctx.timers.lobby.clear('playgroundReturn');
 
   state.eliteConfig = undefined;
   state.miniBoss = undefined;
+
+  if (state.playground) {
+    ctx.lifecycle.transition(state, 'lobby');
+    ctx.events.emit({ type: 'playground-ready' });
+    return;
+  }
 
   roguelike.handleNodeComplete(ctx);
 }

@@ -18,11 +18,24 @@ export function startMiniBoss(ctx: GameContext, nodeId: string): void {
   if (!state.roguelikeMap) return;
 
   const mbType = pickMiniBoss(state.roguelikeMap.seed, nodeId);
+  startMiniBossInternal(ctx, mbType, nodeId);
+}
+
+export function startMiniBossDirect(ctx: GameContext, miniBossType: string): void {
+  startMiniBossInternal(ctx, miniBossType, null);
+}
+
+function startMiniBossInternal(ctx: GameContext, mbType: string, nodeId: string | null): void {
+  const { state } = ctx;
   const plugin = getMiniBossType(mbType);
   if (!plugin) return;
 
-  const node = state.roguelikeMap.nodes.find(n => n.id === nodeId);
-  state.level = node ? node.row + 1 : 1;
+  if (nodeId && state.roguelikeMap) {
+    const node = state.roguelikeMap.nodes.find(n => n.id === nodeId);
+    state.level = node ? node.row + 1 : 1;
+  } else if (!nodeId) {
+    state.level = 1;
+  }
 
   const mbState: MiniBossState = {
     type: mbType,
@@ -154,6 +167,14 @@ function endMiniBoss(ctx: GameContext, victory: boolean): void {
 
     state.miniBoss = undefined;
 
+    if (state.playground) {
+      ctx.timers.lobby.setTimeout('playgroundReturn', () => {
+        ctx.lifecycle.transition(state, 'lobby');
+        ctx.events.emit({ type: 'playground-ready' });
+      }, 1500);
+      return;
+    }
+
     const delay = soloMode ? 100 : 5000;
     ctx.timers.lobby.setTimeout('miniBossRewardDone', () => {
       roguelike.handleNodeComplete(ctx);
@@ -161,6 +182,15 @@ function endMiniBoss(ctx: GameContext, victory: boolean): void {
   } else {
     // Defeat: return to map after brief delay
     state.miniBoss = undefined;
+
+    if (state.playground) {
+      if (state.hp <= 0) state.hp = 1; // Don't game-over in playground
+      ctx.timers.lobby.setTimeout('playgroundReturn', () => {
+        ctx.lifecycle.transition(state, 'lobby');
+        ctx.events.emit({ type: 'playground-ready' });
+      }, 1500);
+      return;
+    }
 
     // Check for game over
     if (state.hp <= 0) {

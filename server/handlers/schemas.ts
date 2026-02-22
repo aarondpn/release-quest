@@ -256,6 +256,7 @@ const devCommandSchema = z.object({
   command: z.string().max(32),
   level: z.number().int().min(1).max(3).optional(),
   value: z.number().optional(),
+  target: z.string().max(64).optional(),
 }) satisfies ZodType<DevCommandMsg>;
 
 // --- Registry ---

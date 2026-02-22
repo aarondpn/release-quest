@@ -17,6 +17,25 @@ import type { GameContext } from './types.ts';
 export function endGame(ctx: GameContext, outcome: string, win: boolean): void {
   const { lobbyId, state } = ctx;
 
+  // Playground mode: skip stats/recording, return to lobby
+  if (state.playground) {
+    ctx.lifecycle.teardown();
+    state.boss = null;
+    state.eliteConfig = undefined;
+    state.miniBoss = undefined;
+    ctx.events.emit({
+      type: win ? 'boss-defeated' : 'game-over',
+      score: state.score,
+      level: state.level,
+      players: getPlayerScores(state),
+    });
+    ctx.timers.lobby.setTimeout('playgroundReturn', () => {
+      ctx.lifecycle.transition(state, 'lobby');
+      ctx.events.emit({ type: 'playground-ready' });
+    }, 2000);
+    return;
+  }
+
   // Log match-end event before teardown closes the log
   if (ctx.matchLog) {
     ctx.matchLog.log('game-end', {
@@ -156,6 +175,17 @@ export function checkGameState(ctx: GameContext): void {
     if (state.phase !== 'playing') return;
 
     if (state.hp <= 0) {
+      if (state.playground) {
+        state.hp = 1; // Don't game-over in playground
+        bugs.clearSpawnTimer(ctx);
+        for (const bugId of Object.keys(state.bugs)) {
+          state.bugs[bugId]._timers.clearAll();
+          delete state.bugs[bugId];
+        }
+        ctx.lifecycle.transition(state, 'lobby');
+        ctx.events.emit({ type: 'playground-ready' });
+        return;
+      }
       endGame(ctx, 'loss', false);
       return;
     }
@@ -192,6 +222,16 @@ export function checkGameState(ctx: GameContext): void {
         level: state.level,
         score: state.score,
       });
+
+      // Playground mode: return to lobby after level ends
+      if (state.playground) {
+        ctx.timers.lobby.setTimeout('playgroundReturn', () => {
+          ctx.lifecycle.transition(state, 'lobby');
+          ctx.events.emit({ type: 'playground-ready' });
+        }, 1500);
+        return;
+      }
+
       // Brief pause, then next phase
       ctx.timers.lobby.setTimeout('levelTransition', () => {
         try {
@@ -217,6 +257,10 @@ export function checkBossGameState(ctx: GameContext): void {
     const { state } = ctx;
     if (state.phase !== 'boss') return;
     if (state.hp <= 0) {
+      if (state.playground) {
+        state.hp = 1;
+        return;
+      }
       endGame(ctx, 'loss', false);
     }
   } catch (err) {
@@ -227,6 +271,7 @@ export function checkBossGameState(ctx: GameContext): void {
 export function resetToLobby(ctx: GameContext): void {
   const { state } = ctx;
   const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
+  const wasPlayground = state.playground;
   ctx.lifecycle.teardown();
   ctx.lifecycle.transition(state, 'lobby');
   state.score = 0;
@@ -246,4 +291,5 @@ export function resetToLobby(ctx: GameContext): void {
   state.miniBoss = undefined;
   state.persistentScoreMultiplier = undefined;
   state.restVotes = undefined;
+  state.playground = wasPlayground;
 }

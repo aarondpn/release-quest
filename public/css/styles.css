@@ -5353,10 +5353,12 @@ header p {
   font-family: monospace;
   font-size: 12px;
   color: #ff8888;
-  min-width: 140px;
+  min-width: 200px;
+  max-height: 80vh;
+  overflow-y: auto;
 }
 #dev-panel-header {
-  padding: 4px 10px;
+  padding: 6px 10px;
   cursor: pointer;
   font-weight: bold;
   text-align: center;
@@ -5368,21 +5370,41 @@ header p {
   padding: 8px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+}
+.dev-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dev-section-label {
+  font-size: 9px;
+  color: #ff6666;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding-bottom: 2px;
+  border-bottom: 1px solid #ff444433;
+}
+.dev-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
 }
 .dev-btn {
   background: #2a1515;
   color: #ff8888;
   border: 1px solid #ff444488;
   border-radius: 4px;
-  padding: 4px 8px;
+  padding: 4px 6px;
   cursor: pointer;
   font-family: monospace;
-  font-size: 11px;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .dev-btn:hover { background: #441515; color: #ffaaaa; }
-.dev-level-btns { display: flex; gap: 4px; }
-.dev-level-btns .dev-btn { flex: 1; }
+.dev-btn:active { background: #661515; }
 .dev-hp-row { display: flex; gap: 4px; }
 .dev-hp-row input {
   flex: 1;
