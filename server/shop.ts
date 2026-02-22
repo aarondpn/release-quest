@@ -2,6 +2,7 @@ import { MAX_LEVEL, getDifficultyConfig } from './config.ts';
 import { createLobbyLogger } from './logger.ts';
 import * as boss from './boss.ts';
 import { startLevel } from './game.ts';
+import * as roguelike from './roguelike.ts';
 import type { GameContext, ShopItem } from './types.ts';
 
 interface ShopItemDef {
@@ -116,15 +117,17 @@ export function openShop(ctx: GameContext): void {
     nextLevel: state.level >= MAX_LEVEL ? 'boss' : state.level + 1,
   });
 
-  // Auto-close after duration
-  ctx.timers.lobby.setTimeout('shopTimer', () => {
-    try {
-      closeShop(ctx);
-    } catch (err) {
-      const logCtx = createLobbyLogger(ctx.lobbyId.toString());
-      logCtx.error({ err }, 'Error closing shop');
-    }
-  }, diffConfig.shop.duration);
+  // In roguelike mode, no auto-close — players must click Ready
+  if (state.gameMode !== 'roguelike') {
+    ctx.timers.lobby.setTimeout('shopTimer', () => {
+      try {
+        closeShop(ctx);
+      } catch (err) {
+        const logCtx = createLobbyLogger(ctx.lobbyId.toString());
+        logCtx.error({ err }, 'Error closing shop');
+      }
+    }, diffConfig.shop.duration);
+  }
 }
 
 export function handleBuy(ctx: GameContext, pid: string, itemId: string): void {
@@ -214,7 +217,9 @@ export function closeShop(ctx: GameContext): void {
 
   ctx.events.emit({ type: 'shop-close' });
 
-  if (state.level >= MAX_LEVEL) {
+  if (state.gameMode === 'roguelike') {
+    roguelike.handleNodeComplete(ctx);
+  } else if (state.level >= MAX_LEVEL) {
     boss.startBoss(ctx);
   } else {
     state.level++;

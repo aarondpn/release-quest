@@ -16,6 +16,7 @@ import { showError, ERROR_LEVELS } from './error-handler.ts';
 import { initChatSend, initChat } from './chat.ts';
 import { initQuestsSend, requestQuests, showQuestsTab } from './quests-ui.ts';
 import { initShopSend, showShopTab, hideShopPanel } from './cosmetic-shop-ui.ts';
+import { initMapSend } from './roguelike-map-ui.ts';
 import type { DifficultyPreset } from './client-types.ts';
 import type { LobbyCustomConfig } from '../../shared/messages.ts';
 
@@ -196,6 +197,9 @@ dom.createLobbyBtn!.addEventListener('click', () => {
     if (dom.configHammerDuration!.value) { if (!customConfig.powerups) customConfig.powerups = {}; customConfig.powerups.hotfixHammerStunDuration = parseInt(dom.configHammerDuration!.value, 10); }
 
     const password = dom.lobbyPasswordInput!.value.trim();
+    const gameModeEl = document.getElementById('lobby-game-mode');
+    const gameMode = gameModeEl?.dataset.value === 'roguelike' ? 'roguelike' as const : undefined;
+
     sendMessage({
       type: 'create-lobby',
       name,
@@ -203,6 +207,7 @@ dom.createLobbyBtn!.addEventListener('click', () => {
       difficulty,
       ...(Object.keys(customConfig).length > 0 ? { customConfig } : {}),
       ...(password ? { password } : {}),
+      ...(gameMode ? { gameMode } : {}),
     });
 
     clientState.pendingLobbyPassword = password || null;
@@ -256,6 +261,23 @@ dom.lobbyDifficulty!.querySelector('.custom-select-options')!.addEventListener('
   updateDifficultyPlaceholders(difficulty);
 });
 document.addEventListener('click', () => dom.lobbyDifficulty!.classList.remove('open'));
+
+// ── Game mode dropdown ──
+const gameModeEl = document.getElementById('lobby-game-mode')!;
+gameModeEl.querySelector('.custom-select-trigger')!.addEventListener('click', (e: Event) => {
+  e.stopPropagation();
+  gameModeEl.classList.toggle('open');
+});
+gameModeEl.querySelector('.custom-select-options')!.addEventListener('click', (e: Event) => {
+  const opt = (e.target as HTMLElement).closest<HTMLElement>('.custom-select-option');
+  if (!opt) return;
+  gameModeEl.dataset.value = opt.dataset.value!;
+  gameModeEl.querySelector('.custom-select-trigger')!.textContent = opt.textContent + ' \u25BE';
+  gameModeEl.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('selected'));
+  opt.classList.add('selected');
+  gameModeEl.classList.remove('open');
+});
+document.addEventListener('click', () => gameModeEl.classList.remove('open'));
 
 // ── Advanced config toggle ──
 dom.advancedToggleBtn!.addEventListener('click', () => {
@@ -451,6 +473,7 @@ initThemePicker();
 initChatSend(sendMessage);
 initChat();
 initQuestsSend(sendMessage);
+initMapSend(sendMessage);
 
 // Initialize cosmetic shop
 initShopSend(sendMessage);

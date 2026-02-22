@@ -154,6 +154,13 @@
             <div class="custom-select-option" data-value="hard">Hard</div>
           </div>
         </div>
+        <div class="custom-select" id="lobby-game-mode" data-value="classic">
+          <div class="custom-select-trigger">Classic ▾</div>
+          <div class="custom-select-options">
+            <div class="custom-select-option selected" data-value="classic">Classic</div>
+            <div class="custom-select-option" data-value="roguelike">Roguelike</div>
+          </div>
+        </div>
         <button class="btn btn-small lobby-create-btn" id="create-lobby-btn">CREATE</button>
       </div>
       <div class="lobby-create-extras">
@@ -531,6 +538,29 @@
       <div class="screen-overlay hidden" id="boss-screen">
         <div class="screen-title boss-title">WARNING</div>
         <div class="screen-sub">MEGA BUG incoming!</div>
+      </div>
+
+      <!-- Roguelike map -->
+      <div class="screen-overlay hidden" id="map-screen">
+        <div class="map-layout">
+          <div class="map-container">
+            <svg id="map-edges" class="map-edges"></svg>
+            <div id="map-nodes" class="map-nodes"></div>
+          </div>
+          <div class="map-sidebar">
+            <div class="map-sidebar-title">EXPEDITION</div>
+            <div class="map-stats">
+              <div class="map-stat"><span class="map-stat-label">HP</span><span class="map-stat-value" id="map-hp-value">100</span></div>
+              <div class="map-stat"><span class="map-stat-label">Score</span><span class="map-stat-value" id="map-score-value">0</span></div>
+            </div>
+            <div class="map-vote-timer hidden" id="map-vote-timer">
+              <div class="map-timer-bar"><div class="map-timer-fill"></div></div>
+              <div class="map-timer-text">15s</div>
+            </div>
+            <div id="map-vote-status" class="map-vote-status"></div>
+            <div class="map-hint">Choose your next node</div>
+          </div>
+        </div>
       </div>
 
       <div class="live-dashboard hidden" id="live-dashboard"></div>

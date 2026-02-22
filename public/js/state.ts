@@ -37,6 +37,9 @@ export const clientState: ClientState = {
   questData: null,
   byteCoinsBalance: 0,
   questTimerInterval: null,
+  // Roguelike
+  gameMode: 'classic',
+  roguelikeMap: null,
   // Dev mode
   devMode: false,
   // Spectator state
@@ -64,6 +67,7 @@ export const dom: DomRefs = {
   levelScreen: null,
   bossScreen: null,
   shopScreen: null,
+  mapScreen: null,
   nameEntry: null,
   nameInput: null,
   iconPicker: null,
@@ -193,6 +197,7 @@ export function initDom(): void {
   dom.levelScreen = document.getElementById('level-screen');
   dom.bossScreen = document.getElementById('boss-screen');
   dom.shopScreen = document.getElementById('shop-screen');
+  dom.mapScreen = document.getElementById('map-screen');
   dom.nameEntry = document.getElementById('name-entry');
   dom.nameInput = document.getElementById('name-input') as HTMLInputElement | null;
   dom.iconPicker = document.getElementById('icon-picker');

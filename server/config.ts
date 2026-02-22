@@ -106,6 +106,18 @@ export function getWeeklyRotation(): { items: CosmeticShopItem[]; rotationEndUtc
   return _cachedRotation;
 }
 
+export const ROGUELIKE_CONFIG = {
+  mapRows: 5,
+  voteTimerMs: 15000,
+  rowScaling: {
+    1: { bugsTotal: 7,  escapeTime: 5500, spawnRate: 2300, maxOnScreen: 2 },
+    2: { bugsTotal: 10, escapeTime: 4500, spawnRate: 1900, maxOnScreen: 3 },
+    3: { bugsTotal: 11, escapeTime: 4000, spawnRate: 1700, maxOnScreen: 3 },
+    4: { bugsTotal: 14, escapeTime: 3400, spawnRate: 1500, maxOnScreen: 4 },
+    5: { bugsTotal: 16, escapeTime: 3000, spawnRate: 1400, maxOnScreen: 4 },
+  } as Record<number, { bugsTotal: number; escapeTime: number; spawnRate: number; maxOnScreen: number }>,
+};
+
 // Difficulty presets
 export const DIFFICULTY_PRESETS: Record<string, DifficultyConfig> = {
   easy: {

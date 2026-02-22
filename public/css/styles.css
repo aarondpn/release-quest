@@ -6742,3 +6742,245 @@ body.qa-hitbox-active .arena .bug::before {
   .shop-cosmetic-grid .shop-item-name { font-size: 6px; }
   .shop-cosmetic-grid .shop-item-desc { font-size: 5px; }
 }
+
+/* ══════════════════════════════════════════════════
+   ROGUELIKE MAP
+   ══════════════════════════════════════════════════ */
+
+#map-screen {
+  background: rgba(10, 10, 30, 0.95);
+}
+
+.map-layout {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  gap: 0;
+}
+
+.map-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.map-edges {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.map-edges line {
+  stroke: #333;
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  opacity: 0.4;
+}
+.map-edges line.edge-available {
+  stroke: #4ecdc4;
+  stroke-width: 2.5;
+  stroke-dasharray: none;
+  opacity: 0.8;
+  filter: drop-shadow(0 0 3px rgba(78,205,196,.5));
+}
+.map-edges line.edge-visited {
+  stroke: #555;
+  stroke-width: 2;
+  stroke-dasharray: none;
+  opacity: 0.5;
+}
+
+.map-nodes {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+
+.map-node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  border: 2px solid var(--node-color, #888);
+  background: rgba(20, 20, 50, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  z-index: 2;
+}
+
+.map-node-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.map-node-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 5px;
+  color: #aaa;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+.map-node-votes {
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 3px;
+}
+
+.map-vote-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.3);
+}
+
+/* Node states */
+.map-node.available {
+  cursor: pointer;
+  animation: map-node-pulse 2s ease-in-out infinite;
+  border-color: var(--node-color, #4ecdc4);
+  box-shadow: 0 0 12px rgba(78, 205, 196, 0.3);
+}
+.map-node.available:hover {
+  transform: translate(-50%, -50%) scale(1.15);
+  box-shadow: 0 0 20px var(--node-color, rgba(78,205,196,.6));
+}
+
+.map-node.visited {
+  opacity: 0.35;
+  border-color: #555;
+}
+
+.map-node.current {
+  border-color: #ffe66d;
+  box-shadow: 0 0 15px rgba(255, 230, 109, 0.4);
+}
+
+.map-node.locked {
+  opacity: 0.3;
+  border-color: #444;
+}
+
+.map-node.my-vote {
+  border-color: #ffe66d;
+  box-shadow: 0 0 18px rgba(255, 230, 109, 0.5);
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+.map-node.selected {
+  border-color: #ffe66d;
+  box-shadow: 0 0 25px rgba(255, 230, 109, 0.7);
+  animation: map-node-select 0.6s ease-out;
+}
+
+@keyframes map-node-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(78, 205, 196, 0.2); }
+  50% { box-shadow: 0 0 18px rgba(78, 205, 196, 0.5); }
+}
+
+@keyframes map-node-select {
+  0% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.3); }
+  100% { transform: translate(-50%, -50%) scale(1.1); }
+}
+
+/* Sidebar */
+.map-sidebar {
+  width: 140px;
+  background: rgba(15, 15, 40, 0.95);
+  border-left: 1px solid #2a2a4a;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.map-sidebar-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #ffe66d;
+  text-align: center;
+  letter-spacing: 2px;
+}
+
+.map-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.map-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 6px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 4px;
+}
+
+.map-stat-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: #888;
+}
+
+.map-stat-value {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #fff;
+}
+
+.map-vote-timer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.map-timer-bar {
+  width: 100%;
+  height: 4px;
+  background: #333;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.map-timer-fill {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #ff6b6b, #ffe66d);
+  border-radius: 2px;
+}
+
+.map-timer-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #ff6b6b;
+}
+
+.map-vote-status {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: #888;
+  text-align: center;
+}
+
+.map-hint {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: #555;
+  text-align: center;
+  margin-top: auto;
+}

@@ -60,10 +60,11 @@ export const handleCreateLobby: MessageHandler = ({ ws, msg, pid, wss }) => {
   const finalDifficulty = validDifficulties.includes(difficulty) ? difficulty : 'medium';
   const customConfig = msg.customConfig || undefined;
   const password = String(msg.password || '').trim() || undefined;
+  const gameMode = msg.gameMode === 'roguelike' ? 'roguelike' as const : 'classic' as const;
 
   const playerLogger = createPlayerLogger(pid);
 
-  lobby.createLobby(lobbyName, maxPlayers, finalDifficulty, customConfig, password).then(result => {
+  lobby.createLobby(lobbyName, maxPlayers, finalDifficulty, customConfig, password, gameMode).then(result => {
     if (result.error) {
       playerLogger.info({ error: result.error }, 'Lobby creation failed');
       network.send(ws, { type: 'lobby-error', message: result.error });

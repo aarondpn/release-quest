@@ -9,7 +9,7 @@ import type {
   ShopBuyMsg, ShopReadyMsg, SelectRoleMsg, ChatMessageMsg,
   GetLeaderboardMsg, GetMyStatsMsg, GetRecordingsMsg,
   ShareRecordingMsg, UnshareRecordingMsg, GetQuestsMsg, GetBalanceMsg,
-  GetShopCatalogMsg, ShopSeenMsg, ShopPurchaseMsg, DevCommandMsg,
+  GetShopCatalogMsg, ShopSeenMsg, ShopPurchaseMsg, MapVoteMsg, DevCommandMsg,
 } from '../../shared/messages.ts';
 
 // --- No-payload messages ---
@@ -139,6 +139,7 @@ const createLobbySchema = z.object({
   difficulty: z.string().max(16).optional(),
   customConfig: customConfigSchema,
   password: z.string().max(64).optional(),
+  gameMode: z.enum(['classic', 'roguelike']).optional(),
 }) satisfies ZodType<CreateLobbyMsg>;
 
 const joinLobbySchema = z.object({
@@ -218,6 +219,13 @@ const shopBuySchema = z.object({
   itemId: z.string().max(64),
 }) satisfies ZodType<ShopBuyMsg>;
 
+// --- Roguelike ---
+
+const mapVoteSchema = z.object({
+  type: z.literal('map-vote'),
+  nodeId: z.string().max(16),
+}) satisfies ZodType<MapVoteMsg>;
+
 // --- Dev mode ---
 
 const devCommandSchema = z.object({
@@ -267,4 +275,5 @@ export const staticSchemas: Record<string, ZodType> = {
   'get-shop-catalog': getShopCatalogSchema,
   'shop-seen': shopSeenSchema,
   'shop-purchase': shopPurchaseSchema,
+  'map-vote': mapVoteSchema,
 };

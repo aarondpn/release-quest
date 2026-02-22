@@ -19,6 +19,7 @@ import { handleChatBroadcast, showChat, hideChat, clearChat } from './chat.ts';
 import { openShop, handleShopBuyResult, handleShopReady, closeShop, clearAllShopState } from './shop.ts';
 import { handleQuestsData, handleQuestProgress, handleBalanceData, requestQuests, resetQuestState } from './quests-ui.ts';
 import { handleShopCatalog, handleShopPurchaseResult, requestShopCatalog } from './cosmetic-shop-ui.ts';
+import { renderMap, updateVotes, highlightSelectedNode, showVoteTimer, hideVoteTimer, updateMapStats, initMapSend } from './roguelike-map-ui.ts';
 import type { SendMessageFn, ServerMessage } from './client-types.ts';
 
 function updateQaHitbox(): void {
@@ -381,9 +382,19 @@ export function handleMessageInternal(msg: ServerMessage): void {
       if (msg.phase === 'boss') dom.levelEl!.textContent = 'BOSS';
       clientState.currentPhase = msg.phase;
 
+      // Restore roguelike state for reconnection
+      if ((msg as any).gameMode) clientState.gameMode = (msg as any).gameMode;
+      if ((msg as any).roguelikeMap) clientState.roguelikeMap = (msg as any).roguelikeMap;
+
       if (msg.phase === 'lobby') { showStartScreen(); updateLobbyRolePicker(); hideLiveDashboard(); }
       else if (msg.phase === 'gameover') { showGameOverScreen(msg.score, msg.level, msg.players || []); hideLiveDashboard(); }
       else if (msg.phase === 'win') { showWinScreen(msg.score, msg.players || []); hideLiveDashboard(); }
+      else if (msg.phase === 'map_view' && clientState.roguelikeMap) {
+        hideAllScreens();
+        if (dom.mapScreen) dom.mapScreen.classList.remove('hidden');
+        showLiveDashboard();
+        // Available nodes will be sent via map-view message
+      }
       else if (msg.phase === 'shopping') { hideAllScreens(); showLiveDashboard(); }
       else { hideAllScreens(); showLiveDashboard(); }
       break;
@@ -479,6 +490,8 @@ export function handleMessageInternal(msg: ServerMessage): void {
       clientState.currentLobbyCode = null;
       clientState.lobbyCreatorId = null;
       clientState.hasCustomSettings = false;
+      clientState.gameMode = 'classic';
+      clientState.roguelikeMap = null;
       if (dom.spectatorBanner) dom.spectatorBanner.classList.add('hidden');
       clearChat();
       hideChat();
@@ -1296,6 +1309,42 @@ export function handleMessageInternal(msg: ServerMessage): void {
 
     case 'shop-purchase-result': {
       handleShopPurchaseResult(msg);
+      break;
+    }
+
+    // Roguelike
+
+    case 'roguelike-map': {
+      clientState.roguelikeMap = msg.map;
+      clientState.gameMode = 'roguelike';
+      updateMapStats(msg.hp, msg.score);
+      break;
+    }
+
+    case 'map-view': {
+      hideAllScreens();
+      if (dom.mapScreen) dom.mapScreen.classList.remove('hidden');
+      showLiveDashboard();
+      if (clientState.roguelikeMap) {
+        renderMap(clientState.roguelikeMap, msg.availableNodes, clientState.players);
+      }
+      if (!msg.soloMode) {
+        // Timer will be updated via map-vote-update
+      }
+      hideVoteTimer();
+      break;
+    }
+
+    case 'map-vote-update': {
+      updateVotes(msg.votes, clientState.players);
+      showVoteTimer(msg.timeRemaining);
+      break;
+    }
+
+    case 'map-node-selected': {
+      highlightSelectedNode(msg.nodeId);
+      hideVoteTimer();
+      // The screen will be hidden when the next phase starts (game-start, shop-open, boss-spawn)
       break;
     }
   }

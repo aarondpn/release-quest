@@ -5,6 +5,7 @@
 import type {
   AuthUser, BugVariant, ShopItem, LeaderboardEntry, StatsData,
   QuestEntry, GamePhase, WirePlayer, RubberDuck, HotfixHammer,
+  GameMode, RoguelikeMap, MapNodeType,
 } from './types.ts';
 
 // ─── Client → Server messages ────────────────────────────────────────────────
@@ -119,6 +120,7 @@ export interface CreateLobbyMsg {
   difficulty?: string;
   customConfig?: LobbyCustomConfig;
   password?: string;
+  gameMode?: GameMode;
 }
 
 export interface JoinLobbyMsg {
@@ -267,6 +269,13 @@ export interface ShopPurchaseMsg {
 
 // Dev
 
+// Roguelike
+
+export interface MapVoteMsg {
+  type: 'map-vote';
+  nodeId: string;
+}
+
 export interface DevCommandMsg {
   type: 'dev-command';
   command: string;
@@ -311,6 +320,7 @@ export type ClientMessage =
   | GetShopCatalogMsg
   | ShopSeenMsg
   | ShopPurchaseMsg
+  | MapVoteMsg
   | DevCommandMsg;
 
 // ─── Server → Client messages ────────────────────────────────────────────────
@@ -437,6 +447,8 @@ export interface LobbyJoinedMsg {
   hotfixHammer: HotfixHammer | null;
   boss: WireBossSnapshot | null;
   hasCustomSettings: boolean;
+  gameMode?: GameMode;
+  roguelikeMap?: RoguelikeMap;
 }
 
 export interface SpectatorJoinedMsg {
@@ -1035,6 +1047,35 @@ export interface ShopPurchaseResultMsg {
   newBalance?: number;
 }
 
+// Roguelike (server → client)
+
+export interface RoguelikeMapMsg {
+  type: 'roguelike-map';
+  map: RoguelikeMap;
+  hp: number;
+  score: number;
+  players: WirePlayer[];
+}
+
+export interface MapViewMsg {
+  type: 'map-view';
+  currentNodeId: string | null;
+  availableNodes: string[];
+  soloMode: boolean;
+}
+
+export interface MapVoteUpdateMsg {
+  type: 'map-vote-update';
+  votes: Record<string, string>;
+  timeRemaining: number;
+}
+
+export interface MapNodeSelectedMsg {
+  type: 'map-node-selected';
+  nodeId: string;
+  nodeType: MapNodeType;
+}
+
 export type ServerMessage =
   // Connection
   | WelcomeMsg
@@ -1140,4 +1181,9 @@ export type ServerMessage =
   | BalanceDataMsg
   // Cosmetic shop
   | ShopCatalogMsg
-  | ShopPurchaseResultMsg;
+  | ShopPurchaseResultMsg
+  // Roguelike
+  | RoguelikeMapMsg
+  | MapViewMsg
+  | MapVoteUpdateMsg
+  | MapNodeSelectedMsg;

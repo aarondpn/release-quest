@@ -4,12 +4,13 @@
 export type {
   GamePhase, WirePlayer, BugVariant, ShopItem, RubberDuck, HotfixHammer,
   LeaderboardEntry, StatsData, AuthUser, QuestEntry, RecordingEvent, MouseMoveEvent,
+  GameMode, RoguelikeMap, MapNode, MapNodeType,
 } from '../../shared/types.ts';
 
 export type { ClientMessage, ServerMessage, LobbyListEntry } from '../../shared/messages.ts';
 
 import type { ClientMessage, LobbyListEntry } from '../../shared/messages.ts';
-import type { WirePlayer, BugVariant, QuestEntry, RecordingEvent, MouseMoveEvent, AuthUser } from '../../shared/types.ts';
+import type { WirePlayer, BugVariant, QuestEntry, RecordingEvent, MouseMoveEvent, AuthUser, GameMode, RoguelikeMap } from '../../shared/types.ts';
 
 export type SendMessageFn = (msg: ClientMessage) => void;
 
@@ -156,6 +157,9 @@ export interface ClientState {
   playbackRecording: PlaybackRecording | null;
   playbackGameTimeOffset: number;
   playbackWallTimeRef: number;
+  // Roguelike
+  gameMode: GameMode;
+  roguelikeMap: RoguelikeMap | null;
   // Dynamic properties added at runtime
   mergeTethers?: Record<string, MergeTether>;
   pipelineTethers?: Record<string, PipelineTether>;
@@ -179,6 +183,7 @@ export interface DomRefs {
   levelScreen: HTMLElement | null;
   bossScreen: HTMLElement | null;
   shopScreen: HTMLElement | null;
+  mapScreen: HTMLElement | null;
   nameEntry: HTMLElement | null;
   nameInput: HTMLInputElement | null;
   iconPicker: HTMLElement | null;

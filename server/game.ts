@@ -6,6 +6,7 @@ import * as boss from './boss.ts';
 import * as powerups from './powerups.ts';
 import * as shop from './shop.ts';
 import * as stats from './stats.ts';
+import * as roguelike from './roguelike.ts';
 import { createMatchLog } from './match-logger.ts';
 import { startRecording, stopRecording } from './recording.ts';
 import * as db from './db.ts';
@@ -79,7 +80,6 @@ export function startGame(ctx: GameContext): void {
   state.hp = diffConfig.startingHp;
   state.level = 1;
   state.playerBuffs = {};
-  ctx.lifecycle.transition(state, 'playing');
   state.boss = null;
   state.gameStartedAt = Date.now();
 
@@ -97,6 +97,13 @@ export function startGame(ctx: GameContext): void {
   });
 
   gameGamesStarted.inc({ difficulty: state.difficulty });
+
+  if (state.gameMode === 'roguelike') {
+    roguelike.startRoguelikeGame(ctx);
+    return;
+  }
+
+  ctx.lifecycle.transition(state, 'playing');
 
   ctx.events.emit({
     type: 'game-start',
@@ -165,14 +172,18 @@ export function checkGameState(ctx: GameContext): void {
         level: state.level,
         score: state.score,
       });
-      // Brief pause, then open shop
+      // Brief pause, then next phase
       ctx.timers.lobby.setTimeout('levelTransition', () => {
         try {
           if (Object.keys(state.players).length === 0) return;
-          shop.openShop(ctx);
+          if (state.gameMode === 'roguelike') {
+            roguelike.handleNodeComplete(ctx);
+          } else {
+            shop.openShop(ctx);
+          }
         } catch (err) {
           const logCtx = createLobbyLogger(ctx.lobbyId.toString());
-          logCtx.error({ err }, 'Error opening shop');
+          logCtx.error({ err }, 'Error in level transition');
         }
       }, 1500);
     }
@@ -205,4 +216,7 @@ export function resetToLobby(ctx: GameContext): void {
   state.bugsSpawned = 0;
   state.boss = null;
   state.playerBuffs = {};
+  state.roguelikeMap = undefined;
+  state.mapVotes = undefined;
+  state.voteDeadline = undefined;
 }
