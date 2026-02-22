@@ -8575,7 +8575,7 @@ body.qa-hitbox-active .arena .bug::before {
 .emote-bubble {
   position: absolute;
   pointer-events: none;
-  z-index: 200;
+  z-index: 5;
   width: 56px;
   height: 56px;
   margin-left: -28px;
