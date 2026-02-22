@@ -221,8 +221,10 @@ Tracked metrics include active lobbies, online players, games by outcome, bugs s
 ```
 
 - **Server** — Node.js 24 native TypeScript (no transpilation), ESM, `ws` for WebSockets
-- **Client** — vanilla JS with HTML5 Canvas, ES modules, bundled by esbuild
+- **Shared** — `shared/` directory with typed message protocol (`ClientMessage` / `ServerMessage` discriminated unions), wire-format types, and constants — imported by both server and client
+- **Client** — vanilla TypeScript with HTML5 Canvas, bundled by esbuild
 - **Data flow** — player action → WebSocket → Zod validation → state update → event bus → broadcast
+- **Type safety** — Zod schemas use `satisfies z.ZodType<T>` to enforce compile-time alignment with shared message types
 - **Persistence** — PostgreSQL for accounts, stats, and recordings; game state is in-memory per lobby
 
 <details>
@@ -230,9 +232,14 @@ Tracked metrics include active lobbies, online players, games by outcome, bugs s
 
 ```
 server.ts                   Entry point — HTTP server + WebSocket setup
+shared/
+  messages.ts               Typed message protocol (ClientMessage / ServerMessage unions)
+  types.ts                  Wire-format types (WirePlayer, BugVariant, AuthUser, …)
+  constants.ts              Shared constants (dimensions, icon lists)
 server/
   config.ts                 Game balance constants & difficulty presets
-  types.ts                  Shared TypeScript interfaces
+  types.ts                  Server-side interfaces, re-exports shared types
+  handlers/schemas.ts       Zod schemas with satisfies z.ZodType<T> alignment
   db.ts                     PostgreSQL schema, pool, queries
   auth.ts                   Registration, login, sessions (bcrypt)
   lobby.ts                  Lobby create / join / leave / destroy
@@ -258,18 +265,19 @@ public/
   overview.html             In-game wiki
   css/styles.css            All styles
   js/
-    main.js                 Client entry point
-    network.js              WebSocket client & message dispatch
-    state.js                Client state & DOM refs
-    auth-ui.js              Login / register UI
-    lobby-ui.js             Lobby browser
-    hud.js                  Score, HP, player count
-    bugs.js                 Bug rendering (Canvas)
-    boss.js                 Boss rendering
-    players.js              Remote cursor display
-    vfx.js                  Visual effects
-    coordinates.js          Logical (800x500) ↔ pixel mapping
-    config.js               Client-side constants
+    main.ts                 Client entry point
+    network.ts              WebSocket client & message dispatch
+    state.ts                Client state & DOM refs
+    client-types.ts         Client-specific types, re-exports from shared/
+    auth-ui.ts              Login / register UI
+    lobby-ui.ts             Lobby browser
+    hud.ts                  Score, HP, player count
+    bugs.ts                 Bug rendering (Canvas)
+    boss.ts                 Boss rendering
+    players.ts              Remote cursor display
+    vfx.ts                  Visual effects
+    coordinates.ts          Logical (800x500) ↔ pixel mapping
+    config.ts               Client-side constants
 ```
 
 </details>
@@ -287,7 +295,7 @@ public/
 | Auth | bcrypt |
 | Logging | Pino |
 | Metrics | prom-client (Prometheus) |
-| Client | Vanilla JS, HTML5 Canvas, CSS3 |
+| Client | Vanilla TypeScript, HTML5 Canvas, CSS3 |
 | Bundler | esbuild |
 | CI/CD | GitHub Actions → GitHub Container Registry |
 | Deploy | Docker / Docker Compose |

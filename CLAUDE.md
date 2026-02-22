@@ -24,6 +24,7 @@ Requires Node.js 24+ (native TypeScript via `node server.ts`, no transpilation s
 Key server modules:
 - **`server/websocket-handler.ts`** — Routes incoming WebSocket messages to handlers
 - **`server/handlers/`** — Message handlers organized by domain (auth, lobby, game, stats, recording)
+- **`server/handlers/schemas.ts`** — Zod validation schemas for all client→server messages, each annotated with `satisfies z.ZodType<T>` to enforce alignment with shared types
 - **`server/event-bus.ts`** — Internal event system; game state changes emit events → handlers broadcast to clients
 - **`server/lobby.ts`** — Lobby lifecycle (create, join, leave, destroy)
 - **`server/game.ts`** / **`server/game-lifecycle.ts`** — Level progression, win/loss conditions
@@ -36,18 +37,27 @@ Key server modules:
 - **`server/recording.ts`** — Game replay capture and retrieval
 - **`server/metrics.ts`** — Prometheus metrics on a separate port (default 9091)
 - **`server/config.ts`** — Game balance constants, server config (reads `config.json` and env vars)
-- **`server/types.ts`** — Shared TypeScript interfaces
+- **`server/types.ts`** — Server-side TypeScript interfaces, re-exports shared types
 
-### Client (Vanilla JS, ES modules)
+### Shared (`shared/`)
 
-All client code is in `public/`. No framework — vanilla JS with HTML5 Canvas for bug rendering.
+Code shared between server and client, importable from both sides:
 
-- **`public/js/main.js`** — Entry point, UI setup, event listeners
-- **`public/js/network.js`** — WebSocket client, message dispatch
-- **`public/js/state.js`** — Client-side game state and DOM references
-- **`public/js/coordinates.js`** — Maps logical game coordinates (800×500) to pixel coordinates
+- **`shared/types.ts`** — Wire-format types (`WirePlayer`, `BugVariant`, `ShopItem`, `AuthUser`, `QuestEntry`, etc.)
+- **`shared/messages.ts`** — Typed WebSocket message protocol: `ClientMessage` (37 variants) and `ServerMessage` (~70 variants) discriminated unions keyed on `type`
+- **`shared/constants.ts`** — Shared constants (logical dimensions, icon lists)
 
-The client JS is bundled by esbuild for production (`main.min.js`) but individual modules are used in development.
+### Client (TypeScript, ES modules)
+
+All client code is in `public/`. No framework — vanilla TypeScript with HTML5 Canvas for bug rendering.
+
+- **`public/js/main.ts`** — Entry point, UI setup, event listeners
+- **`public/js/network.ts`** — WebSocket client, message dispatch (typed with `ServerMessage`)
+- **`public/js/state.ts`** — Client-side game state and DOM references
+- **`public/js/client-types.ts`** — Client-specific types, re-exports from `shared/`
+- **`public/js/coordinates.ts`** — Maps logical game coordinates (800×500) to pixel coordinates
+
+The client TS is bundled by esbuild for production (`main.min.js`) but individual modules are used in development.
 
 ### Data Flow
 
@@ -59,8 +69,9 @@ PostgreSQL with tables: `users`, `sessions`, `guest_sessions`, `lobbies`, `lobby
 
 ## Key Conventions
 
-- Server uses native Node 24 TypeScript (no build step) with strict mode. Client is plain JS.
-- WebSocket messages are validated with Zod schemas before processing.
+- Server uses native Node 24 TypeScript (no build step) with strict mode. Client is TypeScript bundled by esbuild.
+- All WebSocket messages are typed via discriminated unions in `shared/messages.ts` (`ClientMessage` / `ServerMessage`). The send/receive boundaries on both server and client are typed; the event bus stays untyped with a cast at the listener boundary in `server/lobby.ts`.
+- Zod schemas in `server/handlers/schemas.ts` use `satisfies z.ZodType<T>` to enforce compile-time alignment with the shared message types.
 - Logging uses Pino (`server/logger.ts`) — use structured logging with context objects, not string interpolation.
 - Game state is in-memory per lobby; only accounts, stats, and recordings persist to the database.
 - The coordinate system uses a logical 800×500 grid mapped to actual screen dimensions.
