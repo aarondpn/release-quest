@@ -1,7 +1,9 @@
 import { dom, clientState, activateLobbyTab } from './state.ts';
 import { STANDARD_ICONS } from '../../shared/constants.ts';
+import { EMOTE_CATALOG, FREE_EMOTE_IDS } from '../../shared/emotes.ts';
 import { renderIcon, buildIconPickerContent } from './avatars.ts';
 import { getOwnedShopItems, getShopItemPrice, isShopCatalogLoaded } from './cosmetic-shop-ui.ts';
+import { getEmoteSvg, getEmoteBindings, setEmoteBinding, resetEmoteBindings } from './emotes.ts';
 import { escapeHtml } from './utils.ts';
 import type { SendMessageFn, LobbyListEntry } from './client-types.ts';
 
@@ -208,6 +210,97 @@ export function buildLobbyIconPicker(): void {
   if (resolved !== _lobbyEditorSelectedIcon) _lobbyEditorSelectedIcon = resolved;
 }
 
+export function buildEmoteBindingsUI(): void {
+  const container = dom.lobbyEditorEmoteBindings;
+  if (!container) return;
+
+  // Hide for guests
+  if (!clientState.isLoggedIn) {
+    container.classList.add('hidden');
+    return;
+  }
+  container.classList.remove('hidden');
+
+  const bindings = getEmoteBindings();
+  const owned = getOwnedShopItems();
+  const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+  let html = '<div class="emote-binding-header">' +
+    '<span class="emote-binding-title">EMOTE BINDINGS</span>' +
+    '<button class="btn-link emote-binding-reset">RESET</button>' +
+    '</div>' +
+    '<div class="emote-binding-slots">';
+
+  for (const key of keys) {
+    const emoteId = bindings.get(key);
+    const svg = emoteId ? getEmoteSvg(emoteId) : null;
+    html += '<div class="emote-binding-slot" data-key="' + key + '">' +
+      '<span class="emote-binding-key">' + key + '</span>' +
+      '<span class="emote-binding-icon">' + (svg || '') + '</span>' +
+      '</div>';
+  }
+
+  html += '</div><div class="emote-binding-picker hidden"></div>';
+  container.innerHTML = html;
+
+  // Reset button
+  container.querySelector('.emote-binding-reset')!.addEventListener('click', () => {
+    resetEmoteBindings();
+    buildEmoteBindingsUI();
+  });
+
+  // Slot click → open picker
+  let activeKey: string | null = null;
+  const picker = container.querySelector<HTMLElement>('.emote-binding-picker')!;
+
+  container.querySelectorAll<HTMLElement>('.emote-binding-slot').forEach(slot => {
+    slot.addEventListener('click', () => {
+      const key = slot.dataset.key!;
+      if (activeKey === key) {
+        // Toggle off
+        picker.classList.add('hidden');
+        slot.classList.remove('active');
+        activeKey = null;
+        return;
+      }
+
+      // Deactivate previous
+      container.querySelector('.emote-binding-slot.active')?.classList.remove('active');
+      activeKey = key;
+      slot.classList.add('active');
+
+      // Build picker content
+      let pickerHtml = '';
+      for (const emote of EMOTE_CATALOG) {
+        const isFree = FREE_EMOTE_IDS.has(emote.id);
+        const isOwned = owned.has(emote.id);
+        const available = isFree || isOwned;
+        const svg = getEmoteSvg(emote.id);
+        const cls = 'emote-binding-picker-item' + (available ? '' : ' locked');
+        pickerHtml += '<div class="' + cls + '" data-emote-id="' + emote.id + '" title="' + escapeHtml(emote.name) + '">' +
+          (svg || '<span>' + emote.label + '</span>') +
+          '<span class="emote-binding-picker-name">' + escapeHtml(emote.name) + '</span>' +
+          '</div>';
+      }
+      picker.innerHTML = pickerHtml;
+      picker.classList.remove('hidden');
+
+      // Picker item click
+      picker.querySelectorAll<HTMLElement>('.emote-binding-picker-item').forEach(item => {
+        item.addEventListener('click', () => {
+          if (item.classList.contains('locked')) return;
+          const emoteId = item.dataset.emoteId!;
+          setEmoteBinding(key, emoteId);
+          picker.classList.add('hidden');
+          slot.classList.remove('active');
+          activeKey = null;
+          buildEmoteBindingsUI();
+        });
+      });
+    });
+  });
+}
+
 export function toggleLobbyEditor(): void {
   const editor = dom.lobbyProfileEditor;
   if (!editor) return;
@@ -215,6 +308,7 @@ export function toggleLobbyEditor(): void {
   if (isCollapsed) {
     dom.lobbyEditorNameInput!.value = clientState.myName || '';
     buildLobbyIconPicker();
+    buildEmoteBindingsUI();
     editor.classList.remove('collapsed');
   } else {
     editor.classList.add('collapsed');

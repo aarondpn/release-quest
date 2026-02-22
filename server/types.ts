@@ -445,7 +445,7 @@ export interface CurrencyBalance {
 export interface CosmeticShopItem {
   id: string;
   name: string;
-  category: 'avatar';
+  category: 'avatar' | 'emote';
   price: number;
   description: string;
   rarity: 'common' | 'rare' | 'epic';

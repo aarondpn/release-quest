@@ -1,6 +1,7 @@
 import { dom, clientState, activateLobbyTab } from './state.ts';
 import { SHOP_AVATARS, renderIcon, COIN_SVG } from './avatars.ts';
 import { escapeHtml, showToast } from './utils.ts';
+import { getEmoteSvg, getEmoteBindings } from './emotes.ts';
 import type { SendMessageFn } from './client-types.ts';
 import type { ShopCatalogMsg, ShopPurchaseResultMsg } from '../../shared/messages.ts';
 
@@ -19,12 +20,27 @@ let _ownedItems: Set<string> = new Set();
 let _rotationTimerId: ReturnType<typeof setInterval> | null = null;
 let _isNewRotation = false;
 let _catalogReceived = false;
+let _activeCategory: 'avatar' | 'emote' = 'avatar';
 
 export function isShopCatalogLoaded(): boolean {
   return _catalogReceived;
 }
 
-export function initShopSend(fn: SendMessageFn): void { _sendMessage = fn; }
+export function initShopSend(fn: SendMessageFn): void {
+  _sendMessage = fn;
+
+  // Category tab switching
+  const categoryBtns = document.querySelectorAll<HTMLElement>('.shop-category-btn');
+  categoryBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cat = btn.dataset.category as 'avatar' | 'emote';
+      if (cat === _activeCategory) return;
+      _activeCategory = cat;
+      categoryBtns.forEach(b => b.classList.toggle('active', b === btn));
+      renderShopGrid();
+    });
+  });
+}
 
 export function requestShopCatalog(): void {
   if (_sendMessage) _sendMessage({ type: 'get-shop-catalog' });
@@ -63,11 +79,19 @@ export function handleShopPurchaseResult(msg: ShopPurchaseResultMsg): void {
 function showPurchaseToast(itemId: string): void {
   const item = _shopItems.find(i => i.id === itemId);
   if (!item) return;
-  const av = SHOP_AVATARS[itemId];
+  const isEmote = itemId.startsWith('emote:');
+  const emoteSvg = isEmote ? getEmoteSvg(itemId) : null;
+  const av = !isEmote ? SHOP_AVATARS[itemId] : null;
+  let iconContent = '';
+  if (emoteSvg) {
+    iconContent = '<span style="display:inline-block;width:20px;height:20px">' + emoteSvg + '</span>';
+  } else if (av) {
+    iconContent = renderIcon(itemId, 20);
+  }
   const toast = document.createElement('div');
   toast.className = 'quest-toast shop-purchase-toast';
   toast.innerHTML =
-    '<span class="quest-toast-icon">' + (av ? renderIcon(itemId, 20) : '') + '</span>' +
+    '<span class="quest-toast-icon">' + iconContent + '</span>' +
     '<span class="quest-toast-text">PURCHASED!</span>' +
     '<span class="quest-toast-reward">' + escapeHtml(item.name) + '</span>';
   showToast(toast, 3500);
@@ -82,23 +106,22 @@ function showPurchaseError(error: string): void {
   showToast(toast, 3000);
 }
 
-function renderItemCard(item: ShopCatalogItem, isGuest: boolean): string {
+function renderActionHtml(item: ShopCatalogItem, isGuest: boolean): string {
   const owned = _ownedItems.has(item.id);
   const canAfford = (clientState.byteCoinsBalance ?? 0) >= item.price;
+  const safeId = escapeHtml(item.id);
+  if (isGuest) return '<span class="shop-login-badge">LOG IN</span>';
+  if (owned) return '<span class="shop-owned-badge">OWNED</span>';
+  return '<button class="btn btn-small shop-buy-btn' + (canAfford ? '' : ' shop-buy-disabled') + '" data-item-id="' + safeId + '">' +
+    item.price + ' ' + COIN_SVG + '</button>';
+}
+
+function renderAvatarCard(item: ShopCatalogItem, isGuest: boolean): string {
+  const owned = _ownedItems.has(item.id);
   const av = SHOP_AVATARS[item.id];
   const iconHtml = av ? renderIcon(item.id, 40) : '';
   const safeId = escapeHtml(item.id);
   const safeRarity = escapeHtml(item.rarity);
-
-  let actionHtml: string;
-  if (isGuest) {
-    actionHtml = '<span class="shop-login-badge">LOG IN</span>';
-  } else if (owned) {
-    actionHtml = '<span class="shop-owned-badge">OWNED</span>';
-  } else {
-    actionHtml = '<button class="btn btn-small shop-buy-btn' + (canAfford ? '' : ' shop-buy-disabled') + '" data-item-id="' + safeId + '">' +
-      item.price + ' ' + COIN_SVG + '</button>';
-  }
 
   return '<div class="shop-item-card shop-rarity-' + safeRarity + (owned ? ' shop-item-owned' : '') + '" data-item-id="' + safeId + '">' +
     '<div class="shop-item-preview">' + iconHtml + '</div>' +
@@ -107,7 +130,32 @@ function renderItemCard(item: ShopCatalogItem, isGuest: boolean): string {
       '<div class="shop-item-desc">' + escapeHtml(item.description) + '</div>' +
       '<div class="shop-item-rarity shop-rarity-tag-' + safeRarity + '">' + safeRarity.toUpperCase() + '</div>' +
     '</div>' +
-    '<div class="shop-item-action">' + actionHtml + '</div>' +
+    '<div class="shop-item-action">' + renderActionHtml(item, isGuest) + '</div>' +
+  '</div>';
+}
+
+function renderEmoteCard(item: ShopCatalogItem, isGuest: boolean): string {
+  const owned = _ownedItems.has(item.id);
+  const emoteSvg = getEmoteSvg(item.id) || '';
+  // Show the user's current binding for this emote, not the catalog default
+  let keyLabel = '';
+  for (const [k, v] of getEmoteBindings()) {
+    if (v === item.id) { keyLabel = k; break; }
+  }
+  const safeId = escapeHtml(item.id);
+  const safeRarity = escapeHtml(item.rarity);
+
+  return '<div class="shop-emote-card shop-rarity-' + safeRarity + (owned ? ' shop-item-owned' : '') + '" data-item-id="' + safeId + '">' +
+    '<div class="shop-emote-preview">' + emoteSvg + '</div>' +
+    '<div class="shop-emote-info">' +
+      '<div class="shop-emote-name">' + escapeHtml(item.name) + '</div>' +
+      '<div class="shop-emote-desc">' + escapeHtml(item.description) + '</div>' +
+      '<div class="shop-emote-meta">' +
+        '<span class="shop-emote-key" title="Press ' + keyLabel + ' in-game">' + keyLabel + '</span>' +
+        '<span class="shop-item-rarity shop-rarity-tag-' + safeRarity + '">' + safeRarity.toUpperCase() + '</span>' +
+      '</div>' +
+    '</div>' +
+    '<div class="shop-item-action">' + renderActionHtml(item, isGuest) + '</div>' +
   '</div>';
 }
 
@@ -137,23 +185,32 @@ function renderShopGrid(): void {
     return;
   }
 
-  const cardRenderer = (item: ShopCatalogItem) => renderItemCard(item, isGuest);
   let html = '';
 
   // Guest banner
   if (isGuest) {
-    html += '<div class="shop-guest-banner">LOG IN TO PURCHASE AVATARS</div>';
+    html += '<div class="shop-guest-banner">LOG IN TO PURCHASE ITEMS</div>';
   }
 
-  // Weekly rotation header with timer
-  const timerText = _rotationEndUtc ? formatCountdown(_rotationEndUtc) : null;
-  html += '<div class="shop-section-header shop-rotation-header">' +
-    '<span>THIS WEEK</span>' +
-    (timerText ? '<span class="shop-rotation-timer">' + timerText + '</span>' : '') +
-  '</div>';
-  html += '<div class="shop-section-grid">';
-  html += _shopItems.map(cardRenderer).join('');
-  html += '</div>';
+  if (_activeCategory === 'avatar') {
+    const avatarItems = _shopItems.filter(i => !i.id.startsWith('emote:'));
+    const timerText = _rotationEndUtc ? formatCountdown(_rotationEndUtc) : null;
+    html += '<div class="shop-section-header shop-rotation-header">' +
+      '<span>THIS WEEK</span>' +
+      (timerText ? '<span class="shop-rotation-timer">' + timerText + '</span>' : '') +
+    '</div>';
+    html += '<div class="shop-section-grid">';
+    html += avatarItems.map(i => renderAvatarCard(i, isGuest)).join('');
+    html += '</div>';
+  } else {
+    const emoteItems = _shopItems.filter(i => i.id.startsWith('emote:'));
+    html += '<div class="shop-section-header shop-rotation-header">' +
+      '<span class="shop-emotes-hint">press key in-game to use</span>' +
+    '</div>';
+    html += '<div class="shop-emotes-grid">';
+    html += emoteItems.map(i => renderEmoteCard(i, isGuest)).join('');
+    html += '</div>';
+  }
 
   dom.shopGrid.innerHTML = html;
 

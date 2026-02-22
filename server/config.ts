@@ -60,6 +60,11 @@ export const COSMETIC_SHOP_CATALOG: CosmeticShopItem[] = [
   { id: 'shop:angel', name: 'Refactor Angel', category: 'avatar', price: 400, description: 'Blesses code with clean patterns', rarity: 'epic' },
   { id: 'shop:kraken', name: 'Dependency Kraken', category: 'avatar', price: 500, description: 'Lurks deep in node_modules', rarity: 'epic' },
   { id: 'shop:phoenix_gold', name: 'Golden Phoenix', category: 'avatar', price: 750, description: 'Reborn from ashes of production', rarity: 'epic' },
+  // Premium emotes
+  { id: 'emote:shipit', name: 'Ship It', category: 'emote', price: 75, description: 'Launch that feature!', rarity: 'common' },
+  { id: 'emote:duck', name: 'Rubber Duck', category: 'emote', price: 100, description: 'Debug with your duck', rarity: 'common' },
+  { id: 'emote:stack', name: 'Stack Overflow', category: 'emote', price: 150, description: 'Copy-paste salvation', rarity: 'rare' },
+  { id: 'emote:404', name: '404 Not Found', category: 'emote', price: 200, description: 'Where did the bug go?', rarity: 'rare' },
 ];
 
 export const COSMETIC_SHOP_MAP = new Map(COSMETIC_SHOP_CATALOG.map(item => [item.id, item]));
@@ -87,8 +92,8 @@ export function getWeeklyRotation(): { items: CosmeticShopItem[]; rotationEndUtc
   const { weekEnd, weekNumber } = getWeekBoundaries();
   if (_cachedRotation && _cachedRotationWeek === weekNumber) return _cachedRotation;
   const rng = mulberry32(weekNumber);
-  // Fisher-Yates shuffle on the full catalog
-  const pool = [...COSMETIC_SHOP_CATALOG];
+  // Fisher-Yates shuffle on avatar catalog (emotes are always available, not rotated)
+  const pool = COSMETIC_SHOP_CATALOG.filter(item => item.category === 'avatar');
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];

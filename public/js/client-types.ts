@@ -271,6 +271,7 @@ export interface DomRefs {
   lobbyProfileAuth: HTMLElement | null;
   lobbyProfileEditor: HTMLElement | null;
   lobbyEditorIconPicker: HTMLElement | null;
+  lobbyEditorEmoteBindings: HTMLElement | null;
   lobbyEditorNameInput: HTMLInputElement | null;
   lobbyEditorSaveBtn: HTMLElement | null;
   lobbyProfileLoginBtn: HTMLElement | null;

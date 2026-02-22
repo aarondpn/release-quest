@@ -220,6 +220,13 @@ export interface ChatMessageMsg {
   message: string;
 }
 
+// Emotes
+
+export interface EmoteMsg {
+  type: 'emote';
+  emoteId: string;
+}
+
 // Stats & recordings
 
 export interface GetLeaderboardMsg {
@@ -332,6 +339,7 @@ export type ClientMessage =
   | ShopReadyMsg
   | SelectRoleMsg
   | ChatMessageMsg
+  | EmoteMsg
   | GetLeaderboardMsg
   | GetMyStatsMsg
   | GetRecordingsMsg
@@ -1012,6 +1020,17 @@ export interface ChatErrorMsg {
   message: string;
 }
 
+// Emote broadcast
+
+export interface EmoteBroadcastMsg {
+  type: 'emote-broadcast';
+  playerId: string;
+  playerName: string;
+  emoteId: string;
+  x: number;
+  y: number;
+}
+
 // Dev
 
 export interface DevErrorMsg {
@@ -1060,6 +1079,7 @@ export interface ShopCatalogItem {
   description: string;
   price: number;
   rarity: string;
+  category: 'avatar' | 'emote';
 }
 
 export interface ShopCatalogMsg {
@@ -1322,6 +1342,8 @@ export type ServerMessage =
   // Chat
   | ChatBroadcastMsg
   | ChatErrorMsg
+  // Emotes
+  | EmoteBroadcastMsg
   // Dev
   | DevErrorMsg
   | PlaygroundReadyMsg

@@ -16,6 +16,7 @@ import { handleMyStats, requestMyStats } from './stats-card-ui.ts';
 import { startPlayback } from './playback.ts';
 import { showError, ERROR_LEVELS } from './error-handler.ts';
 import { handleChatBroadcast, showChat, hideChat, clearChat } from './chat.ts';
+import { showEmoteBubble } from './emotes.ts';
 import { openShop, handleShopBuyResult, handleShopReady, closeShop, clearAllShopState } from './shop.ts';
 import { handleQuestsData, handleQuestProgress, handleBalanceData, requestQuests, resetQuestState } from './quests-ui.ts';
 import { handleShopCatalog, handleShopPurchaseResult, requestShopCatalog } from './cosmetic-shop-ui.ts';
@@ -1303,6 +1304,11 @@ export function handleMessageInternal(msg: ServerMessage): void {
 
     case 'chat-error': {
       showError(msg.message, ERROR_LEVELS.WARNING);
+      break;
+    }
+
+    case 'emote-broadcast': {
+      showEmoteBubble(msg.playerId, msg.emoteId, msg.x, msg.y);
       break;
     }
 

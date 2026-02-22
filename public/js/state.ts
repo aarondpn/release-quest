@@ -155,6 +155,7 @@ export const dom: DomRefs = {
   lobbyProfileAuth: null,
   lobbyProfileEditor: null,
   lobbyEditorIconPicker: null,
+  lobbyEditorEmoteBindings: null,
   lobbyEditorNameInput: null,
   lobbyEditorSaveBtn: null,
   lobbyProfileLoginBtn: null,
@@ -289,6 +290,7 @@ export function initDom(): void {
   dom.lobbyProfileAuth = document.getElementById('lobby-profile-auth');
   dom.lobbyProfileEditor = document.getElementById('lobby-profile-editor');
   dom.lobbyEditorIconPicker = document.getElementById('lobby-editor-icon-picker');
+  dom.lobbyEditorEmoteBindings = document.getElementById('lobby-editor-emote-bindings');
   dom.lobbyEditorNameInput = document.getElementById('lobby-editor-name-input') as HTMLInputElement | null;
   dom.lobbyEditorSaveBtn = document.getElementById('lobby-editor-save-btn');
   dom.lobbyProfileLoginBtn = document.getElementById('lobby-profile-login-btn');
