@@ -5648,6 +5648,9 @@ body.qa-hitbox-active .arena .bug::before {
   border: 1px solid rgba(255,255,255,0.06);
   border-radius: 3px;
   padding: 12px 8px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
   transition: border-color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.15s;
   cursor: default;
@@ -6505,11 +6508,13 @@ body.qa-hitbox-active .arena .bug::before {
   gap: 8px;
 }
 
-.shop-item-card {
+.shop-cosmetic-grid .shop-item-card {
   display: grid;
   grid-template-columns: 56px 1fr;
   grid-template-rows: 1fr auto;
   gap: 0;
+  align-items: start;
+  text-align: left;
   background: rgba(15,14,23,0.9);
   border: 1px solid rgba(78,205,196,0.15);
   border-radius: 6px;
@@ -6518,36 +6523,36 @@ body.qa-hitbox-active .arena .bug::before {
   cursor: default;
 }
 
-.shop-item-card:hover {
+.shop-cosmetic-grid .shop-item-card:hover {
   border-color: rgba(78,205,196,0.4);
 }
 
-.shop-rarity-common {
+.shop-cosmetic-grid .shop-rarity-common {
   border-color: rgba(167,169,190,0.25);
 }
-.shop-rarity-common:hover {
+.shop-cosmetic-grid .shop-rarity-common:hover {
   border-color: rgba(167,169,190,0.5);
 }
 
-.shop-rarity-rare {
+.shop-cosmetic-grid .shop-rarity-rare {
   border-color: rgba(66,165,245,0.3);
   box-shadow: 0 0 6px rgba(66,165,245,0.1);
 }
-.shop-rarity-rare:hover {
+.shop-cosmetic-grid .shop-rarity-rare:hover {
   border-color: rgba(66,165,245,0.6);
   box-shadow: 0 0 10px rgba(66,165,245,0.2);
 }
 
-.shop-rarity-epic {
+.shop-cosmetic-grid .shop-rarity-epic {
   border-color: rgba(168,85,247,0.3);
   box-shadow: 0 0 6px rgba(168,85,247,0.15);
 }
-.shop-rarity-epic:hover {
+.shop-cosmetic-grid .shop-rarity-epic:hover {
   border-color: rgba(168,85,247,0.6);
   box-shadow: 0 0 12px rgba(168,85,247,0.25);
 }
 
-.shop-item-owned {
+.shop-cosmetic-grid .shop-item-owned {
   opacity: 0.65;
 }
 
@@ -6569,7 +6574,7 @@ body.qa-hitbox-active .arena .bug::before {
   min-width: 0;
 }
 
-.shop-item-name {
+.shop-cosmetic-grid .shop-item-name {
   font-family: 'Press Start 2P', monospace;
   font-size: 7px;
   color: #e0e0e0;
@@ -6578,7 +6583,7 @@ body.qa-hitbox-active .arena .bug::before {
   text-overflow: ellipsis;
 }
 
-.shop-item-desc {
+.shop-cosmetic-grid .shop-item-desc {
   font-family: 'Press Start 2P', monospace;
   font-size: 5px;
   color: #a7a9be;
@@ -6602,7 +6607,7 @@ body.qa-hitbox-active .arena .bug::before {
   padding-top: 6px;
 }
 
-.shop-buy-btn {
+.shop-cosmetic-grid .shop-buy-btn {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -6731,9 +6736,9 @@ body.qa-hitbox-active .arena .bug::before {
   .shop-section-grid {
     grid-template-columns: 1fr;
   }
-  .shop-item-card {
+  .shop-cosmetic-grid .shop-item-card {
     padding: 6px;
   }
-  .shop-item-name { font-size: 6px; }
-  .shop-item-desc { font-size: 5px; }
+  .shop-cosmetic-grid .shop-item-name { font-size: 6px; }
+  .shop-cosmetic-grid .shop-item-desc { font-size: 5px; }
 }
