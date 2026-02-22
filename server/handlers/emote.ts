@@ -4,7 +4,6 @@ import * as lobby from '../lobby.ts';
 import * as db from '../db.ts';
 import { EMOTE_MAP, FREE_EMOTE_IDS } from '../../shared/emotes.ts';
 import type { ServerMessage } from '../../shared/messages.ts';
-import logger from '../logger.ts';
 
 // Rate limiting: 3 emotes per 5 seconds
 const rateLimitBuckets = new Map<string, number[]>();
@@ -78,15 +77,6 @@ export const handleEmote: MessageHandler = async ({ ws, msg, pid, playerInfo }) 
     y: player.y,
   };
 
-  // Broadcast to all clients in the lobby
-  const clients = network.lobbyClients.get(lobbyId);
-  if (!clients) return;
-  const data = JSON.stringify(broadcast);
-  for (const client of clients) {
-    try {
-      if (client.readyState === 1) client.send(data);
-    } catch (err) {
-      logger.error({ err, lobbyId }, 'Error broadcasting emote');
-    }
-  }
+  // Broadcast to all clients in the lobby (goes through broadcastToLobby so it's captured in recordings)
+  network.broadcastToLobby(lobbyId, broadcast);
 };
