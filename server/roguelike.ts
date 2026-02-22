@@ -1,4 +1,4 @@
-import { ROGUELIKE_CONFIG } from './config.ts';
+import { ROGUELIKE_CONFIG, getDifficultyConfig } from './config.ts';
 import { generateMap, getReachableNodes, markNodeVisited } from './roguelike-map.ts';
 import { getPlayerScores } from './state.ts';
 import { startLevel } from './game.ts';
@@ -6,6 +6,7 @@ import * as boss from './boss.ts';
 import * as shop from './shop.ts';
 import * as powerups from './powerups.ts';
 import * as events from './events.ts';
+import * as rest from './rest.ts';
 import logger from './logger.ts';
 import type { GameContext } from './types.ts';
 
@@ -37,12 +38,39 @@ export function showMapView(ctx: GameContext): void {
   const available = getReachableNodes(state.roguelikeMap, state.roguelikeMap.currentNodeId);
   const playerCount = Object.keys(state.players).length;
   const soloMode = playerCount <= 1;
+  const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
+
+  // Collect unique active buff item IDs
+  const buffSet = new Set<string>();
+  for (const buffs of Object.values(state.playerBuffs)) {
+    for (const b of buffs) buffSet.add(b.itemId);
+  }
+
+  // Summarize active event modifier
+  let eventModifierLabel: string | undefined;
+  if (state.eventModifiers && Object.keys(state.eventModifiers).length > 0) {
+    const parts: string[] = [];
+    const em = state.eventModifiers;
+    if (em.scoreMultiplier) parts.push(em.scoreMultiplier + 'x Score');
+    if (em.bugsTotalMultiplier) parts.push(em.bugsTotalMultiplier + 'x Bugs');
+    if (em.grantEagleEye) parts.push('Eagle Eye');
+    if (em.onlyNormalBugs) parts.push('Nur normale Bugs');
+    if (em.escapeTimeOffset) parts.push((em.escapeTimeOffset > 0 ? '+' : '') + (em.escapeTimeOffset / 1000) + 's Escape');
+    if (em.spawnRateMultiplier) parts.push(em.spawnRateMultiplier + 'x Spawn');
+    if (parts.length > 0) eventModifierLabel = parts.join(', ');
+  }
 
   ctx.events.emit({
     type: 'map-view',
     currentNodeId: state.roguelikeMap.currentNodeId,
     availableNodes: available,
     soloMode,
+    hp: state.hp,
+    maxHp: diffConfig.startingHp,
+    score: state.score,
+    persistentScoreMultiplier: state.persistentScoreMultiplier ?? 1,
+    activeBuffs: [...buffSet],
+    eventModifierLabel,
   });
 
   if (!soloMode) {
@@ -141,9 +169,8 @@ function navigateToNode(ctx: GameContext, nodeId: string): void {
   switch (node.type) {
     case 'bug_level':
     case 'elite':
-    case 'rest':
     case 'mini_boss':
-      // elite/rest/mini_boss behave like bug_level for now
+      // elite/mini_boss behave like bug_level for now
       if (node.type !== 'bug_level') {
         logger.warn({ lobbyId: ctx.lobbyId, nodeType: node.type }, 'Unimplemented node type, treating as bug_level');
       }
@@ -161,6 +188,10 @@ function navigateToNode(ctx: GameContext, nodeId: string): void {
       startLevel(ctx);
       powerups.startDuckSpawning(ctx);
       powerups.startHammerSpawning(ctx);
+      break;
+
+    case 'rest':
+      rest.showRest(ctx);
       break;
 
     case 'event':
@@ -184,7 +215,7 @@ export function handleNodeComplete(ctx: GameContext): void {
   const currentNode = state.roguelikeMap.nodes.find(n => n.id === state.roguelikeMap!.currentNodeId);
 
   // Event modifiers expire after one combat — only clear after combat nodes
-  const combatTypes = new Set(['bug_level', 'elite', 'rest', 'mini_boss']);
+  const combatTypes = new Set(['bug_level', 'elite', 'mini_boss']);
   if (currentNode && combatTypes.has(currentNode.type)) {
     state.eventModifiers = undefined;
   }

@@ -18,6 +18,7 @@ import { initQuestsSend, requestQuests, showQuestsTab } from './quests-ui.ts';
 import { initShopSend, showShopTab, hideShopPanel } from './cosmetic-shop-ui.ts';
 import { initMapSend } from './roguelike-map-ui.ts';
 import { initEventSend } from './event-ui.ts';
+import { initRestSend } from './rest-ui.ts';
 import type { DifficultyPreset } from './client-types.ts';
 import type { LobbyCustomConfig } from '../../shared/messages.ts';
 
@@ -476,6 +477,7 @@ initChat();
 initQuestsSend(sendMessage);
 initMapSend(sendMessage);
 initEventSend(sendMessage);
+initRestSend(sendMessage);
 
 // Initialize cosmetic shop
 initShopSend(sendMessage);

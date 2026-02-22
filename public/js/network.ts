@@ -19,8 +19,9 @@ import { handleChatBroadcast, showChat, hideChat, clearChat } from './chat.ts';
 import { openShop, handleShopBuyResult, handleShopReady, closeShop, clearAllShopState } from './shop.ts';
 import { handleQuestsData, handleQuestProgress, handleBalanceData, requestQuests, resetQuestState } from './quests-ui.ts';
 import { handleShopCatalog, handleShopPurchaseResult, requestShopCatalog } from './cosmetic-shop-ui.ts';
-import { renderMap, updateVotes, highlightSelectedNode, showVoteTimer, hideVoteTimer, updateMapStats, initMapSend } from './roguelike-map-ui.ts';
+import { renderMap, updateVotes, highlightSelectedNode, showVoteTimer, hideVoteTimer, updateMapStats, updateMapSidebar, initMapSend } from './roguelike-map-ui.ts';
 import { showEventScreen, updateEventVotes, updateEventTimer, resolveEvent } from './event-ui.ts';
+import { showRestScreen, updateRestVotes, updateRestTimer, resolveRest } from './rest-ui.ts';
 import type { SendMessageFn, ServerMessage } from './client-types.ts';
 
 function updateQaHitbox(): void {
@@ -399,6 +400,11 @@ export function handleMessageInternal(msg: ServerMessage): void {
       else if (msg.phase === 'event') {
         hideAllScreens();
         // Event screen will be shown via event-show message
+        showLiveDashboard();
+      }
+      else if (msg.phase === 'resting') {
+        hideAllScreens();
+        // Rest screen will be shown via rest-start message
         showLiveDashboard();
       }
       else if (msg.phase === 'shopping') { hideAllScreens(); showLiveDashboard(); }
@@ -1334,6 +1340,14 @@ export function handleMessageInternal(msg: ServerMessage): void {
       if (clientState.roguelikeMap) {
         renderMap(clientState.roguelikeMap, msg.availableNodes, clientState.players);
       }
+      updateMapSidebar({
+        hp: msg.hp,
+        maxHp: msg.maxHp,
+        score: msg.score,
+        persistentScoreMultiplier: msg.persistentScoreMultiplier,
+        activeBuffs: msg.activeBuffs,
+        eventModifierLabel: msg.eventModifierLabel,
+      });
       if (!msg.soloMode) {
         // Timer will be updated via map-vote-update
       }
@@ -1373,6 +1387,27 @@ export function handleMessageInternal(msg: ServerMessage): void {
       resolveEvent(msg);
       if (msg.newHp !== undefined) updateHUD(msg.newScore, undefined, msg.newHp);
       else if (msg.newScore !== undefined) updateHUD(msg.newScore);
+      break;
+    }
+
+    // Rest
+
+    case 'rest-start': {
+      hideAllScreens();
+      showRestScreen(msg);
+      showLiveDashboard();
+      break;
+    }
+
+    case 'rest-vote-update': {
+      updateRestVotes(msg.votes, clientState.players);
+      updateRestTimer(msg.timeRemaining);
+      break;
+    }
+
+    case 'rest-resolved': {
+      resolveRest(msg);
+      updateHUD(undefined, undefined, msg.hpAfter);
       break;
     }
   }

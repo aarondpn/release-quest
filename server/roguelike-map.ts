@@ -35,8 +35,9 @@ function pickNodeType(rng: () => number, row: number, totalRows: number): MapNod
   if (row === 0) return 'bug_level'; // row 0 always bug_level — no currency yet
   if (row === totalRows - 1) return 'bug_level'; // last gameplay row before boss
   const roll = rng();
-  if (roll < 0.15) return 'event';
-  if (roll < 0.40) return 'shop';
+  if (roll < 0.10) return 'rest';
+  if (roll < 0.25) return 'event';
+  if (roll < 0.45) return 'shop';
   return 'bug_level';
 }
 
@@ -119,9 +120,10 @@ export function generateMap(seed: number, _difficulty: string = 'medium'): Rogue
     }
   }
 
-  // Break up consecutive shops/events: if same type connects to same type, convert child to bug_level
-  breakConsecutiveShops(nodes);
-  breakConsecutiveEvents(nodes);
+  // Break up consecutive non-combat nodes: if same type connects to same type, convert child to bug_level
+  breakConsecutiveType(nodes, 'shop');
+  breakConsecutiveType(nodes, 'event');
+  breakConsecutiveType(nodes, 'rest');
 
   // Validate: at least 1 shop reachable on every path from row 0 to boss
   validateShopAccess(nodes, rowNodes, rng);
@@ -129,28 +131,13 @@ export function generateMap(seed: number, _difficulty: string = 'medium'): Rogue
   return { nodes, currentNodeId: null, seed };
 }
 
-function breakConsecutiveShops(nodes: MapNode[]): void {
+function breakConsecutiveType(nodes: MapNode[], nodeType: MapNodeType): void {
   const nodeMap = new Map(nodes.map(n => [n.id, n]));
   for (const node of nodes) {
-    if (node.type !== 'shop') continue;
+    if (node.type !== nodeType) continue;
     for (const connId of node.connections) {
       const child = nodeMap.get(connId)!;
-      if (child.type === 'shop') {
-        child.type = 'bug_level';
-        child.label = NODE_LABELS.bug_level;
-        child.icon = NODE_ICONS.bug_level;
-      }
-    }
-  }
-}
-
-function breakConsecutiveEvents(nodes: MapNode[]): void {
-  const nodeMap = new Map(nodes.map(n => [n.id, n]));
-  for (const node of nodes) {
-    if (node.type !== 'event') continue;
-    for (const connId of node.connections) {
-      const child = nodeMap.get(connId)!;
-      if (child.type === 'event') {
+      if (child.type === nodeType) {
         child.type = 'bug_level';
         child.label = NODE_LABELS.bug_level;
         child.icon = NODE_ICONS.bug_level;

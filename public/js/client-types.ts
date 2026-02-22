@@ -185,6 +185,7 @@ export interface DomRefs {
   shopScreen: HTMLElement | null;
   mapScreen: HTMLElement | null;
   eventScreen: HTMLElement | null;
+  restScreen: HTMLElement | null;
   nameEntry: HTMLElement | null;
   nameInput: HTMLInputElement | null;
   iconPicker: HTMLElement | null;

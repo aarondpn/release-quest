@@ -281,6 +281,11 @@ export interface EventVoteMsg {
   optionId: string;
 }
 
+export interface RestVoteMsg {
+  type: 'rest-vote';
+  option: 'rest' | 'train';
+}
+
 export interface DevCommandMsg {
   type: 'dev-command';
   command: string;
@@ -327,6 +332,7 @@ export type ClientMessage =
   | ShopPurchaseMsg
   | MapVoteMsg
   | EventVoteMsg
+  | RestVoteMsg
   | DevCommandMsg;
 
 // ─── Server → Client messages ────────────────────────────────────────────────
@@ -1068,6 +1074,12 @@ export interface MapViewMsg {
   currentNodeId: string | null;
   availableNodes: string[];
   soloMode: boolean;
+  hp: number;
+  maxHp: number;
+  score: number;
+  persistentScoreMultiplier: number;
+  activeBuffs: string[];
+  eventModifierLabel?: string;
 }
 
 export interface MapVoteUpdateMsg {
@@ -1105,6 +1117,31 @@ export interface EventResolvedMsg {
   newHp?: number;
   newScore?: number;
   modifierSummary?: string;
+}
+
+// Rest nodes
+
+export interface RestStartMsg {
+  type: 'rest-start';
+  restHpGain: number;
+  trainScoreBonus: number;
+  currentHp: number;
+  maxHp: number;
+  currentScoreMultiplier: number;
+  soloMode: boolean;
+}
+
+export interface RestVoteUpdateMsg {
+  type: 'rest-vote-update';
+  votes: Record<string, string>;
+  timeRemaining: number;
+}
+
+export interface RestResolvedMsg {
+  type: 'rest-resolved';
+  chosenOption: 'rest' | 'train';
+  hpAfter: number;
+  newScoreMultiplier: number;
 }
 
 export type ServerMessage =
@@ -1221,4 +1258,8 @@ export type ServerMessage =
   // Events
   | EventShowMsg
   | EventVoteUpdateMsg
-  | EventResolvedMsg;
+  | EventResolvedMsg
+  // Rest
+  | RestStartMsg
+  | RestVoteUpdateMsg
+  | RestResolvedMsg;

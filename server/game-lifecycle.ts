@@ -8,8 +8,9 @@ const VALID_TRANSITIONS: Record<GamePhase, GamePhase[]> = {
   boss:     ['gameover', 'win', 'lobby'],
   gameover: ['playing', 'lobby'],
   win:      ['playing', 'lobby'],
-  map_view: ['playing', 'shopping', 'boss', 'lobby', 'event'],
+  map_view: ['playing', 'shopping', 'boss', 'lobby', 'event', 'resting'],
   event:    ['map_view', 'gameover', 'lobby'],
+  resting:  ['map_view', 'lobby'],
 };
 
 export function createGameLifecycle(): GameLifecycle {

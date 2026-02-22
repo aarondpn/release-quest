@@ -9,7 +9,7 @@ import type {
   ShopBuyMsg, ShopReadyMsg, SelectRoleMsg, ChatMessageMsg,
   GetLeaderboardMsg, GetMyStatsMsg, GetRecordingsMsg,
   ShareRecordingMsg, UnshareRecordingMsg, GetQuestsMsg, GetBalanceMsg,
-  GetShopCatalogMsg, ShopSeenMsg, ShopPurchaseMsg, MapVoteMsg, EventVoteMsg, DevCommandMsg,
+  GetShopCatalogMsg, ShopSeenMsg, ShopPurchaseMsg, MapVoteMsg, EventVoteMsg, RestVoteMsg, DevCommandMsg,
 } from '../../shared/messages.ts';
 
 // --- No-payload messages ---
@@ -231,6 +231,11 @@ const eventVoteSchema = z.object({
   optionId: z.string().max(32),
 }) satisfies ZodType<EventVoteMsg>;
 
+const restVoteSchema = z.object({
+  type: z.literal('rest-vote'),
+  option: z.enum(['rest', 'train']),
+}) satisfies ZodType<RestVoteMsg>;
+
 // --- Dev mode ---
 
 const devCommandSchema = z.object({
@@ -282,4 +287,5 @@ export const staticSchemas: Record<string, ZodType> = {
   'shop-purchase': shopPurchaseSchema,
   'map-vote': mapVoteSchema,
   'event-vote': eventVoteSchema,
+  'rest-vote': restVoteSchema,
 };

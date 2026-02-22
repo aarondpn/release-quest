@@ -2,7 +2,7 @@
 // Both server/types.ts and public/js/client-types.ts re-export these so
 // existing consumer imports remain unchanged.
 
-export type GamePhase = 'lobby' | 'playing' | 'shopping' | 'boss' | 'gameover' | 'win' | 'map_view' | 'event';
+export type GamePhase = 'lobby' | 'playing' | 'shopping' | 'boss' | 'gameover' | 'win' | 'map_view' | 'event' | 'resting';
 
 export type MapNodeType = 'bug_level' | 'elite' | 'shop' | 'event' | 'rest' | 'mini_boss' | 'boss';
 export type GameMode = 'classic' | 'roguelike';

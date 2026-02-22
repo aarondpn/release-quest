@@ -187,9 +187,106 @@ export function hideVoteTimer(): void {
   if (timerEl) timerEl.classList.add('hidden');
 }
 
+const BUFF_ICONS: Record<string, string> = {
+  'bigger-cursor': '\u{1F5B1}\uFE0F',
+  'bug-magnet': '\u{1F9F2}',
+  'eagle-eye': '\u{1F441}\uFE0F',
+  'kevlar-vest': '\u{1F9E5}',
+  'turbo-duck': '\u{1F986}',
+  'healing-patch': '\u{1FA79}',
+};
+
+const BUFF_NAMES: Record<string, string> = {
+  'bigger-cursor': 'Bigger Cursor',
+  'bug-magnet': 'Bug Magnet',
+  'eagle-eye': 'Eagle Eye',
+  'kevlar-vest': 'Kevlar Vest',
+  'turbo-duck': 'Turbo Duck',
+};
+
 export function updateMapStats(hp: number, score: number): void {
   const hpEl = document.getElementById('map-hp-value');
   const scoreEl = document.getElementById('map-score-value');
   if (hpEl) hpEl.textContent = String(hp);
   if (scoreEl) scoreEl.textContent = String(score);
+}
+
+export function updateMapSidebar(data: {
+  hp: number;
+  maxHp: number;
+  score: number;
+  persistentScoreMultiplier: number;
+  activeBuffs: string[];
+  eventModifierLabel?: string;
+}): void {
+  // Update HP with bar
+  const hpEl = document.getElementById('map-hp-value');
+  if (hpEl) hpEl.textContent = data.hp + '/' + data.maxHp;
+
+  const scoreEl = document.getElementById('map-score-value');
+  if (scoreEl) scoreEl.textContent = String(data.score);
+
+  // Update HP bar visual
+  let hpBar = document.getElementById('map-hp-bar');
+  if (!hpBar) {
+    const hpStat = hpEl?.closest('.map-stat');
+    if (hpStat) {
+      hpBar = document.createElement('div');
+      hpBar.id = 'map-hp-bar';
+      hpBar.className = 'map-hp-bar';
+      hpBar.innerHTML = '<div class="map-hp-bar-fill"></div>';
+      hpStat.appendChild(hpBar);
+    }
+  }
+  if (hpBar) {
+    const fill = hpBar.querySelector<HTMLElement>('.map-hp-bar-fill');
+    if (fill) {
+      const pct = data.maxHp > 0 ? Math.round((data.hp / data.maxHp) * 100) : 0;
+      fill.style.width = pct + '%';
+      fill.className = 'map-hp-bar-fill' + (pct <= 25 ? ' low' : pct <= 50 ? ' medium' : '');
+    }
+  }
+
+  // Buffs container
+  let buffsContainer = document.getElementById('map-buffs');
+  if (!buffsContainer) {
+    const sidebar = document.querySelector('.map-sidebar');
+    if (sidebar) {
+      buffsContainer = document.createElement('div');
+      buffsContainer.id = 'map-buffs';
+      buffsContainer.className = 'map-buffs';
+      // Insert before the hint
+      const hint = sidebar.querySelector('.map-hint');
+      if (hint) sidebar.insertBefore(buffsContainer, hint);
+      else sidebar.appendChild(buffsContainer);
+    }
+  }
+
+  if (buffsContainer) {
+    let html = '';
+
+    // Persistent score multiplier
+    if (data.persistentScoreMultiplier > 1) {
+      html += '<div class="map-buff-item score-bonus" title="Persistenter Score-Bonus">' +
+        '\u2B50 \u00D7' + data.persistentScoreMultiplier.toFixed(1) +
+        '</div>';
+    }
+
+    // Active shop buffs
+    for (const buffId of data.activeBuffs) {
+      const icon = BUFF_ICONS[buffId] || '\u2728';
+      const name = BUFF_NAMES[buffId] || buffId;
+      html += '<div class="map-buff-item" title="' + name + '">' + icon + '</div>';
+    }
+
+    // Event modifier
+    if (data.eventModifierLabel) {
+      html += '<div class="map-buff-item event-mod" title="N\u00E4chster Kampf: ' + data.eventModifierLabel + '">' +
+        '\u26A1 ' + data.eventModifierLabel +
+        '</div>';
+    }
+
+    buffsContainer.innerHTML = html;
+    buffsContainer.classList.toggle('hidden', html === '');
+  }
 }

@@ -106,6 +106,11 @@ export function getWeeklyRotation(): { items: CosmeticShopItem[]; rotationEndUtc
   return _cachedRotation;
 }
 
+export const REST_CONFIG = {
+  hpGain: 30,
+  trainScoreBonus: 0.1,
+};
+
 export const ROGUELIKE_CONFIG = {
   mapRows: 5,
   voteTimerMs: 15000,

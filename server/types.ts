@@ -200,6 +200,8 @@ export interface GameState {
   eventModifiers?: EventModifiers;
   eventVotes?: Record<string, string>;
   activeEventId?: string;
+  persistentScoreMultiplier?: number;
+  restVotes?: Record<string, string>;
 }
 
 export interface GameCounters {
