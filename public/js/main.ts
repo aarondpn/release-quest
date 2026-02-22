@@ -213,13 +213,16 @@ dom.createLobbyBtn!.addEventListener('click', () => {
     if (dom.configHammerDuration!.value) { if (!customConfig.powerups) customConfig.powerups = {}; customConfig.powerups.hotfixHammerStunDuration = parseInt(dom.configHammerDuration!.value, 10); }
 
     const password = dom.lobbyPasswordInput!.value.trim();
-    const message: Record<string, unknown> = { type: 'create-lobby', name, maxPlayers, difficulty };
-    if (Object.keys(customConfig).length > 0) message.customConfig = customConfig;
-    if (password) message.password = password;
+    sendMessage({
+      type: 'create-lobby',
+      name,
+      maxPlayers,
+      difficulty,
+      ...(Object.keys(customConfig).length > 0 ? { customConfig: customConfig as Record<string, unknown> } : {}),
+      ...(password ? { password } : {}),
+    });
 
     clientState.pendingLobbyPassword = password || null;
-
-    sendMessage(message);
     dom.lobbyNameInput!.value = '';
     dom.lobbyPasswordInput!.value = '';
     dom.lobbyError!.classList.add('hidden');
@@ -552,10 +555,12 @@ fetch('/api/dev-mode')
       const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-cmd]');
       if (!btn) return;
       const cmd = btn.dataset.cmd!;
-      const msg: Record<string, unknown> = { type: 'dev-command', command: cmd };
-      if (cmd === 'skip-to-level') msg.level = parseInt(btn.dataset.level!);
-      if (cmd === 'set-boss-hp') msg.value = parseInt((document.getElementById('dev-boss-hp') as HTMLInputElement).value) || 1;
-      sendMessage(msg);
+      sendMessage({
+        type: 'dev-command',
+        command: cmd,
+        ...(cmd === 'skip-to-level' ? { level: parseInt(btn.dataset.level!) } : {}),
+        ...(cmd === 'set-boss-hp' ? { value: parseInt((document.getElementById('dev-boss-hp') as HTMLInputElement).value) || 1 } : {}),
+      });
     });
   })
   .catch(() => { /* dev-mode endpoint not available */ });

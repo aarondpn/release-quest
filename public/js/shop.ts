@@ -2,7 +2,9 @@ import { dom, clientState } from './state.ts';
 import { sendMessage } from './network.ts';
 import { hideAllScreens, showLiveDashboard } from './hud.ts';
 import { escapeHtml } from './utils.ts';
-import type { ActiveBuffDisplay, ShopItem } from './client-types.ts';
+import type { ActiveBuffDisplay } from './client-types.ts';
+import type { ShopOpenMsg, ShopBuyResultMsg, ShopReadyResultMsg } from '../../shared/messages.ts';
+import type { ShopItem } from '../../shared/types.ts';
 
 let shopTimerRaf: number | null = null;
 let shopEndTime = 0;
@@ -86,7 +88,7 @@ function getItemSvg(itemId: string): string | null {
 }
 
 
-export function openShop(msg: Record<string, any>): void {
+export function openShop(msg: ShopOpenMsg): void {
   hideAllScreens();
   activeBuffs = [];
   renderBuffHud();
@@ -175,7 +177,7 @@ function animateTimer(): void {
   });
 }
 
-export function handleShopBuyResult(msg: Record<string, any>): void {
+export function handleShopBuyResult(msg: ShopBuyResultMsg): void {
   if (msg.playerId === clientState.myId && msg.itemId === 'bigger-cursor') {
     if (dom.arena) dom.arena.classList.add('cursor-enlarged');
   }
@@ -218,7 +220,7 @@ export function handleShopBuyResult(msg: Record<string, any>): void {
   }
 }
 
-export function handleShopReady(msg: Record<string, any>): void {
+export function handleShopReady(msg: ShopReadyResultMsg): void {
   const feed = document.getElementById('shop-feed');
   if (feed && msg.playerId !== clientState.myId) {
     const player = clientState.players[msg.playerId];

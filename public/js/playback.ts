@@ -6,7 +6,7 @@ import { addRemoteCursor, clearRemoteCursors } from './players.ts';
 import { removeDuckBuffOverlay } from './vfx.ts';
 import { showLobbyBrowser } from './lobby-ui.ts';
 import { handleMessageInternal } from './network.ts';
-import type { PlaybackRecording } from './client-types.ts';
+import type { PlaybackRecording, ServerMessage } from './client-types.ts';
 
 let progressRafId: number | null = null;
 let progressBarClickBound = false;
@@ -109,7 +109,7 @@ function seekTo(targetTime: number): void {
   if (recording && recording.events) {
     for (const event of recording.events) {
       if (event.t <= targetTime) {
-        handleMessageInternal(event.msg);
+        handleMessageInternal(event.msg as unknown as ServerMessage);
       }
     }
   }
@@ -205,7 +205,7 @@ function scheduleEvents(events: PlaybackRecording['events']): void {
     const delay = event.t / clientState.playbackSpeed;
     const timerId = setTimeout(() => {
       if (!clientState.isPlayback) return;
-      handleMessageInternal(event.msg);
+      handleMessageInternal(event.msg as unknown as ServerMessage);
     }, delay);
     clientState.playbackTimers.push(timerId);
   }
@@ -277,7 +277,7 @@ function rescheduleFrom(gameTime: number): void {
     const delay = (event.t - gameTime) / clientState.playbackSpeed;
     const timerId = setTimeout(() => {
       if (!clientState.isPlayback || clientState.playbackPaused) return;
-      handleMessageInternal(event.msg);
+      handleMessageInternal(event.msg as unknown as ServerMessage);
     }, delay);
     clientState.playbackTimers.push(timerId);
   }

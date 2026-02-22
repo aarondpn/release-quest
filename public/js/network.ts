@@ -19,7 +19,7 @@ import { handleChatBroadcast, showChat, hideChat, clearChat } from './chat.ts';
 import { openShop, handleShopBuyResult, handleShopReady, closeShop, clearAllShopState } from './shop.ts';
 import { handleQuestsData, handleQuestProgress, handleBalanceData, requestQuests, resetQuestState } from './quests-ui.ts';
 import { handleShopCatalog, handleShopPurchaseResult, requestShopCatalog } from './cosmetic-shop-ui.ts';
-import type { SendMessageFn } from './client-types.ts';
+import type { SendMessageFn, ServerMessage } from './client-types.ts';
 
 function updateQaHitbox(): void {
   const myPlayer = clientState.players[clientState.myId!];
@@ -95,9 +95,9 @@ export function connect(): void {
 
     clientState.ws.onmessage = (event: MessageEvent) => {
       try {
-        let msg: Record<string, any>;
+        let msg: ServerMessage;
         try {
-          msg = JSON.parse(event.data);
+          msg = JSON.parse(event.data) as ServerMessage;
         } catch (parseErr) {
           console.error('Failed to parse message:', parseErr);
           return;
@@ -115,7 +115,7 @@ export function connect(): void {
   }
 }
 
-function handleMessage(msg: Record<string, any>): void {
+function handleMessage(msg: ServerMessage): void {
   try {
     handleMessageInternal(msg);
   } catch (err) {
@@ -124,7 +124,7 @@ function handleMessage(msg: Record<string, any>): void {
   }
 }
 
-export function handleMessageInternal(msg: Record<string, any>): void {
+export function handleMessageInternal(msg: ServerMessage): void {
   switch (msg.type) {
 
     case 'auth-result': {
@@ -176,15 +176,15 @@ export function handleMessageInternal(msg: Record<string, any>): void {
           } else if (msg.action === 'resume') {
             clientState.authToken = localStorage.getItem('rq_session_token');
           }
-          clientState.authUser = msg.user;
+          clientState.authUser = msg.user ?? null;
           clientState.isLoggedIn = true;
           hideAuthOverlay();
 
-          if (msg.user.displayName) {
+          if (msg.user?.displayName) {
             clientState.myName = msg.user.displayName;
             dom.nameInput!.value = msg.user.displayName;
           }
-          if (msg.user.icon) {
+          if (msg.user?.icon) {
             clientState.myIcon = msg.user.icon;
             clientState.selectedIcon = msg.user.icon;
           }
@@ -329,12 +329,12 @@ export function handleMessageInternal(msg: Record<string, any>): void {
     }
 
     case 'lobby-created': {
-      const joinMsg: Record<string, unknown> = { type: 'join-lobby', lobbyId: msg.lobby.id };
-      if (clientState.pendingLobbyPassword) {
-        joinMsg.password = clientState.pendingLobbyPassword;
-      }
+      sendMessage({
+        type: 'join-lobby',
+        lobbyId: msg.lobby.id,
+        password: clientState.pendingLobbyPassword ?? undefined,
+      });
       clientState.pendingLobbyPassword = null;
-      sendMessage(joinMsg);
       break;
     }
 

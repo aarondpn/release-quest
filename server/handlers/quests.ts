@@ -1,4 +1,5 @@
 import type { MessageHandler } from './types.ts';
+import type { ServerMessage } from '../../shared/messages.ts';
 import * as network from '../network.ts';
 import * as db from '../db.ts';
 import * as quests from '../quests.ts';
@@ -10,7 +11,7 @@ export const handleGetQuests: MessageHandler = ({ ws, pid, playerInfo }) => {
     return;
   }
   quests.getOrAssignQuests(info.userId).then(data => {
-    network.send(ws, { type: 'quests-data', ...data, isGuest: false });
+    network.send(ws, { type: 'quests-data', ...data, isGuest: false } as ServerMessage);
   }).catch(() => {
     network.send(ws, { type: 'quests-data', quests: [], isGuest: false });
   });

@@ -6,28 +6,18 @@ export type {
   LeaderboardEntry, StatsData, AuthUser, QuestEntry, RecordingEvent, MouseMoveEvent,
 } from '../../shared/types.ts';
 
+export type { ClientMessage, ServerMessage, LobbyListEntry } from '../../shared/messages.ts';
+
+import type { ClientMessage, LobbyListEntry } from '../../shared/messages.ts';
 import type { WirePlayer, BugVariant, QuestEntry, RecordingEvent, MouseMoveEvent, AuthUser } from '../../shared/types.ts';
 
-export type SendMessageFn = (msg: Record<string, unknown>) => void;
+export type SendMessageFn = (msg: ClientMessage) => void;
 
 export interface ClientPlayer extends Omit<WirePlayer, 'bugsSquashed' | 'isGuest'> {
   bugsSquashed?: number;
   isGuest?: boolean;
   x?: number;
   y?: number;
-}
-
-export interface LobbyListEntry {
-  id: number;
-  name: string;
-  code: string;
-  max_players: number;
-  player_count: number;
-  started: boolean;
-  hasPassword?: boolean;
-  hasCustomSettings?: boolean;
-  spectatorCount?: number;
-  settings?: Record<string, unknown>;
 }
 
 export interface DifficultyPreset {

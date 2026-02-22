@@ -1,3 +1,4 @@
+import type { ServerMessage } from '../shared/messages.ts';
 import type { RecordingBuffer, RecordingEvent, MouseMoveEvent } from './types.ts';
 
 const buffers = new Map<number, RecordingBuffer>();
@@ -6,10 +7,10 @@ export function startRecording(lobbyId: number): void {
   buffers.set(lobbyId, { startTime: Date.now(), events: [] });
 }
 
-export function recordEvent(lobbyId: number, msg: Record<string, unknown>): void {
+export function recordEvent(lobbyId: number, msg: ServerMessage): void {
   const buf = buffers.get(lobbyId);
   if (!buf) return;
-  buf.events.push({ t: Date.now() - buf.startTime, msg });
+  buf.events.push({ t: Date.now() - buf.startTime, msg: msg as unknown as Record<string, unknown> });
 }
 
 export interface StopRecordingResult {

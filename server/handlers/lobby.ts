@@ -1,5 +1,5 @@
 import type { HandlerContext, MessageHandler } from './types.ts';
-import type { PlayerInfo } from '../types.ts';
+import type { PlayerInfo, ServerMessage } from '../types.ts';
 import { LOGICAL_W, LOGICAL_H } from '../../shared/constants.ts';
 import { createPlayerLogger, createLobbyLogger } from '../logger.ts';
 import { getStateSnapshot } from '../state.ts';
@@ -152,7 +152,7 @@ export const handleJoinLobby: MessageHandler = async ({ ws, msg, pid, playerInfo
     const lobbyLogger = createLobbyLogger(lobbyId.toString());
     lobbyLogger.info({ playerId: pid, playerCount: Object.keys(ctx.state.players).length }, 'Player joined lobby');
 
-    // Send lobby-joined with full game state
+    // Send lobby-joined with full game state (getStateSnapshot returns Record<string, unknown>)
     network.send(ws, {
       type: 'lobby-joined',
       lobbyId,
@@ -160,14 +160,14 @@ export const handleJoinLobby: MessageHandler = async ({ ws, msg, pid, playerInfo
       lobbyCode: result.lobby!.code,
       creatorId: getLobbyModerator(lobbyId),
       ...getStateSnapshot(ctx.state),
-    });
+    } as ServerMessage);
 
     // Notify others in the lobby
     network.broadcastToLobby(lobbyId, {
       type: 'player-joined',
       player: { id: pid, name: info.name, color: info.color, icon: info.icon, score: 0, isGuest: !info.userId },
       playerCount: Object.keys(ctx.state.players).length,
-    }, ws);
+    });
 
     broadcastSystemChat(lobbyId, `${info.name} joined`);
     broadcastLobbyList(wss);
@@ -257,13 +257,13 @@ export const handleJoinLobbyByCode: MessageHandler = async ({ ws, msg, pid, play
       lobbyCode: result.lobby!.code,
       creatorId: getLobbyModerator(lobbyId),
       ...getStateSnapshot(ctx.state),
-    });
+    } as ServerMessage);
 
     network.broadcastToLobby(lobbyId, {
       type: 'player-joined',
       player: { id: pid, name: info.name, color: info.color, icon: info.icon, score: 0, isGuest: !info.userId },
       playerCount: Object.keys(ctx.state.players).length,
-    }, ws);
+    });
 
     broadcastSystemChat(lobbyId, `${info.name} joined`);
     broadcastLobbyList(wss);
@@ -348,7 +348,7 @@ export const handleJoinSpectate: MessageHandler = async ({ ws, msg, pid, playerI
     lobbyCode: targetLobby.code,
     hasCustomSettings: !!(safeSettings?.customConfig && Object.keys(safeSettings.customConfig).length > 0),
     ...getStateSnapshot(mem.state),
-  });
+  } as ServerMessage);
 
   const specSet = lobby.getSpectators(lobbyId);
   network.broadcastToLobby(lobbyId, {

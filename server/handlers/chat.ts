@@ -1,4 +1,5 @@
 import type { MessageHandler } from './types.ts';
+import type { ServerMessage } from '../../shared/messages.ts';
 import * as network from '../network.ts';
 import * as lobby from '../lobby.ts';
 import logger from '../logger.ts';
@@ -64,7 +65,7 @@ export function getLobbyModerator(lobbyId: number): string | null {
 
 // --- Helpers ---
 
-function broadcastChatToLobby(lobbyId: number, msg: Record<string, unknown>): void {
+function broadcastChatToLobby(lobbyId: number, msg: ServerMessage): void {
   const clients = network.lobbyClients.get(lobbyId);
   if (!clients) return;
   const data = JSON.stringify(msg);

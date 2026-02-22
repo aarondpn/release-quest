@@ -1,4 +1,5 @@
 import type { WebSocket, WebSocketServer } from 'ws';
+import type { ServerMessage } from '../shared/messages.ts';
 import logger from './logger.ts';
 import { recordEvent } from './recording.ts';
 import { wsMessagesSent } from './metrics.ts';
@@ -31,7 +32,7 @@ export function removeClientFromLobby(lobbyId: number, ws: WebSocket): void {
   }
 }
 
-export function broadcast(msg: Record<string, unknown>, exclude?: WebSocket): void {
+export function broadcast(msg: ServerMessage, exclude?: WebSocket): void {
   try {
     const data = JSON.stringify(msg);
     wss!.clients.forEach(client => {
@@ -49,7 +50,7 @@ export function broadcast(msg: Record<string, unknown>, exclude?: WebSocket): vo
   }
 }
 
-export function broadcastToLobby(lobbyId: number, msg: Record<string, unknown>, exclude?: WebSocket): void {
+export function broadcastToLobby(lobbyId: number, msg: ServerMessage, exclude?: WebSocket): void {
   try {
     const set = lobbyClients.get(lobbyId);
     if (!set) return;
@@ -77,7 +78,7 @@ export function getWsForPlayer(playerId: string): WebSocket | undefined {
   return undefined;
 }
 
-export function send(ws: WebSocket, msg: Record<string, unknown>): void {
+export function send(ws: WebSocket, msg: ServerMessage): void {
   try {
     if (ws.readyState === 1) {
       ws.send(JSON.stringify(msg));

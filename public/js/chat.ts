@@ -1,6 +1,7 @@
 import { dom, clientState } from './state.ts';
 import { isPremium, renderIcon } from './avatars.ts';
 import type { SendMessageFn } from './client-types.ts';
+import type { ChatBroadcastMsg } from '../../shared/messages.ts';
 
 let _sendMessage: SendMessageFn | null = null;
 let isChatOpen = false;
@@ -34,7 +35,7 @@ function sendChat(): void {
   dom.chatInput!.value = '';
 }
 
-export function handleChatBroadcast(msg: Record<string, any>): void {
+export function handleChatBroadcast(msg: ChatBroadcastMsg): void {
   const el = document.createElement('div');
 
   if (msg.system) {
@@ -55,7 +56,7 @@ export function handleChatBroadcast(msg: Record<string, any>): void {
     const name = document.createElement('span');
     name.className = 'chat-msg-name';
     name.style.color = msg.playerColor || '#ccc';
-    name.textContent = msg.playerName;
+    name.textContent = msg.playerName || '';
     el.appendChild(name);
 
     const text = document.createElement('span');

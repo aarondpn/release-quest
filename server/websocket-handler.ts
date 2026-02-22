@@ -38,12 +38,12 @@ function isGlobalRateLimited(ws: WebSocket): boolean {
 
 function formatValidationError(messageType: string, error: ZodError) {
   return {
-    type: 'validation-error',
+    type: 'validation-error' as const,
     messageType,
     errors: error.issues.map(issue => ({
       path: issue.path.join('.'),
       message: issue.message,
-      code: issue.code,
+      code: String(issue.code),
     })),
   };
 }

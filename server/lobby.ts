@@ -9,6 +9,7 @@ import { createGameLifecycle } from './game-lifecycle.ts';
 import { broadcastToLobby, send, getWsForPlayer, removeClientFromLobby, wsToLobby } from './network.ts';
 import { stopRecording } from './recording.ts';
 import { cleanupChatForLobby } from './handlers/chat.ts';
+import type { ServerMessage } from '../shared/messages.ts';
 import type { LobbyMemory, PlayerData, DbLobbyRow, CustomDifficultyConfig, GameTimers } from './types.ts';
 
 function createGameTimers(): GameTimers {
@@ -19,7 +20,8 @@ function createLobbyMemory(lobbyId: number, difficulty: string, customConfig?: C
   const timers = createGameTimers();
   const state = createGameState(difficulty, customConfig);
   const events = createEventBus();
-  events.on((msg) => broadcastToLobby(lobbyId, msg));
+  // Trust boundary: event bus payload is always a valid ServerMessage
+  events.on((msg) => broadcastToLobby(lobbyId, msg as unknown as ServerMessage));
 
   const lifecycle = createGameLifecycle();
 

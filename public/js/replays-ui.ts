@@ -4,20 +4,10 @@ import { showError, ERROR_LEVELS } from './error-handler.ts';
 import { renderIcon } from './avatars.ts';
 import { escapeHtml } from './utils.ts';
 import type { SendMessageFn } from './client-types.ts';
+import type { RecordingSharedMsg, RecordingUnsharedMsg, RecordingListItem } from '../../shared/messages.ts';
 
 let _sendMessage: SendMessageFn | null = null;
 export function initReplaysSend(fn: SendMessageFn): void { _sendMessage = fn; }
-
-interface RecordingListItem {
-  id: number;
-  score: number;
-  outcome: 'win' | 'loss';
-  difficulty: string;
-  recorded_at: string;
-  duration_ms: number;
-  players?: { icon?: string }[];
-  share_token?: string | null;
-}
 
 export function requestRecordings(): void {
   if (_sendMessage) _sendMessage({ type: 'get-recordings' });
@@ -120,7 +110,7 @@ export function renderRecordingsList(recordings: RecordingListItem[]): void {
   });
 }
 
-export function handleRecordingShared(msg: Record<string, any>): void {
+export function handleRecordingShared(msg: RecordingSharedMsg): void {
   const url = location.origin + '/?replay=' + msg.shareToken;
   navigator.clipboard.writeText(url).catch(() => {});
 
@@ -157,7 +147,7 @@ export function handleRecordingShared(msg: Record<string, any>): void {
   }
 }
 
-export function handleRecordingUnshared(_msg: Record<string, unknown>): void {
+export function handleRecordingUnshared(_msg: RecordingUnsharedMsg): void {
   requestRecordings();
 }
 

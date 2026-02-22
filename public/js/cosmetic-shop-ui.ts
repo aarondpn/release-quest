@@ -2,6 +2,7 @@ import { dom, clientState, activateLobbyTab } from './state.ts';
 import { SHOP_AVATARS, renderIcon, COIN_SVG } from './avatars.ts';
 import { escapeHtml, showToast } from './utils.ts';
 import type { SendMessageFn } from './client-types.ts';
+import type { ShopCatalogMsg, ShopPurchaseResultMsg } from '../../shared/messages.ts';
 
 interface ShopCatalogItem {
   id: string;
@@ -29,7 +30,7 @@ export function requestShopCatalog(): void {
   if (_sendMessage) _sendMessage({ type: 'get-shop-catalog' });
 }
 
-export function handleShopCatalog(msg: Record<string, unknown>): void {
+export function handleShopCatalog(msg: ShopCatalogMsg): void {
   _shopItems = (msg.rotatingItems || []) as ShopCatalogItem[];
   _rotationEndUtc = (msg.rotationEndUtc as string) || null;
   _ownedItems = new Set((msg.owned || []) as string[]);
@@ -44,7 +45,7 @@ export function handleShopCatalog(msg: Record<string, unknown>): void {
   updateShopNewBadge();
 }
 
-export function handleShopPurchaseResult(msg: Record<string, unknown>): void {
+export function handleShopPurchaseResult(msg: ShopPurchaseResultMsg): void {
   if (msg.success) {
     _ownedItems.add(msg.itemId as string);
     clientState.byteCoinsBalance = msg.newBalance as number;
@@ -166,7 +167,7 @@ function renderShopGrid(): void {
         btn.addEventListener('animationend', () => btn.classList.remove('locked-shake'), { once: true });
         return;
       }
-      if (_sendMessage) _sendMessage({ type: 'shop-purchase', itemId: id });
+      if (_sendMessage && id) _sendMessage({ type: 'shop-purchase', itemId: id });
     });
   });
 }

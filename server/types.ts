@@ -9,6 +9,8 @@ export type {
   LeaderboardEntry, StatsData, AuthUser, QuestEntry, RecordingEvent, MouseMoveEvent,
 } from '../shared/types.ts';
 
+export type { ClientMessage, ServerMessage } from '../shared/messages.ts';
+
 import type { GamePhase, WirePlayer, ShopItem, RubberDuck, HotfixHammer, AuthUser, RecordingEvent } from '../shared/types.ts';
 
 export interface ActiveBuff {
@@ -511,7 +513,7 @@ export interface RecordingRow {
   user_id: number;
   recorded_at: Date;
   duration_ms: number;
-  outcome: string;
+  outcome: 'win' | 'loss';
   score: number;
   difficulty: string;
   player_count: number;
