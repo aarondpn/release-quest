@@ -50,6 +50,64 @@ export interface SetNameMsg {
 
 // Lobby
 
+export interface LobbyCustomConfig {
+  startingHp?: number;
+  hpDamage?: number;
+  bugPoints?: number;
+  scoreMultiplier?: number;
+  levels?: Record<string, {
+    bugsTotal?: number;
+    escapeTime?: number;
+    spawnRate?: number;
+    maxOnScreen?: number;
+  }>;
+  boss?: {
+    hp?: number;
+    clickDamage?: number;
+    clickPoints?: number;
+    killBonus?: number;
+    wanderInterval?: number;
+    minionSpawnRate?: number;
+    minionEscapeTime?: number;
+    minionMaxOnScreen?: number;
+    clickCooldownMs?: number;
+    regenPerSecond?: number;
+    timeLimit?: number;
+  };
+  specialBugs?: {
+    heisenbugChance?: number;
+    codeReviewChance?: number;
+    codeReviewStartLevel?: number;
+    mergeConflictChance?: number;
+    pipelineBugChance?: number;
+    pipelineBugStartLevel?: number;
+    memoryLeakChance?: number;
+    infiniteLoopChance?: number;
+    infiniteLoopStartLevel?: number;
+    azubiChance?: number;
+    azubiStartLevel?: number;
+    azubiSpawnInterval?: number;
+    azubiFeatureChance?: number;
+  };
+  shop?: {
+    duration?: number;
+  };
+  powerups?: {
+    rubberDuckIntervalMin?: number;
+    rubberDuckIntervalMax?: number;
+    rubberDuckBuffDuration?: number;
+    rubberDuckWanderInterval?: number;
+    rubberDuckDespawnTime?: number;
+    rubberDuckPoints?: number;
+    rubberDuckPointsMultiplier?: number;
+    hotfixHammerIntervalMin?: number;
+    hotfixHammerIntervalMax?: number;
+    hotfixHammerStunDuration?: number;
+    hotfixHammerDespawnTime?: number;
+    hotfixHammerPoints?: number;
+  };
+}
+
 export interface ListLobbiesMsg {
   type: 'list-lobbies';
 }
@@ -59,7 +117,7 @@ export interface CreateLobbyMsg {
   name?: string;
   maxPlayers?: number;
   difficulty?: string;
-  customConfig?: Record<string, unknown>;
+  customConfig?: LobbyCustomConfig;
   password?: string;
 }
 

@@ -1,25 +1,41 @@
 import { z } from 'zod';
 import type { ZodType } from 'zod';
+import type {
+  RegisterMsg, LoginMsg, LogoutMsg, ResumeSessionMsg, ResumeGuestMsg,
+  SetNameMsg, ListLobbiesMsg, CreateLobbyMsg, JoinLobbyMsg, JoinLobbyByCodeMsg,
+  LeaveLobbyMsg, JoinSpectateMsg, LeaveSpectateMsg, StartGameMsg,
+  ClickBugMsg, ClickBossMsg, ClickDuckMsg, ClickHammerMsg, CursorMoveMsg,
+  ClickBreakpointMsg, ClickMemoryLeakStartMsg, ClickMemoryLeakCompleteMsg,
+  ShopBuyMsg, ShopReadyMsg, SelectRoleMsg, ChatMessageMsg,
+  GetLeaderboardMsg, GetMyStatsMsg, GetRecordingsMsg,
+  ShareRecordingMsg, UnshareRecordingMsg, GetQuestsMsg, GetBalanceMsg,
+  GetShopCatalogMsg, ShopSeenMsg, ShopPurchaseMsg, DevCommandMsg,
+} from '../../shared/messages.ts';
 
-// --- No-payload messages (9) ---
+// --- No-payload messages ---
 
-const listLobbiesSchema = z.object({ type: z.literal('list-lobbies') });
-const leaveLobbSchema = z.object({ type: z.literal('leave-lobby') });
-const startGameSchema = z.object({ type: z.literal('start-game') });
-const clickBossSchema = z.object({ type: z.literal('click-boss') });
-const clickDuckSchema = z.object({ type: z.literal('click-duck') });
-const clickHammerSchema = z.object({ type: z.literal('click-hammer') });
-const getLeaderboardSchema = z.object({ type: z.literal('get-leaderboard') });
-const getMyStatsSchema = z.object({ type: z.literal('get-my-stats') });
-const getRecordingsSchema = z.object({ type: z.literal('get-recordings') });
-const getQuestsSchema = z.object({ type: z.literal('get-quests') });
-const getBalanceSchema = z.object({ type: z.literal('get-balance') });
-const getShopCatalogSchema = z.object({ type: z.literal('get-shop-catalog') });
-const shopSeenSchema = z.object({ type: z.literal('shop-seen') });
+const listLobbiesSchema = z.object({ type: z.literal('list-lobbies') }) satisfies ZodType<ListLobbiesMsg>;
+const leaveLobbySchema = z.object({ type: z.literal('leave-lobby') }) satisfies ZodType<LeaveLobbyMsg>;
+const startGameSchema = z.object({ type: z.literal('start-game') }) satisfies ZodType<StartGameMsg>;
+const clickBossSchema = z.object({ type: z.literal('click-boss') }) satisfies ZodType<ClickBossMsg>;
+const clickDuckSchema = z.object({ type: z.literal('click-duck') }) satisfies ZodType<ClickDuckMsg>;
+const clickHammerSchema = z.object({ type: z.literal('click-hammer') }) satisfies ZodType<ClickHammerMsg>;
+const getLeaderboardSchema = z.object({ type: z.literal('get-leaderboard') }) satisfies ZodType<GetLeaderboardMsg>;
+const getMyStatsSchema = z.object({ type: z.literal('get-my-stats') }) satisfies ZodType<GetMyStatsMsg>;
+const getRecordingsSchema = z.object({ type: z.literal('get-recordings') }) satisfies ZodType<GetRecordingsMsg>;
+const getQuestsSchema = z.object({ type: z.literal('get-quests') }) satisfies ZodType<GetQuestsMsg>;
+const getBalanceSchema = z.object({ type: z.literal('get-balance') }) satisfies ZodType<GetBalanceMsg>;
+const getShopCatalogSchema = z.object({ type: z.literal('get-shop-catalog') }) satisfies ZodType<GetShopCatalogMsg>;
+const shopSeenSchema = z.object({ type: z.literal('shop-seen') }) satisfies ZodType<ShopSeenMsg>;
 const shopPurchaseSchema = z.object({
   type: z.literal('shop-purchase'),
   itemId: z.string().max(64),
-});
+}) satisfies ZodType<ShopPurchaseMsg>;
+
+const leaveSpectateSchema = z.object({ type: z.literal('leave-spectate') }) satisfies ZodType<LeaveSpectateMsg>;
+const shopReadySchema = z.object({ type: z.literal('shop-ready') }) satisfies ZodType<ShopReadyMsg>;
+
+// --- Custom config sub-schema (used by create-lobby) ---
 
 const customConfigSchema = z.object({
   startingHp: z.number().int().min(1).max(150).optional(),
@@ -79,7 +95,7 @@ const customConfigSchema = z.object({
   }).optional(),
 }).optional();
 
-// --- Messages with fields (15) ---
+// --- Messages with fields ---
 
 const registerSchema = z.object({
   type: z.literal('register'),
@@ -87,34 +103,34 @@ const registerSchema = z.object({
   password: z.string().max(64),
   displayName: z.string().max(32),
   icon: z.string().max(64).optional(),
-});
+}) satisfies ZodType<RegisterMsg>;
 
 const loginSchema = z.object({
   type: z.literal('login'),
   username: z.string().max(16),
   password: z.string().max(64),
-});
+}) satisfies ZodType<LoginMsg>;
 
 const logoutSchema = z.object({
   type: z.literal('logout'),
   token: z.string().max(64),
-});
+}) satisfies ZodType<LogoutMsg>;
 
 const resumeSessionSchema = z.object({
   type: z.literal('resume-session'),
   token: z.string().max(64),
-});
+}) satisfies ZodType<ResumeSessionMsg>;
 
 const resumeGuestSchema = z.object({
   type: z.literal('resume-guest'),
   token: z.string().max(64).optional(),
-});
+}) satisfies ZodType<ResumeGuestMsg>;
 
 const setNameSchema = z.object({
   type: z.literal('set-name'),
   name: z.string().max(32).optional(),
   icon: z.string().max(64).optional(),
-});
+}) satisfies ZodType<SetNameMsg>;
 
 const createLobbySchema = z.object({
   type: z.literal('create-lobby'),
@@ -123,90 +139,84 @@ const createLobbySchema = z.object({
   difficulty: z.string().max(16).optional(),
   customConfig: customConfigSchema,
   password: z.string().max(64).optional(),
-});
+}) satisfies ZodType<CreateLobbyMsg>;
 
 const joinLobbySchema = z.object({
   type: z.literal('join-lobby'),
   lobbyId: z.number(),
   password: z.string().max(64).optional(),
-});
+}) satisfies ZodType<JoinLobbyMsg>;
 
 const joinLobbyByCodeSchema = z.object({
   type: z.literal('join-lobby-by-code'),
   code: z.string().max(6),
   password: z.string().max(64).optional(),
-});
+}) satisfies ZodType<JoinLobbyByCodeMsg>;
 
 const joinSpectateSchema = z.object({
   type: z.literal('join-spectate'),
   lobbyId: z.number(),
   password: z.string().max(64).optional(),
-});
-
-const leaveSpectateSchema = z.object({ type: z.literal('leave-spectate') });
+}) satisfies ZodType<JoinSpectateMsg>;
 
 const clickBugSchema = z.object({
   type: z.literal('click-bug'),
   bugId: z.string().max(64),
-});
+}) satisfies ZodType<ClickBugMsg>;
 
 const shareRecordingSchema = z.object({
   type: z.literal('share-recording'),
   id: z.number(),
-});
+}) satisfies ZodType<ShareRecordingMsg>;
 
 const unshareRecordingSchema = z.object({
   type: z.literal('unshare-recording'),
   id: z.number(),
-});
+}) satisfies ZodType<UnshareRecordingMsg>;
 
 const cursorMoveSchema = z.object({
   type: z.literal('cursor-move'),
   x: z.number().min(0).max(800),
   y: z.number().min(0).max(500),
-});
+}) satisfies ZodType<CursorMoveMsg>;
 
-// --- Plugin message schemas (3) ---
+// --- Plugin message schemas ---
 
 const clickBreakpointSchema = z.object({
   type: z.literal('click-breakpoint'),
   bugId: z.string().max(64),
-});
+}) satisfies ZodType<ClickBreakpointMsg>;
 
 const clickMemoryLeakStartSchema = z.object({
   type: z.literal('click-memory-leak-start'),
   bugId: z.string().max(64),
-});
+}) satisfies ZodType<ClickMemoryLeakStartMsg>;
 
 const clickMemoryLeakCompleteSchema = z.object({
   type: z.literal('click-memory-leak-complete'),
   bugId: z.string().max(64),
-});
+}) satisfies ZodType<ClickMemoryLeakCompleteMsg>;
 
-// --- Chat messages ---
+// --- Chat ---
 
 const chatMessageSchema = z.object({
   type: z.literal('chat-message'),
   message: z.string().min(1).max(200),
-});
+}) satisfies ZodType<ChatMessageMsg>;
 
 // --- Role selection ---
 
 const selectRoleSchema = z.object({
   type: z.literal('select-role'),
   role: z.string().max(32).nullable(),
-});
+}) satisfies ZodType<SelectRoleMsg>;
 
-// --- Shop messages ---
+// --- Shop (in-game) ---
 
 const shopBuySchema = z.object({
   type: z.literal('shop-buy'),
   itemId: z.string().max(64),
-});
-
-const shopReadySchema = z.object({
-  type: z.literal('shop-ready'),
-});
+}) satisfies ZodType<ShopBuyMsg>;
 
 // --- Dev mode ---
 
@@ -215,7 +225,7 @@ const devCommandSchema = z.object({
   command: z.string().max(32),
   level: z.number().int().min(1).max(3).optional(),
   value: z.number().optional(),
-});
+}) satisfies ZodType<DevCommandMsg>;
 
 // --- Registry ---
 
@@ -230,7 +240,7 @@ export const staticSchemas: Record<string, ZodType> = {
   'create-lobby': createLobbySchema,
   'join-lobby': joinLobbySchema,
   'join-lobby-by-code': joinLobbyByCodeSchema,
-  'leave-lobby': leaveLobbSchema,
+  'leave-lobby': leaveLobbySchema,
   'join-spectate': joinSpectateSchema,
   'leave-spectate': leaveSpectateSchema,
   'start-game': startGameSchema,
@@ -258,23 +268,3 @@ export const staticSchemas: Record<string, ZodType> = {
   'shop-seen': shopSeenSchema,
   'shop-purchase': shopPurchaseSchema,
 };
-
-// --- Inferred types for future handler opt-in ---
-
-export type RegisterMessage = z.infer<typeof registerSchema>;
-export type LoginMessage = z.infer<typeof loginSchema>;
-export type LogoutMessage = z.infer<typeof logoutSchema>;
-export type ResumeSessionMessage = z.infer<typeof resumeSessionSchema>;
-export type SetNameMessage = z.infer<typeof setNameSchema>;
-export type CreateLobbyMessage = z.infer<typeof createLobbySchema>;
-export type JoinLobbyMessage = z.infer<typeof joinLobbySchema>;
-export type JoinLobbyByCodeMessage = z.infer<typeof joinLobbyByCodeSchema>;
-export type ClickBugMessage = z.infer<typeof clickBugSchema>;
-export type ShareRecordingMessage = z.infer<typeof shareRecordingSchema>;
-export type UnshareRecordingMessage = z.infer<typeof unshareRecordingSchema>;
-export type CursorMoveMessage = z.infer<typeof cursorMoveSchema>;
-export type ClickBreakpointMessage = z.infer<typeof clickBreakpointSchema>;
-export type ClickMemoryLeakStartMessage = z.infer<typeof clickMemoryLeakStartSchema>;
-export type ClickMemoryLeakCompleteMessage = z.infer<typeof clickMemoryLeakCompleteSchema>;
-export type ChatMessageMessage = z.infer<typeof chatMessageSchema>;
-export type DevCommandMessage = z.infer<typeof devCommandSchema>;

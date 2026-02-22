@@ -17,6 +17,7 @@ import { initChatSend, initChat } from './chat.ts';
 import { initQuestsSend, requestQuests, showQuestsTab } from './quests-ui.ts';
 import { initShopSend, showShopTab, hideShopPanel } from './cosmetic-shop-ui.ts';
 import type { DifficultyPreset } from './client-types.ts';
+import type { LobbyCustomConfig } from '../../shared/messages.ts';
 
 initDom();
 
@@ -110,24 +111,6 @@ function updateDifficultyPlaceholders(difficulty: string): void {
   }
 }
 
-interface CustomConfig {
-  startingHp?: number;
-  hpDamage?: number;
-  bugPoints?: number;
-  boss?: {
-    hp?: number;
-    timeLimit?: number;
-    clickDamage?: number;
-    killBonus?: number;
-    regenPerSecond?: number;
-  };
-  specialBugs?: Record<string, number>;
-  powerups?: {
-    rubberDuckBuffDuration?: number;
-    hotfixHammerStunDuration?: number;
-  };
-}
-
 function submitJoin(): void {
   try {
     if (!clientState.ws || clientState.ws.readyState !== 1) return;
@@ -180,7 +163,7 @@ dom.createLobbyBtn!.addEventListener('click', () => {
     const maxPlayers = parseInt(dom.lobbyMaxPlayers!.dataset.value!, 10) || 4;
     const difficulty = dom.lobbyDifficulty!.dataset.value || 'medium';
 
-    const customConfig: CustomConfig = {};
+    const customConfig: LobbyCustomConfig = {};
 
     if (dom.configStartingHp!.value) customConfig.startingHp = parseInt(dom.configStartingHp!.value, 10);
     if (dom.configHpDamage!.value) customConfig.hpDamage = parseInt(dom.configHpDamage!.value, 10);
@@ -191,7 +174,7 @@ dom.createLobbyBtn!.addEventListener('click', () => {
     if (dom.configBossKillBonus!.value) { if (!customConfig.boss) customConfig.boss = {}; customConfig.boss.killBonus = parseInt(dom.configBossKillBonus!.value, 10); }
     if (dom.configBossRegen!.value) { if (!customConfig.boss) customConfig.boss = {}; customConfig.boss.regenPerSecond = parseFloat(dom.configBossRegen!.value); }
 
-    const bugToggleMap: { toggle: HTMLInputElement; input: HTMLInputElement; key: string }[] = [
+    const bugToggleMap: { toggle: HTMLInputElement; input: HTMLInputElement; key: keyof NonNullable<LobbyCustomConfig['specialBugs']> }[] = [
       { toggle: dom.toggleHeisenbug!, input: dom.configHeisenbug!, key: 'heisenbugChance' },
       { toggle: dom.toggleCodeReview!, input: dom.configCodeReview!, key: 'codeReviewChance' },
       { toggle: dom.toggleMergeConflict!, input: dom.configMergeConflict!, key: 'mergeConflictChance' },
@@ -218,7 +201,7 @@ dom.createLobbyBtn!.addEventListener('click', () => {
       name,
       maxPlayers,
       difficulty,
-      ...(Object.keys(customConfig).length > 0 ? { customConfig: customConfig as Record<string, unknown> } : {}),
+      ...(Object.keys(customConfig).length > 0 ? { customConfig } : {}),
       ...(password ? { password } : {}),
     });
 

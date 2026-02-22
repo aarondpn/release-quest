@@ -1,5 +1,5 @@
 import type { HandlerContext, MessageHandler } from './types.ts';
-import type { DevCommandMessage } from './schemas.ts';
+import type { DevCommandMsg } from '../../shared/messages.ts';
 import { DEV_MODE } from '../config.ts';
 import { getCtxForPlayer } from '../helpers.ts';
 import * as network from '../network.ts';
@@ -13,7 +13,7 @@ function sendDevError(ws: HandlerContext['ws'], message: string): void {
   network.send(ws, { type: 'dev-error', message });
 }
 
-export const handleDevCommand: MessageHandler<DevCommandMessage> = ({ ws, msg, pid, playerInfo }) => {
+export const handleDevCommand: MessageHandler<DevCommandMsg> = ({ ws, msg, pid, playerInfo }) => {
   if (!DEV_MODE) {
     sendDevError(ws, 'Dev mode is not enabled');
     return;
