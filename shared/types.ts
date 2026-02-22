@@ -2,7 +2,41 @@
 // Both server/types.ts and public/js/client-types.ts re-export these so
 // existing consumer imports remain unchanged.
 
-export type GamePhase = 'lobby' | 'playing' | 'shopping' | 'boss' | 'gameover' | 'win';
+export type GamePhase = 'lobby' | 'playing' | 'shopping' | 'boss' | 'gameover' | 'win' | 'map_view' | 'event' | 'resting' | 'mini_boss';
+
+export type MapNodeType = 'bug_level' | 'elite' | 'shop' | 'event' | 'rest' | 'mini_boss' | 'boss';
+export type GameMode = 'classic' | 'roguelike';
+
+export interface MapNode {
+  id: string;
+  row: number;
+  col: number;
+  type: MapNodeType;
+  connections: string[];
+  visited: boolean;
+  label: string;
+  icon: string;
+}
+
+export interface RoguelikeMap {
+  nodes: MapNode[];
+  currentNodeId: string | null;
+  seed: number;
+}
+
+export interface EventOption { id: string; label: string; description: string; icon: string; }
+export interface EventDefinition { id: string; title: string; description: string; icon: string; options: EventOption[]; }
+
+export interface EventModifiers {
+  bugsTotalMultiplier?: number;
+  escapeTimeOffset?: number;
+  spawnRateMultiplier?: number;
+  scoreMultiplier?: number;
+  hpChange?: number;
+  scoreChange?: number;
+  grantEagleEye?: boolean;
+  onlyNormalBugs?: boolean;
+}
 
 /** Fields sent over the wire for every player. */
 export interface WirePlayer {
@@ -112,4 +146,15 @@ export interface MouseMoveEvent {
   playerId: string;
   x: number;
   y: number;
+}
+
+export interface MiniBossEntity {
+  id: string;
+  x: number;
+  y: number;
+  hp: number;
+  maxHp: number;
+  isOriginal?: boolean;
+  spawnedAt?: number;
+  frozen?: boolean;
 }

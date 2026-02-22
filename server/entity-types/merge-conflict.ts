@@ -54,9 +54,9 @@ export const mergeConflictDescriptor: EntityDescriptor = {
     if (!player) return;
     const partner = state.bugs[bug.mergePartner!];
 
-    // Same player can't resolve both sides — unless they're an Architect
+    // Same player can't resolve both sides — unless they're an Architect or in an elite encounter
     if (partner && partner.mergeClicked && partner.mergeClickedBy === pid) {
-      if (!roles.hasRole(state, pid, 'architect')) return;
+      if (!roles.hasRole(state, pid, 'architect') && !state.eliteConfig) return;
     }
 
     bug.mergeClicked = true;

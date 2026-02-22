@@ -6,6 +6,8 @@ import * as boss from './boss.ts';
 import * as powerups from './powerups.ts';
 import * as shop from './shop.ts';
 import * as stats from './stats.ts';
+import * as roguelike from './roguelike.ts';
+import * as elite from './elite.ts';
 import { createMatchLog } from './match-logger.ts';
 import { startRecording, stopRecording } from './recording.ts';
 import * as db from './db.ts';
@@ -42,7 +44,8 @@ export function endGame(ctx: GameContext, outcome: string, win: boolean): void {
     players: getPlayerScores(state),
   });
   const hasCustom = state.customConfig && Object.keys(state.customConfig).length > 0;
-  if (!hasCustom && ctx.playerInfo) stats.recordGameEnd(state, ctx.playerInfo, win);
+  const isRoguelike = state.gameMode === 'roguelike';
+  if (!hasCustom && !isRoguelike && ctx.playerInfo) stats.recordGameEnd(state, ctx.playerInfo, win);
 
   // Save recording for logged-in players
   if (recording && ctx.playerInfo) {
@@ -79,8 +82,8 @@ export function startGame(ctx: GameContext): void {
   state.hp = diffConfig.startingHp;
   state.level = 1;
   state.playerBuffs = {};
-  ctx.lifecycle.transition(state, 'playing');
   state.boss = null;
+  state.persistentScoreMultiplier = undefined;
   state.gameStartedAt = Date.now();
 
   ctx.matchLog = createMatchLog(lobbyId);
@@ -97,6 +100,13 @@ export function startGame(ctx: GameContext): void {
   });
 
   gameGamesStarted.inc({ difficulty: state.difficulty });
+
+  if (state.gameMode === 'roguelike') {
+    roguelike.startRoguelikeGame(ctx);
+    return;
+  }
+
+  ctx.lifecycle.transition(state, 'playing');
 
   ctx.events.emit({
     type: 'game-start',
@@ -151,28 +161,49 @@ export function checkGameState(ctx: GameContext): void {
     }
 
     const cfg = currentLevelConfig(state);
-    const allSpawned = state.bugsSpawned >= cfg.bugsTotal;
+    // Elites manually control bugsSpawned — bypass row-scaled bugsTotal check
+    const allSpawned = state.eliteConfig
+      ? true
+      : state.bugsSpawned >= cfg.bugsTotal;
     const noneAlive = Object.keys(state.bugs).length === 0;
 
     if (allSpawned && noneAlive) {
+      // Elite wave check: if elite config is active and more waves remain, trigger next wave
+      if (state.eliteConfig && state.eliteConfig.wavesSpawned < state.eliteConfig.wavesTotal) {
+        bugs.clearSpawnTimer(ctx);
+        elite.onEliteWaveCheck(ctx);
+        return;
+      }
+
       bugs.clearSpawnTimer(ctx);
       if (ctx.matchLog) {
         const next = state.level >= MAX_LEVEL ? 'boss' : state.level + 1;
         ctx.matchLog.log('level-complete', { level: state.level, ...(typeof next === 'number' ? { nextLevel: next } : { next }) });
       }
+
+      // If elite encounter, complete it instead of normal level transition
+      if (state.eliteConfig) {
+        elite.onEliteWaveCheck(ctx);
+        return;
+      }
+
       ctx.events.emit({
         type: 'level-complete',
         level: state.level,
         score: state.score,
       });
-      // Brief pause, then open shop
+      // Brief pause, then next phase
       ctx.timers.lobby.setTimeout('levelTransition', () => {
         try {
           if (Object.keys(state.players).length === 0) return;
-          shop.openShop(ctx);
+          if (state.gameMode === 'roguelike') {
+            roguelike.handleNodeComplete(ctx);
+          } else {
+            shop.openShop(ctx);
+          }
         } catch (err) {
           const logCtx = createLobbyLogger(ctx.lobbyId.toString());
-          logCtx.error({ err }, 'Error opening shop');
+          logCtx.error({ err }, 'Error in level transition');
         }
       }, 1500);
     }
@@ -205,4 +236,14 @@ export function resetToLobby(ctx: GameContext): void {
   state.bugsSpawned = 0;
   state.boss = null;
   state.playerBuffs = {};
+  state.roguelikeMap = undefined;
+  state.mapVotes = undefined;
+  state.voteDeadline = undefined;
+  state.eventModifiers = undefined;
+  state.eventVotes = undefined;
+  state.activeEventId = undefined;
+  state.eliteConfig = undefined;
+  state.miniBoss = undefined;
+  state.persistentScoreMultiplier = undefined;
+  state.restVotes = undefined;
 }

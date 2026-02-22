@@ -5,6 +5,7 @@
 import type {
   AuthUser, BugVariant, ShopItem, LeaderboardEntry, StatsData,
   QuestEntry, GamePhase, WirePlayer, RubberDuck, HotfixHammer,
+  GameMode, RoguelikeMap, MapNodeType, EventDefinition, MiniBossEntity,
 } from './types.ts';
 
 // ─── Client → Server messages ────────────────────────────────────────────────
@@ -119,6 +120,7 @@ export interface CreateLobbyMsg {
   difficulty?: string;
   customConfig?: LobbyCustomConfig;
   password?: string;
+  gameMode?: GameMode;
 }
 
 export interface JoinLobbyMsg {
@@ -267,6 +269,32 @@ export interface ShopPurchaseMsg {
 
 // Dev
 
+// Roguelike
+
+export interface MapVoteMsg {
+  type: 'map-vote';
+  nodeId: string;
+}
+
+export interface EventVoteMsg {
+  type: 'event-vote';
+  optionId: string;
+}
+
+export interface RestVoteMsg {
+  type: 'rest-vote';
+  option: 'rest' | 'train';
+}
+
+export interface MiniBossClickMsg {
+  type: 'mini-boss-click';
+  entityId: string;
+}
+
+export interface EncounterRewardContinueMsg {
+  type: 'encounter-reward-continue';
+}
+
 export interface DevCommandMsg {
   type: 'dev-command';
   command: string;
@@ -311,6 +339,11 @@ export type ClientMessage =
   | GetShopCatalogMsg
   | ShopSeenMsg
   | ShopPurchaseMsg
+  | MapVoteMsg
+  | EventVoteMsg
+  | RestVoteMsg
+  | MiniBossClickMsg
+  | EncounterRewardContinueMsg
   | DevCommandMsg;
 
 // ─── Server → Client messages ────────────────────────────────────────────────
@@ -437,6 +470,8 @@ export interface LobbyJoinedMsg {
   hotfixHammer: HotfixHammer | null;
   boss: WireBossSnapshot | null;
   hasCustomSettings: boolean;
+  gameMode?: GameMode;
+  roguelikeMap?: RoguelikeMap;
 }
 
 export interface SpectatorJoinedMsg {
@@ -456,6 +491,8 @@ export interface SpectatorJoinedMsg {
   duckBuff: { expiresAt: number } | null;
   hotfixHammer: HotfixHammer | null;
   boss: WireBossSnapshot | null;
+  gameMode?: GameMode;
+  roguelikeMap?: RoguelikeMap;
 }
 
 export interface SpectatorCountMsg {
@@ -1035,6 +1072,148 @@ export interface ShopPurchaseResultMsg {
   newBalance?: number;
 }
 
+// Roguelike (server → client)
+
+export interface RoguelikeMapMsg {
+  type: 'roguelike-map';
+  map: RoguelikeMap;
+  hp: number;
+  score: number;
+  players: WirePlayer[];
+}
+
+export interface MapViewMsg {
+  type: 'map-view';
+  currentNodeId: string | null;
+  visitedNodeIds: string[];
+  availableNodes: string[];
+  soloMode: boolean;
+  hp: number;
+  maxHp: number;
+  score: number;
+  persistentScoreMultiplier: number;
+  activeBuffs: string[];
+  eventModifierLabel?: string;
+}
+
+export interface MapVoteUpdateMsg {
+  type: 'map-vote-update';
+  votes: Record<string, string>;
+  timeRemaining: number;
+}
+
+export interface MapNodeSelectedMsg {
+  type: 'map-node-selected';
+  nodeId: string;
+  nodeType: MapNodeType;
+}
+
+// Event nodes
+
+export interface EventShowMsg {
+  type: 'event-show';
+  event: EventDefinition;
+  soloMode: boolean;
+}
+
+export interface EventVoteUpdateMsg {
+  type: 'event-vote-update';
+  votes: Record<string, string>;
+  timeRemaining: number;
+}
+
+export interface EventResolvedMsg {
+  type: 'event-resolved';
+  eventId: string;
+  chosenOptionId: string;
+  hpChange?: number;
+  scoreChange?: number;
+  newHp?: number;
+  newScore?: number;
+  modifierSummary?: string;
+}
+
+// Rest nodes
+
+export interface RestStartMsg {
+  type: 'rest-start';
+  restHpGain: number;
+  trainScoreBonus: number;
+  currentHp: number;
+  maxHp: number;
+  currentScoreMultiplier: number;
+  soloMode: boolean;
+}
+
+export interface RestVoteUpdateMsg {
+  type: 'rest-vote-update';
+  votes: Record<string, string>;
+  timeRemaining: number;
+}
+
+export interface RestResolvedMsg {
+  type: 'rest-resolved';
+  chosenOption: 'rest' | 'train';
+  hpAfter: number;
+  newScoreMultiplier: number;
+}
+
+// Elite encounters
+
+export interface EliteStartMsg {
+  type: 'elite-start';
+  eliteType: string;
+  title: string;
+  icon: string;
+  description: string;
+  scoreMultiplier: number;
+  waveIndex: number;
+  wavesTotal: number;
+}
+
+// Mini-boss encounters
+
+export interface MiniBossSpawnMsg {
+  type: 'mini-boss-spawn';
+  miniBossType: string;
+  title: string;
+  icon: string;
+  description: string;
+  timeLimit: number;
+  entities: MiniBossEntity[];
+}
+
+export interface MiniBossTickMsg {
+  type: 'mini-boss-tick';
+  timeRemaining: number;
+  entities: MiniBossEntity[];
+}
+
+export interface MiniBossEntityUpdateMsg {
+  type: 'mini-boss-entity-update';
+  entities: MiniBossEntity[];
+  warning?: string;
+}
+
+export interface MiniBossDefeatedMsg {
+  type: 'mini-boss-defeated';
+  victory: boolean;
+  hpChange?: number;
+  newHp?: number;
+}
+
+// Encounter reward (shared by elite + mini-boss)
+
+export interface EncounterRewardMsg {
+  type: 'encounter-reward';
+  encounterType: 'elite' | 'mini_boss';
+  title: string;
+  scoreGained: number;
+  freeItem?: { id: string; name: string; icon: string; description: string } | null;
+  totalScore: number;
+  soloMode: boolean;
+}
+
 export type ServerMessage =
   // Connection
   | WelcomeMsg
@@ -1140,4 +1319,26 @@ export type ServerMessage =
   | BalanceDataMsg
   // Cosmetic shop
   | ShopCatalogMsg
-  | ShopPurchaseResultMsg;
+  | ShopPurchaseResultMsg
+  // Roguelike
+  | RoguelikeMapMsg
+  | MapViewMsg
+  | MapVoteUpdateMsg
+  | MapNodeSelectedMsg
+  // Events
+  | EventShowMsg
+  | EventVoteUpdateMsg
+  | EventResolvedMsg
+  // Rest
+  | RestStartMsg
+  | RestVoteUpdateMsg
+  | RestResolvedMsg
+  // Elite
+  | EliteStartMsg
+  // Mini-boss
+  | MiniBossSpawnMsg
+  | MiniBossTickMsg
+  | MiniBossEntityUpdateMsg
+  | MiniBossDefeatedMsg
+  // Encounter reward
+  | EncounterRewardMsg;

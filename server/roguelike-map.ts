@@ -1,0 +1,287 @@
+import { ROGUELIKE_CONFIG } from './config.ts';
+import { mulberry32 } from './rng.ts';
+import type { RoguelikeMap, MapNode, MapNodeType } from './types.ts';
+
+const NODE_ICONS: Record<MapNodeType, string> = {
+  bug_level: '\u{1F41B}',
+  shop: '\u{1F6D2}',
+  boss: '\u{1F47E}',
+  elite: '\u{2694}\u{FE0F}',
+  event: '\u{2753}',
+  rest: '\u{1F3D5}\u{FE0F}',
+  mini_boss: '\u{1F608}',
+};
+
+const NODE_LABELS: Record<MapNodeType, string> = {
+  bug_level: 'Bug Hunt',
+  shop: 'Shop',
+  boss: 'BOSS',
+  elite: 'Elite',
+  event: 'Event',
+  rest: 'Rest',
+  mini_boss: 'Mini-Boss',
+};
+
+function pickNodeType(rng: () => number, row: number, totalRows: number): MapNodeType {
+  if (row === 0) return 'bug_level'; // row 0 always bug_level — no currency yet
+  if (row === totalRows - 1) return 'bug_level'; // last gameplay row before boss
+  const roll = rng();
+  if (roll < 0.15) return 'rest';
+  if (roll < 0.30) return 'event';
+  if (roll < 0.50) return 'shop';
+  return 'bug_level';
+}
+
+export function generateMap(seed: number, _difficulty: string = 'medium'): RoguelikeMap {
+  const rng = mulberry32(seed);
+  const totalRows = ROGUELIKE_CONFIG.mapRows;
+  const nodes: MapNode[] = [];
+
+  // Generate rows 0..totalRows-1 (gameplay rows), then row totalRows (boss)
+  const rowNodes: string[][] = [];
+
+  for (let row = 0; row < totalRows; row++) {
+    const count = 2 + (rng() < 0.5 ? 1 : 0); // 2-3 nodes per row
+    const ids: string[] = [];
+    for (let col = 0; col < count; col++) {
+      const id = `r${row}n${col}`;
+      const type = pickNodeType(rng, row, totalRows);
+      nodes.push({
+        id,
+        row,
+        col,
+        type,
+        connections: [],
+        visited: false,
+        label: NODE_LABELS[type],
+        icon: NODE_ICONS[type],
+      });
+      ids.push(id);
+    }
+    rowNodes.push(ids);
+  }
+
+  // Add boss node
+  const bossId = `r${totalRows}n0`;
+  nodes.push({
+    id: bossId,
+    row: totalRows,
+    col: 0,
+    type: 'boss',
+    connections: [],
+    visited: false,
+    label: NODE_LABELS.boss,
+    icon: NODE_ICONS.boss,
+  });
+  rowNodes.push([bossId]);
+
+  // Connect rows: each node in row N connects to 1-2 nodes in row N+1
+  // Ensure every node in N+1 has at least 1 incoming edge
+  for (let row = 0; row < rowNodes.length - 1; row++) {
+    const currentIds = rowNodes[row];
+    const nextIds = rowNodes[row + 1];
+    const incoming = new Set<string>();
+
+    // Each node connects to at least 1 node in next row
+    for (const nodeId of currentIds) {
+      const node = nodes.find(n => n.id === nodeId)!;
+      const targetIdx = Math.floor(rng() * nextIds.length);
+      node.connections.push(nextIds[targetIdx]);
+      incoming.add(nextIds[targetIdx]);
+
+      // 50% chance to connect to a second node
+      if (nextIds.length > 1 && rng() < 0.5) {
+        const remaining = nextIds.filter((_, i) => i !== targetIdx);
+        const secondIdx = Math.floor(rng() * remaining.length);
+        node.connections.push(remaining[secondIdx]);
+        incoming.add(remaining[secondIdx]);
+      }
+    }
+
+    // Ensure all nodes in next row have at least 1 incoming edge
+    for (const nextId of nextIds) {
+      if (!incoming.has(nextId)) {
+        // Connect from a random node in current row
+        const sourceIdx = Math.floor(rng() * currentIds.length);
+        const sourceNode = nodes.find(n => n.id === currentIds[sourceIdx])!;
+        if (!sourceNode.connections.includes(nextId)) {
+          sourceNode.connections.push(nextId);
+        }
+      }
+    }
+  }
+
+  // Break up consecutive non-combat nodes: if same type connects to same type, convert child to bug_level
+  breakConsecutiveType(nodes, 'shop');
+  breakConsecutiveType(nodes, 'event');
+  breakConsecutiveType(nodes, 'rest');
+
+  // Validate: at least 1 shop reachable on every path from row 0 to boss
+  validateShopAccess(nodes, rowNodes, rng);
+
+  // Place elite and mini-boss nodes on some bug_level nodes
+  placeElitesAndMiniBosses(nodes, rowNodes, rng);
+
+  return { nodes, currentNodeId: null, seed };
+}
+
+function breakConsecutiveType(nodes: MapNode[], nodeType: MapNodeType): void {
+  const nodeMap = new Map(nodes.map(n => [n.id, n]));
+  for (const node of nodes) {
+    if (node.type !== nodeType) continue;
+    for (const connId of node.connections) {
+      const child = nodeMap.get(connId)!;
+      if (child.type === nodeType) {
+        child.type = 'bug_level';
+        child.label = NODE_LABELS.bug_level;
+        child.icon = NODE_ICONS.bug_level;
+      }
+    }
+  }
+}
+
+function validateShopAccess(nodes: MapNode[], rowNodes: string[][], rng: () => number): void {
+  const nodeMap = new Map(nodes.map(n => [n.id, n]));
+  const startIds = rowNodes[0];
+
+  // Check EVERY starting node has a path to a shop
+  for (const startId of startIds) {
+    if (!hasShopOnPath(nodes, startId)) {
+      // Find a node on a path from this start that can be converted to shop
+      const reachable = getReachableFromStart(nodeMap, startId);
+      const midRows = rowNodes.slice(1, rowNodes.length - 2);
+      let placed = false;
+      for (const rowIds of midRows) {
+        for (const id of rowIds) {
+          if (reachable.has(id)) {
+            const node = nodeMap.get(id)!;
+            if (node.type === 'bug_level') {
+              node.type = 'shop';
+              node.label = NODE_LABELS.shop;
+              node.icon = NODE_ICONS.shop;
+              placed = true;
+              break;
+            }
+          }
+        }
+        if (placed) break;
+      }
+    }
+  }
+}
+
+function getReachableFromStart(nodeMap: Map<string, MapNode>, startId: string): Set<string> {
+  const visited = new Set<string>();
+  const queue = [startId];
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    if (visited.has(id)) continue;
+    visited.add(id);
+    const node = nodeMap.get(id);
+    if (node) {
+      for (const connId of node.connections) {
+        if (!visited.has(connId)) queue.push(connId);
+      }
+    }
+  }
+  return visited;
+}
+
+function hasShopOnPath(nodes: MapNode[], startId: string): boolean {
+  const nodeMap = new Map(nodes.map(n => [n.id, n]));
+  const visited = new Set<string>();
+  const queue = [startId];
+
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    if (visited.has(id)) continue;
+    visited.add(id);
+
+    const node = nodeMap.get(id)!;
+    if (node.type === 'shop') return true;
+
+    for (const connId of node.connections) {
+      if (!visited.has(connId)) queue.push(connId);
+    }
+  }
+  return false;
+}
+
+function placeElitesAndMiniBosses(nodes: MapNode[], rowNodes: string[][], rng: () => number): void {
+  const nodeMap = new Map(nodes.map(n => [n.id, n]));
+  const maxElites = 2;
+  const maxMiniBosses = 1;
+
+  // Collect bug_level nodes from rows 2-4 (eligible for elite)
+  const eliteCandidates: MapNode[] = [];
+  for (let row = 2; row < Math.min(5, rowNodes.length - 1); row++) {
+    for (const id of rowNodes[row]) {
+      const node = nodeMap.get(id)!;
+      if (node.type === 'bug_level') eliteCandidates.push(node);
+    }
+  }
+
+  // Shuffle and pick up to maxElites
+  for (let i = eliteCandidates.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [eliteCandidates[i], eliteCandidates[j]] = [eliteCandidates[j], eliteCandidates[i]];
+  }
+
+  const eliteIds = new Set<string>();
+  for (let i = 0; i < Math.min(maxElites, eliteCandidates.length); i++) {
+    const node = eliteCandidates[i];
+    node.type = 'elite';
+    node.label = NODE_LABELS.elite;
+    node.icon = NODE_ICONS.elite;
+    eliteIds.add(node.id);
+  }
+
+  // Collect bug_level nodes from rows 3-4 for mini-boss (not adjacent to elites)
+  const miniBossCandidates: MapNode[] = [];
+  for (let row = 3; row < Math.min(5, rowNodes.length - 1); row++) {
+    for (const id of rowNodes[row]) {
+      const node = nodeMap.get(id)!;
+      if (node.type !== 'bug_level') continue;
+      // Check adjacency: no elite should connect to this node or this node connect to an elite
+      let adjacentToElite = false;
+      for (const n of nodes) {
+        if (eliteIds.has(n.id) && n.connections.includes(id)) { adjacentToElite = true; break; }
+      }
+      if (!adjacentToElite && !node.connections.some(c => eliteIds.has(c))) {
+        miniBossCandidates.push(node);
+      }
+    }
+  }
+
+  // Shuffle and pick up to maxMiniBosses
+  for (let i = miniBossCandidates.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [miniBossCandidates[i], miniBossCandidates[j]] = [miniBossCandidates[j], miniBossCandidates[i]];
+  }
+
+  for (let i = 0; i < Math.min(maxMiniBosses, miniBossCandidates.length); i++) {
+    const node = miniBossCandidates[i];
+    node.type = 'mini_boss';
+    node.label = NODE_LABELS.mini_boss;
+    node.icon = NODE_ICONS.mini_boss;
+  }
+}
+
+export function getReachableNodes(map: RoguelikeMap, currentNodeId: string | null): string[] {
+  if (currentNodeId === null) {
+    // At start: all nodes in row 0 are reachable
+    return map.nodes.filter(n => n.row === 0).map(n => n.id);
+  }
+
+  const current = map.nodes.find(n => n.id === currentNodeId);
+  if (!current) return [];
+  return current.connections;
+}
+
+export function markNodeVisited(map: RoguelikeMap, nodeId: string): void {
+  const node = map.nodes.find(n => n.id === nodeId);
+  if (node) {
+    node.visited = true;
+    map.currentNodeId = nodeId;
+  }
+}

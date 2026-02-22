@@ -2,6 +2,7 @@ import { MAX_LEVEL, getDifficultyConfig } from './config.ts';
 import { createLobbyLogger } from './logger.ts';
 import * as boss from './boss.ts';
 import { startLevel } from './game.ts';
+import * as roguelike from './roguelike.ts';
 import type { GameContext, ShopItem } from './types.ts';
 
 interface ShopItemDef {
@@ -116,7 +117,8 @@ export function openShop(ctx: GameContext): void {
     nextLevel: state.level >= MAX_LEVEL ? 'boss' : state.level + 1,
   });
 
-  // Auto-close after duration
+  // In roguelike mode, use a longer fallback timeout (players must click Ready, but don't let it hang forever)
+  const shopTimeout = state.gameMode === 'roguelike' ? diffConfig.shop.duration * 3 : diffConfig.shop.duration;
   ctx.timers.lobby.setTimeout('shopTimer', () => {
     try {
       closeShop(ctx);
@@ -124,7 +126,7 @@ export function openShop(ctx: GameContext): void {
       const logCtx = createLobbyLogger(ctx.lobbyId.toString());
       logCtx.error({ err }, 'Error closing shop');
     }
-  }, diffConfig.shop.duration);
+  }, shopTimeout);
 }
 
 export function handleBuy(ctx: GameContext, pid: string, itemId: string): void {
@@ -214,7 +216,9 @@ export function closeShop(ctx: GameContext): void {
 
   ctx.events.emit({ type: 'shop-close' });
 
-  if (state.level >= MAX_LEVEL) {
+  if (state.gameMode === 'roguelike') {
+    roguelike.handleNodeComplete(ctx);
+  } else if (state.level >= MAX_LEVEL) {
     boss.startBoss(ctx);
   } else {
     state.level++;

@@ -54,6 +54,11 @@ export function hideAllScreens(): void {
   dom.levelScreen!.classList.add('hidden');
   dom.bossScreen!.classList.add('hidden');
   if (dom.shopScreen) dom.shopScreen.classList.add('hidden');
+  if (dom.mapScreen) dom.mapScreen.classList.add('hidden');
+  if (dom.eventScreen) dom.eventScreen.classList.add('hidden');
+  if (dom.restScreen) dom.restScreen.classList.add('hidden');
+  if (dom.miniBossScreen) dom.miniBossScreen.classList.add('hidden');
+  if (dom.rewardScreen) dom.rewardScreen.classList.add('hidden');
   stopLobbyAnimations();
 }
 

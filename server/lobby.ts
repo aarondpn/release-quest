@@ -10,15 +10,15 @@ import { broadcastToLobby, send, getWsForPlayer, removeClientFromLobby, wsToLobb
 import { stopRecording } from './recording.ts';
 import { cleanupChatForLobby } from './handlers/chat.ts';
 import type { ServerMessage } from '../shared/messages.ts';
-import type { LobbyMemory, PlayerData, DbLobbyRow, CustomDifficultyConfig, GameTimers } from './types.ts';
+import type { LobbyMemory, PlayerData, DbLobbyRow, CustomDifficultyConfig, GameTimers, GameMode } from './types.ts';
 
 function createGameTimers(): GameTimers {
   return { lobby: createTimerBag(), boss: createTimerBag() };
 }
 
-function createLobbyMemory(lobbyId: number, difficulty: string, customConfig?: CustomDifficultyConfig): LobbyMemory {
+function createLobbyMemory(lobbyId: number, difficulty: string, customConfig?: CustomDifficultyConfig, gameMode: GameMode = 'classic'): LobbyMemory {
   const timers = createGameTimers();
-  const state = createGameState(difficulty, customConfig);
+  const state = createGameState(difficulty, customConfig, gameMode);
   const events = createEventBus();
   // Trust boundary: event bus payload is always a valid ServerMessage
   events.on((msg) => broadcastToLobby(lobbyId, msg as unknown as ServerMessage));
@@ -103,7 +103,7 @@ export function getSpectatorLobby(pid: string): number | null {
   return spectatorToLobby.get(pid) ?? null;
 }
 
-export async function createLobby(name: string, maxPlayers: number | undefined, difficulty: string = 'medium', customConfig?: CustomDifficultyConfig, password?: string): Promise<{ lobby?: DbLobbyRow; error?: string }> {
+export async function createLobby(name: string, maxPlayers: number | undefined, difficulty: string = 'medium', customConfig?: CustomDifficultyConfig, password?: string, gameMode: GameMode = 'classic'): Promise<{ lobby?: DbLobbyRow; error?: string }> {
   const lobbyCount = await db.getActiveLobbyCount();
   if (lobbyCount >= LOBBY_CONFIG.maxLobbies) {
     return { error: 'Maximum number of lobbies reached' };
@@ -112,11 +112,11 @@ export async function createLobby(name: string, maxPlayers: number | undefined, 
   let mp = Math.min(maxPlayers || LOBBY_CONFIG.defaultMaxPlayers, LOBBY_CONFIG.maxPlayersLimit);
   mp = Math.max(1, mp);
 
-  const settings: Record<string, unknown> = { difficulty, customConfig };
+  const settings: Record<string, unknown> = { difficulty, customConfig, gameMode };
   if (password) settings.password = password;
   const row = await db.createLobby(name, mp, settings);
 
-  lobbies.set(row.id, createLobbyMemory(row.id, difficulty, customConfig));
+  lobbies.set(row.id, createLobbyMemory(row.id, difficulty, customConfig, gameMode));
   gameLobbiesActive.inc();
 
   return { lobby: row };
@@ -139,7 +139,8 @@ export async function joinLobby(lobbyId: number, playerId: string, playerData: P
   if (!lobbies.has(lobbyId)) {
     const difficulty = (lobby.settings as any)?.difficulty || 'medium';
     const customConfig = (lobby.settings as any)?.customConfig;
-    lobbies.set(lobbyId, createLobbyMemory(lobbyId, difficulty, customConfig));
+    const gameMode = (lobby.settings as any)?.gameMode || 'classic';
+    lobbies.set(lobbyId, createLobbyMemory(lobbyId, difficulty, customConfig, gameMode));
   }
 
   const mem = lobbies.get(lobbyId)!;
@@ -160,6 +161,9 @@ export async function leaveLobby(lobbyId: number, playerId: string): Promise<voi
   if (mem) {
     delete mem.state.players[playerId];
     delete mem.state.playerBuffs[playerId];
+    if (mem.state.mapVotes) delete mem.state.mapVotes[playerId];
+    if (mem.state.eventVotes) delete mem.state.eventVotes[playerId];
+    if (mem.state.restVotes) delete mem.state.restVotes[playerId];
 
     // Auto-delete empty lobbies — check both in-memory and DB
     const inMemoryEmpty = Object.keys(mem.state.players).length === 0;

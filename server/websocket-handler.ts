@@ -134,7 +134,7 @@ export function setupWebSocketConnection(
     }
 
     // Block game interactions for spectators
-    const SPECTATOR_BLOCKED = new Set(['click-bug', 'click-boss', 'click-duck', 'click-hammer', 'start-game', 'shop-buy', 'shop-ready', 'select-role', 'chat-message', 'create-lobby', 'join-lobby', 'join-lobby-by-code']);
+    const SPECTATOR_BLOCKED = new Set(['click-bug', 'click-boss', 'click-duck', 'click-hammer', 'start-game', 'shop-buy', 'shop-ready', 'select-role', 'chat-message', 'create-lobby', 'join-lobby', 'join-lobby-by-code', 'map-vote', 'event-vote', 'rest-vote', 'mini-boss-click', 'encounter-reward-continue']);
     if (lobby.isSpectator(pid) && SPECTATOR_BLOCKED.has(msg.type)) return;
 
     const knownType = typeof msg.type === 'string' && msg.type in handlers ? msg.type : 'unknown';
