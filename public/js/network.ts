@@ -1,4 +1,4 @@
-import { LOGICAL_W, LOGICAL_H } from './config.ts';
+import { LOGICAL_W, LOGICAL_H } from '../../shared/constants.ts';
 import { dom, clientState } from './state.ts';
 import { logicalToPixel } from './coordinates.ts';
 import { updateHUD, updatePlayerCount, hideAllScreens, showStartScreen, showGameOverScreen, showWinScreen, showLevelScreen, updateLobbyRoster, updateLobbyRolePicker, updateLobbyPlayerRoleBadge, updateLiveDashboard, showLiveDashboard, hideLiveDashboard, updateStartButtonState } from './hud.ts';
@@ -8,7 +8,8 @@ import { addRemoteCursor, removeRemoteCursor, updateRemoteCursor, clearRemoteCur
 import { shakeArena, showParticleBurst, showImpactRing, showDamageVignette, showLevelFlash, showEscalationWarning, showBossRegenNumber, showHeisenbugFleeEffect, showFeaturePenaltyEffect, showDuckBuffOverlay, removeDuckBuffOverlay, showHammerStunOverlay, removeHammerStunOverlay, showMergeResolvedEffect, showPipelineChainResolvedEffect, showPipelineChainResetEffect, showBreakpointHitEffect, showPhaseTransitionFlash, showBlockedText, showScreenWipeFlash } from './vfx.ts';
 import { showLobbyBrowser, hideLobbyBrowser, renderLobbyList, showLobbyError, buildLobbyIconPicker, joinLobbyByCodeWithPassword } from './lobby-ui.ts';
 import { updateAuthUI, hideAuthOverlay, showAuthError } from './auth-ui.ts';
-import { isPremium, isShopAvatar, STANDARD_ICONS } from './avatars.ts';
+import { STANDARD_ICONS } from '../../shared/constants.ts';
+import { isPremium, isShopAvatar } from './avatars.ts';
 import { renderLeaderboard } from './leaderboard-ui.ts';
 import { renderRecordingsList, handleRecordingShared, handleRecordingUnshared, requestRecordings } from './replays-ui.ts';
 import { handleMyStats, requestMyStats } from './stats-card-ui.ts';

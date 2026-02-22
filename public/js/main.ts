@@ -1,5 +1,6 @@
 import { CURSOR_THROTTLE_MS } from './config.ts';
-import { STANDARD_ICONS, buildIconPickerContent } from './avatars.ts';
+import { STANDARD_ICONS } from '../../shared/constants.ts';
+import { buildIconPickerContent } from './avatars.ts';
 import { getOwnedShopItems, getShopItemPrice, isShopCatalogLoaded } from './cosmetic-shop-ui.ts';
 import { clientState, dom, initDom } from './state.ts';
 import { pixelToLogical } from './coordinates.ts';

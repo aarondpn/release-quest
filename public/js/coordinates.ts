@@ -1,4 +1,4 @@
-import { LOGICAL_W, LOGICAL_H } from './config.ts';
+import { LOGICAL_W, LOGICAL_H } from '../../shared/constants.ts';
 import { dom } from './state.ts';
 
 let cachedRect: DOMRect | null = null;

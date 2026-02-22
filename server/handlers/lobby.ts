@@ -1,6 +1,6 @@
 import type { HandlerContext, MessageHandler } from './types.ts';
 import type { PlayerInfo } from '../types.ts';
-import { LOGICAL_W, LOGICAL_H } from '../config.ts';
+import { LOGICAL_W, LOGICAL_H } from '../../shared/constants.ts';
 import { createPlayerLogger, createLobbyLogger } from '../logger.ts';
 import { getStateSnapshot } from '../state.ts';
 import * as network from '../network.ts';

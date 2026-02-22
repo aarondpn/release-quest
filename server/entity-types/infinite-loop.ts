@@ -1,5 +1,5 @@
 import { baseDescriptor } from './base.ts';
-import { LOGICAL_W, LOGICAL_H } from '../config.ts';
+import { LOGICAL_W, LOGICAL_H } from '../../shared/constants.ts';
 import { awardScore } from '../state.ts';
 import * as game from '../game.ts';
 import * as powerups from '../powerups.ts';

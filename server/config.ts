@@ -37,10 +37,8 @@ export const LOBBY_CONFIG = {
   maxPlayersLimit: parseInt(process.env.MAX_PLAYERS_LIMIT ?? '', 10) || fileConfig.lobby?.maxPlayersLimit || 8,
 };
 
-export const LOGICAL_W = 800;
-export const LOGICAL_H = 500;
+import { STANDARD_ICONS as ICONS } from '../shared/constants.ts';
 export const COLORS = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#a855f7', '#ff9ff3', '#54a0ff', '#5f27cd', '#01a3a4'];
-export const ICONS = ['\u{1F431}', '\u{1F436}', '\u{1F430}', '\u{1F98A}', '\u{1F438}', '\u{1F427}', '\u{1F43C}', '\u{1F428}'];
 export const PREMIUM_ICON_IDS = ['av:knight', 'av:ninja', 'av:mage'];
 
 

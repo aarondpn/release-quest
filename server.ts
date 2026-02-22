@@ -5,7 +5,8 @@ import { WebSocketServer } from 'ws';
 import type { WebSocket } from 'ws';
 
 import logger from './server/logger.ts';
-import { SERVER_CONFIG, DEV_MODE, COLORS, ICONS, GUEST_NAMES } from './server/config.ts';
+import { SERVER_CONFIG, DEV_MODE, COLORS, GUEST_NAMES } from './server/config.ts';
+import { STANDARD_ICONS as ICONS } from './shared/constants.ts';
 import * as network from './server/network.ts';
 import * as db from './server/db.ts';
 import * as lobby from './server/lobby.ts';

@@ -1,4 +1,5 @@
-import { LOGICAL_W, LOGICAL_H, MAX_LEVEL, getDifficultyConfig } from './config.ts';
+import { LOGICAL_W, LOGICAL_H } from '../shared/constants.ts';
+import { MAX_LEVEL, getDifficultyConfig } from './config.ts';
 import { getDescriptor } from './entity-types/index.ts';
 import { getActivePlugin } from './boss.ts';
 import type { GameState, GameContext, GameCounters, LevelConfigEntry, PlayerScoreEntry, DifficultyConfig, CustomDifficultyConfig } from './types.ts';

@@ -1,5 +1,5 @@
 // ── Standard emoji icons (available to everyone) ──
-export const STANDARD_ICONS: string[] = ['\u{1F431}', '\u{1F436}', '\u{1F430}', '\u{1F98A}', '\u{1F438}', '\u{1F427}', '\u{1F43C}', '\u{1F428}'];
+import { STANDARD_ICONS } from '../../shared/constants.ts';
 
 // ── Premium pixel-art SVG avatars (members only) ──
 // 32x32 pixel-art, neon-on-dark aesthetic, stored as data URIs

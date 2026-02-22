@@ -1,5 +1,6 @@
 import { dom, clientState, activateLobbyTab } from './state.ts';
-import { STANDARD_ICONS, renderIcon, buildIconPickerContent } from './avatars.ts';
+import { STANDARD_ICONS } from '../../shared/constants.ts';
+import { renderIcon, buildIconPickerContent } from './avatars.ts';
 import { getOwnedShopItems, getShopItemPrice, isShopCatalogLoaded } from './cosmetic-shop-ui.ts';
 import { escapeHtml } from './utils.ts';
 import type { SendMessageFn, LobbyListEntry } from './client-types.ts';

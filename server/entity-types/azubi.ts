@@ -1,6 +1,7 @@
 import { baseDescriptor } from './base.ts';
 import { getDescriptor, getType } from './index.ts';
-import { getDifficultyConfig, LOGICAL_W, LOGICAL_H } from '../config.ts';
+import { LOGICAL_W, LOGICAL_H } from '../../shared/constants.ts';
+import { getDifficultyConfig } from '../config.ts';
 import { currentLevelConfig } from '../state.ts';
 import { createTimerBag } from '../timer-bag.ts';
 import * as game from '../game.ts';

@@ -1,5 +1,6 @@
 import type { MessageHandler } from './types.ts';
-import { ICONS, PREMIUM_ICON_IDS, SHOP_ICON_IDS } from '../config.ts';
+import { STANDARD_ICONS as ICONS } from '../../shared/constants.ts';
+import { PREMIUM_ICON_IDS, SHOP_ICON_IDS } from '../config.ts';
 import * as network from '../network.ts';
 import * as db from '../db.ts';
 import * as auth from '../auth.ts';
