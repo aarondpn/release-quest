@@ -4,6 +4,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 COPY tsconfig.json config.json build.mjs ./
 COPY server.ts ./
+COPY shared/ ./shared/
 COPY server/ ./server/
 COPY public/ ./public/
 RUN npm run build
