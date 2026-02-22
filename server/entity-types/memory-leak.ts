@@ -54,10 +54,11 @@ export const memoryLeakDescriptor: EntityDescriptor = {
   },
 
   onEscape(bug: BugEntity, ctx: GameContext, onEscapeCheck: () => void) {
-    const diffConfig = getDifficultyConfig(ctx.state.difficulty);
+    const diffConfig = getDifficultyConfig(ctx.state.difficulty, ctx.state.customConfig);
     bug._timers.clearAll();
     let damage = MEMORY_LEAK_MECHANICS.damageByStage[bug.growthStage!] || diffConfig.hpDamage;
     damage = Math.ceil(damage * getKevlarDamageMultiplier(ctx));
+    if (ctx.state.eliteConfig) damage = Math.ceil(damage * ctx.state.eliteConfig.hpDamageMultiplier);
     delete ctx.state.bugs[bug.id];
     ctx.state.hp -= damage;
     if (ctx.state.hp < 0) ctx.state.hp = 0;

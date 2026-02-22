@@ -8,6 +8,7 @@ import * as db from '../db.ts';
 import * as lobby from '../lobby.ts';
 import { getCtxForPlayer, handleLeaveLobby as doLeaveLobby, broadcastLobbyList, augmentLobbies } from '../helpers.ts';
 import { initChatForLobby, getLobbyModerator, removePlayerFromChat, broadcastSystemChat } from './chat.ts';
+import { getShopSnapshot } from '../shop.ts';
 
 // Returns true if the same registered user (by userId) or the same guest session
 // (by guestToken) already occupies a player or spectator slot in the lobby under
@@ -60,10 +61,11 @@ export const handleCreateLobby: MessageHandler = ({ ws, msg, pid, wss }) => {
   const finalDifficulty = validDifficulties.includes(difficulty) ? difficulty : 'medium';
   const customConfig = msg.customConfig || undefined;
   const password = String(msg.password || '').trim() || undefined;
+  const gameMode = msg.gameMode === 'roguelike' ? 'roguelike' as const : 'classic' as const;
 
   const playerLogger = createPlayerLogger(pid);
 
-  lobby.createLobby(lobbyName, maxPlayers, finalDifficulty, customConfig, password).then(result => {
+  lobby.createLobby(lobbyName, maxPlayers, finalDifficulty, customConfig, password, gameMode).then(result => {
     if (result.error) {
       playerLogger.info({ error: result.error }, 'Lobby creation failed');
       network.send(ws, { type: 'lobby-error', message: result.error });
@@ -162,6 +164,12 @@ export const handleJoinLobby: MessageHandler = async ({ ws, msg, pid, playerInfo
       ...getStateSnapshot(ctx.state),
     } as ServerMessage);
 
+    // If joining mid-shop, re-send the shop-open so the client renders the shop + timer
+    const shopSnap = getShopSnapshot(ctx.state);
+    if (shopSnap) {
+      network.send(ws, shopSnap);
+    }
+
     // Notify others in the lobby
     network.broadcastToLobby(lobbyId, {
       type: 'player-joined',
@@ -258,6 +266,12 @@ export const handleJoinLobbyByCode: MessageHandler = async ({ ws, msg, pid, play
       creatorId: getLobbyModerator(lobbyId),
       ...getStateSnapshot(ctx.state),
     } as ServerMessage);
+
+    // If joining mid-shop, re-send the shop-open so the client renders the shop + timer
+    const shopSnap = getShopSnapshot(ctx.state);
+    if (shopSnap) {
+      network.send(ws, shopSnap);
+    }
 
     network.broadcastToLobby(lobbyId, {
       type: 'player-joined',

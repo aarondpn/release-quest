@@ -45,7 +45,7 @@ function spawnEntity(ctx: GameContext, opts: SpawnEntityOptions): boolean {
   const broadcastPayload: Record<string, unknown> = { id, x: bug.x, y: bug.y };
   if (opts.isMinion) broadcastPayload.isMinion = true;
   Object.assign(broadcastPayload, descriptor.broadcastFields(bug));
-  if (bug.isFeature && hasAnyPlayerBuff(ctx, 'eagle-eye')) broadcastPayload.eagleEye = true;
+  if (bug.isFeature && (hasAnyPlayerBuff(ctx, 'eagle-eye') || ctx.state.eventModifiers?.grantEagleEye)) broadcastPayload.eagleEye = true;
 
   ctx.events.emit({ type: 'bug-spawned', bug: broadcastPayload });
 
@@ -72,28 +72,32 @@ function spawnBug(ctx: GameContext): void {
     return;
   }
 
-  const plugins = getPlugins();
-  const specialBugs = diffConfig.specialBugs;
-
-  // Multi-entity types first
-  for (const p of plugins) {
-    if (p.spawn.mode !== 'multi') continue;
-    if (p.spawn.startLevelKey && state.level < specialBugs[p.spawn.startLevelKey]) continue;
-    if (Math.random() >= specialBugs[p.spawn.chanceKey]) continue;
-    if (p.spawn.trySpawn(ctx, cfg)) return;
-  }
-
-  // Single-entity variants
   let variant: Partial<BugEntity> | null = null;
   let escapeTimeMultiplier = 1;
-  for (const p of plugins) {
-    if (p.spawn.mode !== 'single') continue;
-    if (p.spawn.startLevelKey && state.level < specialBugs[p.spawn.startLevelKey]) continue;
-    if (Math.random() >= specialBugs[p.spawn.chanceKey]) continue;
-    if (p.spawn.canSpawn && !p.spawn.canSpawn(ctx)) continue;
-    variant = p.spawn.createVariant(ctx);
-    escapeTimeMultiplier = p.escapeTimeMultiplier ?? 1;
-    break;
+
+  // Skip all special bug types when onlyNormalBugs modifier is active
+  if (!ctx.state.eventModifiers?.onlyNormalBugs) {
+    const plugins = getPlugins();
+    const specialBugs = diffConfig.specialBugs;
+
+    // Multi-entity types first
+    for (const p of plugins) {
+      if (p.spawn.mode !== 'multi') continue;
+      if (p.spawn.startLevelKey && state.level < specialBugs[p.spawn.startLevelKey]) continue;
+      if (Math.random() >= specialBugs[p.spawn.chanceKey]) continue;
+      if (p.spawn.trySpawn(ctx, cfg)) return;
+    }
+
+    // Single-entity variants
+    for (const p of plugins) {
+      if (p.spawn.mode !== 'single') continue;
+      if (p.spawn.startLevelKey && state.level < specialBugs[p.spawn.startLevelKey]) continue;
+      if (Math.random() >= specialBugs[p.spawn.chanceKey]) continue;
+      if (p.spawn.canSpawn && !p.spawn.canSpawn(ctx)) continue;
+      variant = p.spawn.createVariant(ctx);
+      escapeTimeMultiplier = p.escapeTimeMultiplier ?? 1;
+      break;
+    }
   }
 
   const spawned = spawnEntity(ctx, {

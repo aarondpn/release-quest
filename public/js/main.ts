@@ -16,6 +16,12 @@ import { showError, ERROR_LEVELS } from './error-handler.ts';
 import { initChatSend, initChat } from './chat.ts';
 import { initQuestsSend, requestQuests, showQuestsTab } from './quests-ui.ts';
 import { initShopSend, showShopTab, hideShopPanel } from './cosmetic-shop-ui.ts';
+import { initMapSend } from './roguelike-map-ui.ts';
+import { initEventSend } from './event-ui.ts';
+import { initRestSend } from './rest-ui.ts';
+import { initEliteSend } from './elite-ui.ts';
+import { initMiniBossSend } from './mini-boss-ui.ts';
+import { initRewardSend } from './reward-ui.ts';
 import type { DifficultyPreset } from './client-types.ts';
 import type { LobbyCustomConfig } from '../../shared/messages.ts';
 
@@ -196,6 +202,9 @@ dom.createLobbyBtn!.addEventListener('click', () => {
     if (dom.configHammerDuration!.value) { if (!customConfig.powerups) customConfig.powerups = {}; customConfig.powerups.hotfixHammerStunDuration = parseInt(dom.configHammerDuration!.value, 10); }
 
     const password = dom.lobbyPasswordInput!.value.trim();
+    const gameModeEl = document.getElementById('lobby-game-mode');
+    const gameMode = gameModeEl?.dataset.value === 'roguelike' ? 'roguelike' as const : undefined;
+
     sendMessage({
       type: 'create-lobby',
       name,
@@ -203,6 +212,7 @@ dom.createLobbyBtn!.addEventListener('click', () => {
       difficulty,
       ...(Object.keys(customConfig).length > 0 ? { customConfig } : {}),
       ...(password ? { password } : {}),
+      ...(gameMode ? { gameMode } : {}),
     });
 
     clientState.pendingLobbyPassword = password || null;
@@ -256,6 +266,23 @@ dom.lobbyDifficulty!.querySelector('.custom-select-options')!.addEventListener('
   updateDifficultyPlaceholders(difficulty);
 });
 document.addEventListener('click', () => dom.lobbyDifficulty!.classList.remove('open'));
+
+// ── Game mode dropdown ──
+const gameModeEl = document.getElementById('lobby-game-mode')!;
+gameModeEl.querySelector('.custom-select-trigger')!.addEventListener('click', (e: Event) => {
+  e.stopPropagation();
+  gameModeEl.classList.toggle('open');
+});
+gameModeEl.querySelector('.custom-select-options')!.addEventListener('click', (e: Event) => {
+  const opt = (e.target as HTMLElement).closest<HTMLElement>('.custom-select-option');
+  if (!opt) return;
+  gameModeEl.dataset.value = opt.dataset.value!;
+  gameModeEl.querySelector('.custom-select-trigger')!.textContent = opt.textContent + ' \u25BE';
+  gameModeEl.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('selected'));
+  opt.classList.add('selected');
+  gameModeEl.classList.remove('open');
+});
+document.addEventListener('click', () => gameModeEl.classList.remove('open'));
 
 // ── Advanced config toggle ──
 dom.advancedToggleBtn!.addEventListener('click', () => {
@@ -451,6 +478,12 @@ initThemePicker();
 initChatSend(sendMessage);
 initChat();
 initQuestsSend(sendMessage);
+initMapSend(sendMessage);
+initEventSend(sendMessage);
+initRestSend(sendMessage);
+initEliteSend(sendMessage);
+initMiniBossSend(sendMessage);
+initRewardSend(sendMessage);
 
 // Initialize cosmetic shop
 initShopSend(sendMessage);
@@ -514,17 +547,53 @@ fetch('/api/dev-mode')
     const panel = document.createElement('div');
     panel.id = 'dev-panel';
     panel.innerHTML = `
-      <div id="dev-panel-header">DEV</div>
+      <div id="dev-panel-header">PLAYGROUND</div>
       <div id="dev-panel-body" class="hidden">
-        <button class="dev-btn" data-cmd="skip-to-boss">Skip to Boss</button>
-        <div class="dev-level-btns">
-          <button class="dev-btn" data-cmd="skip-to-level" data-level="1">Lv 1</button>
-          <button class="dev-btn" data-cmd="skip-to-level" data-level="2">Lv 2</button>
-          <button class="dev-btn" data-cmd="skip-to-level" data-level="3">Lv 3</button>
+        <div class="dev-section">
+          <div class="dev-section-label">Mini-Bosses</div>
+          <div class="dev-grid">
+            <button class="dev-btn" data-cmd="spawn-mini-boss" data-target="stack-overflow">Stack Overflow</button>
+            <button class="dev-btn" data-cmd="spawn-mini-boss" data-target="race-condition">Race Condition</button>
+            <button class="dev-btn" data-cmd="spawn-mini-boss" data-target="deadlock">Deadlock</button>
+          </div>
         </div>
-        <div class="dev-hp-row">
-          <input type="number" id="dev-boss-hp" placeholder="Boss HP" min="0" />
-          <button class="dev-btn" data-cmd="set-boss-hp">Set</button>
+        <div class="dev-section">
+          <div class="dev-section-label">Elites</div>
+          <div class="dev-grid">
+            <button class="dev-btn" data-cmd="spawn-elite" data-target="super-heisenbug">Super-Heisenbug</button>
+            <button class="dev-btn" data-cmd="spawn-elite" data-target="mega-pipeline">Mega-Pipeline</button>
+            <button class="dev-btn" data-cmd="spawn-elite" data-target="memory-leak-cluster">Memory Leak</button>
+            <button class="dev-btn" data-cmd="spawn-elite" data-target="merge-conflict-chain">Merge Conflict</button>
+          </div>
+        </div>
+        <div class="dev-section">
+          <div class="dev-section-label">Encounters</div>
+          <div class="dev-grid">
+            <button class="dev-btn" data-cmd="spawn-boss">Boss Fight</button>
+            <button class="dev-btn" data-cmd="spawn-level" data-level="1">Level 1</button>
+            <button class="dev-btn" data-cmd="spawn-level" data-level="2">Level 2</button>
+            <button class="dev-btn" data-cmd="spawn-level" data-level="3">Level 3</button>
+          </div>
+        </div>
+        <div class="dev-section">
+          <div class="dev-section-label">Controls</div>
+          <div class="dev-hp-row">
+            <input type="number" id="dev-hp-input" placeholder="HP" min="1" max="150" />
+            <button class="dev-btn" data-cmd="set-hp">Set HP</button>
+          </div>
+          <div class="dev-hp-row">
+            <input type="number" id="dev-boss-hp" placeholder="Boss HP" min="0" />
+            <button class="dev-btn" data-cmd="set-boss-hp">Set</button>
+          </div>
+        </div>
+        <div class="dev-section">
+          <div class="dev-section-label">Classic</div>
+          <div class="dev-grid">
+            <button class="dev-btn" data-cmd="skip-to-boss">Skip to Boss</button>
+            <button class="dev-btn" data-cmd="skip-to-level" data-level="1">Lv 1</button>
+            <button class="dev-btn" data-cmd="skip-to-level" data-level="2">Lv 2</button>
+            <button class="dev-btn" data-cmd="skip-to-level" data-level="3">Lv 3</button>
+          </div>
         </div>
       </div>
     `;
@@ -538,12 +607,12 @@ fetch('/api/dev-mode')
       const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-cmd]');
       if (!btn) return;
       const cmd = btn.dataset.cmd!;
-      sendMessage({
-        type: 'dev-command',
-        command: cmd,
-        ...(cmd === 'skip-to-level' ? { level: parseInt(btn.dataset.level!) } : {}),
-        ...(cmd === 'set-boss-hp' ? { value: parseInt((document.getElementById('dev-boss-hp') as HTMLInputElement).value) || 1 } : {}),
-      });
+      const devMsg: any = { type: 'dev-command', command: cmd };
+      if (btn.dataset.target) devMsg.target = btn.dataset.target;
+      if (btn.dataset.level) devMsg.level = parseInt(btn.dataset.level);
+      if (cmd === 'set-boss-hp') devMsg.value = parseInt((document.getElementById('dev-boss-hp') as HTMLInputElement).value) || 1;
+      if (cmd === 'set-hp') devMsg.value = parseInt((document.getElementById('dev-hp-input') as HTMLInputElement).value) || 100;
+      sendMessage(devMsg);
     });
   })
   .catch(() => { /* dev-mode endpoint not available */ });

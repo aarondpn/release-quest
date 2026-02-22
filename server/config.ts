@@ -1,5 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { VOTE_TIMER_MS } from '../shared/constants.ts';
+import { mulberry32 } from './rng.ts';
 import type { DifficultyConfig, CustomDifficultyConfig, CosmeticShopItem } from './types.ts';
 
 export const DEV_MODE = process.env.DEV_MODE === 'true';
@@ -78,16 +80,6 @@ export function getWeekBoundaries(): { weekStart: Date; weekEnd: Date; weekNumbe
   return { weekStart, weekEnd, weekNumber };
 }
 
-function mulberry32(seed: number): () => number {
-  let s = seed | 0;
-  return () => {
-    s = (s + 0x6D2B79F5) | 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 let _cachedRotation: { items: CosmeticShopItem[]; rotationEndUtc: string } | null = null;
 let _cachedRotationWeek = -1;
 
@@ -105,6 +97,68 @@ export function getWeeklyRotation(): { items: CosmeticShopItem[]; rotationEndUtc
   _cachedRotationWeek = weekNumber;
   return _cachedRotation;
 }
+
+export const REST_CONFIG = {
+  hpGain: 30,
+  trainScoreBonus: 0.1,
+};
+
+export const ELITE_CONFIG = {
+  maxPerMap: 2,
+  scoreMultiplier: 2.5,
+  hpDamageMultiplier: 1.5,
+  types: {
+    'super-heisenbug': {
+      title: 'Super-Heisenbug',
+      icon: '\u{1F47B}',
+      description: 'A massive Heisenbug with 5 flees and 30% faster escape',
+      scoreMultiplier: 5,
+      hpDamageMultiplier: 1.5,
+      wavesTotal: 1,
+    },
+    'mega-pipeline': {
+      title: 'Mega-Pipeline',
+      icon: '\u{1F6A7}',
+      description: 'An 8-segment pipeline that resets on wrong clicks',
+      scoreMultiplier: 3,
+      hpDamageMultiplier: 1.5,
+      wavesTotal: 1,
+    },
+    'memory-leak-cluster': {
+      title: 'Memory Leak Cluster',
+      icon: '\u{1F4A7}',
+      description: '3 simultaneous memory leaks with accelerating growth',
+      scoreMultiplier: 3,
+      hpDamageMultiplier: 1.5,
+      wavesTotal: 1,
+    },
+    'merge-conflict-chain': {
+      title: 'Merge Conflict Chain',
+      icon: '\u{1F500}',
+      description: '3 waves of merge conflicts with shrinking resolve windows',
+      scoreMultiplier: 3,
+      hpDamageMultiplier: 1.5,
+      wavesTotal: 3,
+    },
+  } as Record<string, { title: string; icon: string; description: string; scoreMultiplier: number; hpDamageMultiplier: number; wavesTotal: number }>,
+};
+
+export const MINI_BOSS_CONFIG = {
+  maxPerMap: 1,
+  defeatHpPenalty: 20,
+};
+
+export const ROGUELIKE_CONFIG = {
+  mapRows: 5,
+  voteTimerMs: VOTE_TIMER_MS,
+  rowScaling: {
+    1: { bugsTotal: 7,  escapeTime: 5500, spawnRate: 2300, maxOnScreen: 2 },
+    2: { bugsTotal: 10, escapeTime: 4500, spawnRate: 1900, maxOnScreen: 3 },
+    3: { bugsTotal: 11, escapeTime: 4000, spawnRate: 1700, maxOnScreen: 3 },
+    4: { bugsTotal: 14, escapeTime: 3400, spawnRate: 1500, maxOnScreen: 4 },
+    5: { bugsTotal: 16, escapeTime: 3000, spawnRate: 1400, maxOnScreen: 4 },
+  } as Record<number, { bugsTotal: number; escapeTime: number; spawnRate: number; maxOnScreen: number }>,
+};
 
 // Difficulty presets
 export const DIFFICULTY_PRESETS: Record<string, DifficultyConfig> = {

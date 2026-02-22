@@ -6,6 +6,8 @@ import * as boss from './boss.ts';
 import * as powerups from './powerups.ts';
 import * as shop from './shop.ts';
 import * as stats from './stats.ts';
+import * as roguelike from './roguelike.ts';
+import * as elite from './elite.ts';
 import { createMatchLog } from './match-logger.ts';
 import { startRecording, stopRecording } from './recording.ts';
 import * as db from './db.ts';
@@ -14,6 +16,25 @@ import type { GameContext } from './types.ts';
 
 export function endGame(ctx: GameContext, outcome: string, win: boolean): void {
   const { lobbyId, state } = ctx;
+
+  // Playground mode: skip stats/recording, return to lobby
+  if (state.playground) {
+    ctx.lifecycle.teardown();
+    state.boss = null;
+    state.eliteConfig = undefined;
+    state.miniBoss = undefined;
+    ctx.events.emit({
+      type: win ? 'boss-defeated' : 'game-over',
+      score: state.score,
+      level: state.level,
+      players: getPlayerScores(state),
+    });
+    ctx.timers.lobby.setTimeout('playgroundReturn', () => {
+      ctx.lifecycle.transition(state, 'lobby');
+      ctx.events.emit({ type: 'playground-ready' });
+    }, 2000);
+    return;
+  }
 
   // Log match-end event before teardown closes the log
   if (ctx.matchLog) {
@@ -42,7 +63,8 @@ export function endGame(ctx: GameContext, outcome: string, win: boolean): void {
     players: getPlayerScores(state),
   });
   const hasCustom = state.customConfig && Object.keys(state.customConfig).length > 0;
-  if (!hasCustom && ctx.playerInfo) stats.recordGameEnd(state, ctx.playerInfo, win);
+  const isRoguelike = state.gameMode === 'roguelike';
+  if (!hasCustom && !isRoguelike && ctx.playerInfo) stats.recordGameEnd(state, ctx.playerInfo, win);
 
   // Save recording for logged-in players
   if (recording && ctx.playerInfo) {
@@ -79,9 +101,21 @@ export function startGame(ctx: GameContext): void {
   state.hp = diffConfig.startingHp;
   state.level = 1;
   state.playerBuffs = {};
-  ctx.lifecycle.transition(state, 'playing');
   state.boss = null;
+  state.persistentScoreMultiplier = undefined;
   state.gameStartedAt = Date.now();
+  // Clear stale roguelike/event state from previous game
+  state.roguelikeMap = undefined;
+  state.mapVotes = undefined;
+  state.voteDeadline = undefined;
+  state.eventModifiers = undefined;
+  state.eventVotes = undefined;
+  state.activeEventId = undefined;
+  state.eliteConfig = undefined;
+  state.miniBoss = undefined;
+  state.restVotes = undefined;
+  state.shopOpenedAt = undefined;
+  state.shopDuration = undefined;
 
   ctx.matchLog = createMatchLog(lobbyId);
   startRecording(lobbyId);
@@ -97,6 +131,13 @@ export function startGame(ctx: GameContext): void {
   });
 
   gameGamesStarted.inc({ difficulty: state.difficulty });
+
+  if (state.gameMode === 'roguelike') {
+    roguelike.startRoguelikeGame(ctx);
+    return;
+  }
+
+  ctx.lifecycle.transition(state, 'playing');
 
   ctx.events.emit({
     type: 'game-start',
@@ -146,33 +187,75 @@ export function checkGameState(ctx: GameContext): void {
     if (state.phase !== 'playing') return;
 
     if (state.hp <= 0) {
+      if (state.playground) {
+        state.hp = 1; // Don't game-over in playground
+        bugs.clearSpawnTimer(ctx);
+        for (const bugId of Object.keys(state.bugs)) {
+          state.bugs[bugId]._timers.clearAll();
+          delete state.bugs[bugId];
+        }
+        ctx.lifecycle.transition(state, 'lobby');
+        ctx.events.emit({ type: 'playground-ready' });
+        return;
+      }
       endGame(ctx, 'loss', false);
       return;
     }
 
     const cfg = currentLevelConfig(state);
-    const allSpawned = state.bugsSpawned >= cfg.bugsTotal;
+    // Elites manually control bugsSpawned — bypass row-scaled bugsTotal check
+    const allSpawned = state.eliteConfig
+      ? true
+      : state.bugsSpawned >= cfg.bugsTotal;
     const noneAlive = Object.keys(state.bugs).length === 0;
 
     if (allSpawned && noneAlive) {
+      // Elite wave check: if elite config is active and more waves remain, trigger next wave
+      if (state.eliteConfig && state.eliteConfig.wavesSpawned < state.eliteConfig.wavesTotal) {
+        bugs.clearSpawnTimer(ctx);
+        elite.onEliteWaveCheck(ctx);
+        return;
+      }
+
       bugs.clearSpawnTimer(ctx);
       if (ctx.matchLog) {
         const next = state.level >= MAX_LEVEL ? 'boss' : state.level + 1;
         ctx.matchLog.log('level-complete', { level: state.level, ...(typeof next === 'number' ? { nextLevel: next } : { next }) });
       }
+
+      // If elite encounter, complete it instead of normal level transition
+      if (state.eliteConfig) {
+        elite.onEliteWaveCheck(ctx);
+        return;
+      }
+
       ctx.events.emit({
         type: 'level-complete',
         level: state.level,
         score: state.score,
       });
-      // Brief pause, then open shop
+
+      // Playground mode: return to lobby after level ends
+      if (state.playground) {
+        ctx.timers.lobby.setTimeout('playgroundReturn', () => {
+          ctx.lifecycle.transition(state, 'lobby');
+          ctx.events.emit({ type: 'playground-ready' });
+        }, 1500);
+        return;
+      }
+
+      // Brief pause, then next phase
       ctx.timers.lobby.setTimeout('levelTransition', () => {
         try {
           if (Object.keys(state.players).length === 0) return;
-          shop.openShop(ctx);
+          if (state.gameMode === 'roguelike') {
+            roguelike.handleNodeComplete(ctx);
+          } else {
+            shop.openShop(ctx);
+          }
         } catch (err) {
           const logCtx = createLobbyLogger(ctx.lobbyId.toString());
-          logCtx.error({ err }, 'Error opening shop');
+          logCtx.error({ err }, 'Error in level transition');
         }
       }, 1500);
     }
@@ -186,6 +269,10 @@ export function checkBossGameState(ctx: GameContext): void {
     const { state } = ctx;
     if (state.phase !== 'boss') return;
     if (state.hp <= 0) {
+      if (state.playground) {
+        state.hp = 1;
+        return;
+      }
       endGame(ctx, 'loss', false);
     }
   } catch (err) {
@@ -196,6 +283,7 @@ export function checkBossGameState(ctx: GameContext): void {
 export function resetToLobby(ctx: GameContext): void {
   const { state } = ctx;
   const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
+  const wasPlayground = state.playground;
   ctx.lifecycle.teardown();
   ctx.lifecycle.transition(state, 'lobby');
   state.score = 0;
@@ -205,4 +293,15 @@ export function resetToLobby(ctx: GameContext): void {
   state.bugsSpawned = 0;
   state.boss = null;
   state.playerBuffs = {};
+  state.roguelikeMap = undefined;
+  state.mapVotes = undefined;
+  state.voteDeadline = undefined;
+  state.eventModifiers = undefined;
+  state.eventVotes = undefined;
+  state.activeEventId = undefined;
+  state.eliteConfig = undefined;
+  state.miniBoss = undefined;
+  state.persistentScoreMultiplier = undefined;
+  state.restVotes = undefined;
+  state.playground = wasPlayground;
 }

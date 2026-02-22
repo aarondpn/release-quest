@@ -9,7 +9,9 @@ import type {
   ShopBuyMsg, ShopReadyMsg, SelectRoleMsg, ChatMessageMsg,
   GetLeaderboardMsg, GetMyStatsMsg, GetRecordingsMsg,
   ShareRecordingMsg, UnshareRecordingMsg, GetQuestsMsg, GetBalanceMsg,
-  GetShopCatalogMsg, ShopSeenMsg, ShopPurchaseMsg, DevCommandMsg,
+  GetShopCatalogMsg, ShopSeenMsg, ShopPurchaseMsg, MapVoteMsg, EventVoteMsg, RestVoteMsg,
+  MiniBossClickMsg, EncounterRewardContinueMsg,
+  DevCommandMsg,
 } from '../../shared/messages.ts';
 
 // --- No-payload messages ---
@@ -139,6 +141,7 @@ const createLobbySchema = z.object({
   difficulty: z.string().max(16).optional(),
   customConfig: customConfigSchema,
   password: z.string().max(64).optional(),
+  gameMode: z.enum(['classic', 'roguelike']).optional(),
 }) satisfies ZodType<CreateLobbyMsg>;
 
 const joinLobbySchema = z.object({
@@ -218,6 +221,34 @@ const shopBuySchema = z.object({
   itemId: z.string().max(64),
 }) satisfies ZodType<ShopBuyMsg>;
 
+// --- Roguelike ---
+
+const mapVoteSchema = z.object({
+  type: z.literal('map-vote'),
+  nodeId: z.string().max(16),
+}) satisfies ZodType<MapVoteMsg>;
+
+const eventVoteSchema = z.object({
+  type: z.literal('event-vote'),
+  optionId: z.string().max(32),
+}) satisfies ZodType<EventVoteMsg>;
+
+const restVoteSchema = z.object({
+  type: z.literal('rest-vote'),
+  option: z.enum(['rest', 'train']),
+}) satisfies ZodType<RestVoteMsg>;
+
+const miniBossClickSchema = z.object({
+  type: z.literal('mini-boss-click'),
+  entityId: z.string().max(64),
+  x: z.number().finite().min(0).max(800).optional(),
+  y: z.number().finite().min(0).max(500).optional(),
+}) satisfies ZodType<MiniBossClickMsg>;
+
+const encounterRewardContinueSchema = z.object({
+  type: z.literal('encounter-reward-continue'),
+}) satisfies ZodType<EncounterRewardContinueMsg>;
+
 // --- Dev mode ---
 
 const devCommandSchema = z.object({
@@ -225,6 +256,7 @@ const devCommandSchema = z.object({
   command: z.string().max(32),
   level: z.number().int().min(1).max(3).optional(),
   value: z.number().optional(),
+  target: z.string().max(64).optional(),
 }) satisfies ZodType<DevCommandMsg>;
 
 // --- Registry ---
@@ -267,4 +299,9 @@ export const staticSchemas: Record<string, ZodType> = {
   'get-shop-catalog': getShopCatalogSchema,
   'shop-seen': shopSeenSchema,
   'shop-purchase': shopPurchaseSchema,
+  'map-vote': mapVoteSchema,
+  'event-vote': eventVoteSchema,
+  'rest-vote': restVoteSchema,
+  'mini-boss-click': miniBossClickSchema,
+  'encounter-reward-continue': encounterRewardContinueSchema,
 };

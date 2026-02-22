@@ -2,9 +2,10 @@ import { LOGICAL_W, LOGICAL_H } from '../shared/constants.ts';
 import { MAX_LEVEL, getDifficultyConfig } from './config.ts';
 import { getDescriptor } from './entity-types/index.ts';
 import { getActivePlugin } from './boss.ts';
-import type { GameState, GameContext, GameCounters, LevelConfigEntry, PlayerScoreEntry, DifficultyConfig, CustomDifficultyConfig } from './types.ts';
+import type { GameState, GameContext, GameCounters, LevelConfigEntry, PlayerScoreEntry, DifficultyConfig, CustomDifficultyConfig, GameMode } from './types.ts';
+import { ROGUELIKE_CONFIG } from './config.ts';
 
-export function createGameState(difficulty: string = 'medium', customConfig?: CustomDifficultyConfig): GameState {
+export function createGameState(difficulty: string = 'medium', customConfig?: CustomDifficultyConfig, gameMode: GameMode = 'classic'): GameState {
   const diffConfig = getDifficultyConfig(difficulty, customConfig);
   return {
     phase: 'lobby',
@@ -24,6 +25,7 @@ export function createGameState(difficulty: string = 'medium', customConfig?: Cu
     playerBuffs: {},
     difficulty,
     customConfig,
+    gameMode,
   };
 }
 
@@ -48,22 +50,42 @@ export function randomPosition(): { x: number; y: number } {
 }
 
 export function currentLevelConfig(state: GameState): LevelConfigEntry {
-  const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
-  const base = diffConfig.levels[state.level] || diffConfig.levels[MAX_LEVEL];
+  let base: LevelConfigEntry;
+  if (state.gameMode === 'roguelike') {
+    const row = state.level as keyof typeof ROGUELIKE_CONFIG.rowScaling;
+    base = ROGUELIKE_CONFIG.rowScaling[row] || ROGUELIKE_CONFIG.rowScaling[5];
+  } else {
+    const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
+    base = diffConfig.levels[state.level] || diffConfig.levels[MAX_LEVEL];
+  }
   const extra = Math.max(0, Object.keys(state.players).length - 1);
-  if (extra === 0) return base;
-  return {
-    bugsTotal: base.bugsTotal + extra * 3,
+  const result = {
+    bugsTotal: base.bugsTotal + (extra > 0 ? extra * 3 : 0),
     escapeTime: base.escapeTime,
-    spawnRate: Math.max(800, base.spawnRate - extra * 50),
+    spawnRate: extra > 0 ? Math.max(800, base.spawnRate - extra * 50) : base.spawnRate,
     maxOnScreen: base.maxOnScreen,
   };
+
+  // Apply event modifiers (roguelike events)
+  const em = state.eventModifiers;
+  if (em) {
+    if (em.bugsTotalMultiplier) result.bugsTotal = Math.round(result.bugsTotal * em.bugsTotalMultiplier);
+    if (em.escapeTimeOffset) result.escapeTime = Math.max(1500, result.escapeTime + em.escapeTimeOffset);
+    if (em.spawnRateMultiplier) result.spawnRate = Math.max(500, Math.round(result.spawnRate / em.spawnRateMultiplier));
+  }
+
+  return result;
 }
 
-/** Apply the difficulty score multiplier to raw points. */
+/** Apply the difficulty score multiplier to raw points. Caps combined multiplier at 10x. */
 export function calcScore(state: GameState, rawPoints: number): number {
   const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
-  return Math.round(rawPoints * diffConfig.scoreMultiplier);
+  let multiplier = diffConfig.scoreMultiplier;
+  if (state.persistentScoreMultiplier) multiplier *= state.persistentScoreMultiplier;
+  if (state.eventModifiers?.scoreMultiplier) multiplier *= state.eventModifiers.scoreMultiplier;
+  if (state.eliteConfig?.scoreMultiplier) multiplier *= state.eliteConfig.scoreMultiplier;
+  multiplier = Math.min(multiplier, 10);
+  return Math.round(rawPoints * multiplier);
 }
 
 /** Award points to a player and the team total, with the difficulty multiplier applied. Returns the final point value. */
@@ -112,5 +134,7 @@ export function getStateSnapshot(state: GameState): Record<string, unknown> {
       timeRemaining: state.boss.timeRemaining,
       ...(getActivePlugin()?.broadcastFields({ state } as any) || {}),
     } : null,
+    ...(state.gameMode !== 'classic' ? { gameMode: state.gameMode } : {}),
+    ...(state.roguelikeMap ? { roguelikeMap: state.roguelikeMap } : {}),
   };
 }

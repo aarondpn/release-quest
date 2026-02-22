@@ -2,7 +2,8 @@ import { MAX_LEVEL, getDifficultyConfig } from './config.ts';
 import { createLobbyLogger } from './logger.ts';
 import * as boss from './boss.ts';
 import { startLevel } from './game.ts';
-import type { GameContext, ShopItem } from './types.ts';
+import * as roguelike from './roguelike.ts';
+import type { GameContext, ServerMessage, ShopItem } from './types.ts';
 
 interface ShopItemDef {
   id: string;
@@ -89,6 +90,30 @@ export function getShopItems(difficulty: string): ShopItem[] {
   }));
 }
 
+/** Build a shop-open message for a client that joins/reconnects mid-shop. */
+export function getShopSnapshot(state: import('./types.ts').GameState): ServerMessage | null {
+  if (state.phase !== 'shopping' || !state.shopOpenedAt || !state.shopDuration) return null;
+
+  const elapsed = Date.now() - state.shopOpenedAt;
+  const remaining = Math.max(0, state.shopDuration - elapsed);
+  if (remaining <= 0) return null;
+
+  const items = getShopItems(state.difficulty);
+  const playerScores: Record<string, number> = {};
+  for (const pid of Object.keys(state.players)) {
+    playerScores[pid] = state.players[pid].score;
+  }
+
+  return {
+    type: 'shop-open',
+    items,
+    playerScores,
+    duration: remaining,
+    level: state.level,
+    nextLevel: state.level >= MAX_LEVEL ? 'boss' : state.level + 1,
+  };
+}
+
 export function openShop(ctx: GameContext): void {
   const { state } = ctx;
   const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
@@ -107,16 +132,20 @@ export function openShop(ctx: GameContext): void {
     playerScores[pid] = state.players[pid].score;
   }
 
+  const shopTimeout = state.gameMode === 'roguelike' ? diffConfig.shop.duration * 2 : diffConfig.shop.duration;
+
+  state.shopOpenedAt = Date.now();
+  state.shopDuration = shopTimeout;
+
   ctx.events.emit({
     type: 'shop-open',
     items,
     playerScores,
-    duration: diffConfig.shop.duration,
+    duration: shopTimeout,
     level: state.level,
     nextLevel: state.level >= MAX_LEVEL ? 'boss' : state.level + 1,
   });
 
-  // Auto-close after duration
   ctx.timers.lobby.setTimeout('shopTimer', () => {
     try {
       closeShop(ctx);
@@ -124,7 +153,7 @@ export function openShop(ctx: GameContext): void {
       const logCtx = createLobbyLogger(ctx.lobbyId.toString());
       logCtx.error({ err }, 'Error closing shop');
     }
-  }, diffConfig.shop.duration);
+  }, shopTimeout);
 }
 
 export function handleBuy(ctx: GameContext, pid: string, itemId: string): void {
@@ -211,10 +240,14 @@ export function closeShop(ctx: GameContext): void {
 
   ctx.timers.lobby.clear('shopTimer');
   state.shopReadyPlayers = undefined;
+  state.shopOpenedAt = undefined;
+  state.shopDuration = undefined;
 
   ctx.events.emit({ type: 'shop-close' });
 
-  if (state.level >= MAX_LEVEL) {
+  if (state.gameMode === 'roguelike') {
+    roguelike.handleNodeComplete(ctx);
+  } else if (state.level >= MAX_LEVEL) {
     boss.startBoss(ctx);
   } else {
     state.level++;
