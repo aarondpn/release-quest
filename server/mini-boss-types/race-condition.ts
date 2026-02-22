@@ -1,4 +1,5 @@
 import { LOGICAL_W, LOGICAL_H } from '../../shared/constants.ts';
+import logger from '../logger.ts';
 import type { GameContext, MiniBossPlugin, MiniBossEntity } from '../types.ts';
 
 const THREAD_HP = 12;
@@ -53,11 +54,35 @@ export const raceConditionPlugin: MiniBossPlugin = {
     };
     mb.data = data as unknown as Record<string, unknown>;
 
+    const posA = { x: LOGICAL_W * 0.2, y: LOGICAL_H * 0.3 + Math.random() * LOGICAL_H * 0.4 };
+    const posB = { x: LOGICAL_W * 0.8, y: LOGICAL_H * 0.3 + Math.random() * LOGICAL_H * 0.4 };
+    const initDist = distance(posA, posB);
+
+    logger.info({
+      miniBoss: 'race-condition',
+      event: 'init',
+      lobbyId: ctx.lobbyId,
+      constants: {
+        THREAD_HP,
+        PUSH_RADIUS,
+        PUSH_DISTANCE,
+        COLLISION_DISTANCE,
+        COLLISION_COOLDOWN_MS,
+        DRIFT_SPEED,
+        DRIFT_FAST,
+        SLIPPERY_PUSH,
+        timeLimit: 45,
+      },
+      initialPositions: { a: posA, b: posB },
+      initialDistance: Math.round(initDist),
+      note: `Threads need to be within ${COLLISION_DISTANCE}px to collide. They drift apart by ${DRIFT_SPEED}px/tick. Each collision deals 1 HP to both threads (${THREAD_HP} HP each = ${THREAD_HP} collisions needed).`,
+    }, '[RaceCondition] Boss initialized');
+
     return [
       {
         id: 'mb_thread_a',
-        x: LOGICAL_W * 0.2,
-        y: LOGICAL_H * 0.3 + Math.random() * LOGICAL_H * 0.4,
+        x: posA.x,
+        y: posA.y,
         hp: THREAD_HP,
         maxHp: THREAD_HP,
         variant: 'thread-a',
@@ -65,8 +90,8 @@ export const raceConditionPlugin: MiniBossPlugin = {
       },
       {
         id: 'mb_thread_b',
-        x: LOGICAL_W * 0.8,
-        y: LOGICAL_H * 0.3 + Math.random() * LOGICAL_H * 0.4,
+        x: posB.x,
+        y: posB.y,
         hp: THREAD_HP,
         maxHp: THREAD_HP,
         variant: 'thread-b',
@@ -75,18 +100,41 @@ export const raceConditionPlugin: MiniBossPlugin = {
     ];
   },
 
-  onClick(ctx: GameContext, _pid: string, _entityId: string, clickPos?: { x: number; y: number }): void {
+  onClick(ctx: GameContext, pid: string, _entityId: string, clickPos?: { x: number; y: number }): void {
     const mb = ctx.state.miniBoss;
-    if (!mb || !clickPos) return;
+    if (!mb || !clickPos) {
+      logger.info({
+        miniBoss: 'race-condition',
+        event: 'click-no-pos',
+        lobbyId: ctx.lobbyId,
+        pid,
+        hasClickPos: !!clickPos,
+      }, '[RaceCondition] Click ignored — no click position');
+      return;
+    }
 
     const data = mb.data as unknown as HerdData;
     const threads = mb.entities.filter(e => e.hp > 0);
-    if (threads.length < 2) return;
+    if (threads.length < 2) {
+      logger.info({
+        miniBoss: 'race-condition',
+        event: 'click-not-enough-threads',
+        lobbyId: ctx.lobbyId,
+        pid,
+        aliveThreads: threads.length,
+      }, '[RaceCondition] Click ignored — fewer than 2 threads alive');
+      return;
+    }
 
     const minHp = Math.min(...threads.map(t => t.hp));
     const pushDist = minHp <= THREAD_HP * 0.25 ? SLIPPERY_PUSH : PUSH_DISTANCE;
 
+    const distToA = distance(threads[0], clickPos);
+    const distToB = distance(threads[1], clickPos);
+    const threadDist = distance(threads[0], threads[1]);
+
     let pushed = false;
+    const pushedThreads: string[] = [];
 
     // Push threads near click position
     for (const thread of threads) {
@@ -100,15 +148,33 @@ export const raceConditionPlugin: MiniBossPlugin = {
         thread.x = pos.x;
         thread.y = pos.y;
         pushed = true;
+        pushedThreads.push(thread.id);
       }
     }
 
-    if (!pushed) return;
+    if (!pushed) {
+      logger.info({
+        miniBoss: 'race-condition',
+        event: 'click-out-of-range',
+        lobbyId: ctx.lobbyId,
+        pid,
+        clickPos,
+        distToA: Math.round(distToA),
+        distToB: Math.round(distToB),
+        pushRadius: PUSH_RADIUS,
+        threadDist: Math.round(threadDist),
+      }, '[RaceCondition] Click too far from any thread');
+      return;
+    }
 
     // Check collision between threads
     const now = Date.now();
     const [a, b] = threads;
-    if (a && b && distance(a, b) < COLLISION_DISTANCE && (now - data.lastCollisionAt) > COLLISION_COOLDOWN_MS) {
+    const distAfterPush = distance(a, b);
+    const timeSinceCollision = now - data.lastCollisionAt;
+    const collisionReady = distAfterPush < COLLISION_DISTANCE && timeSinceCollision > COLLISION_COOLDOWN_MS;
+
+    if (a && b && collisionReady) {
       data.lastCollisionAt = now;
 
       // Damage both
@@ -128,6 +194,20 @@ export const raceConditionPlugin: MiniBossPlugin = {
       b.y = posB.y;
 
       data._extra.collisionFlash = true;
+
+      logger.info({
+        miniBoss: 'race-condition',
+        event: 'collision',
+        lobbyId: ctx.lobbyId,
+        pid,
+        threadDistBeforePush: Math.round(threadDist),
+        threadDistAfterPush: Math.round(distAfterPush),
+        collisionDistance: COLLISION_DISTANCE,
+        threadAHp: a.hp,
+        threadBHp: b.hp,
+        timeRemaining: mb.timeRemaining,
+      }, '[RaceCondition] COLLISION — both threads take damage');
+
       ctx.events.emit({
         type: 'mini-boss-entity-update',
         entities: mb.entities,
@@ -136,6 +216,23 @@ export const raceConditionPlugin: MiniBossPlugin = {
       data._extra.collisionFlash = false;
       return;
     }
+
+    logger.info({
+      miniBoss: 'race-condition',
+      event: 'click-push',
+      lobbyId: ctx.lobbyId,
+      pid,
+      clickPos,
+      pushedThreads,
+      pushDistance: pushDist,
+      threadDistBeforePush: Math.round(threadDist),
+      threadDistAfterPush: Math.round(distAfterPush),
+      collisionDistance: COLLISION_DISTANCE,
+      collisionBlocked: distAfterPush < COLLISION_DISTANCE && timeSinceCollision <= COLLISION_COOLDOWN_MS,
+      collisionCooldownRemainingMs: Math.max(0, COLLISION_COOLDOWN_MS - timeSinceCollision),
+      threadAHp: a?.hp,
+      threadBHp: b?.hp,
+    }, '[RaceCondition] Threads pushed');
 
     ctx.events.emit({
       type: 'mini-boss-entity-update',
@@ -153,6 +250,8 @@ export const raceConditionPlugin: MiniBossPlugin = {
 
     const [a, b] = threads;
     if (!a || !b) return;
+
+    const distBefore = distance(a, b);
 
     // Threads drift apart
     const minHp = Math.min(a.hp, b.hp);
@@ -175,11 +274,36 @@ export const raceConditionPlugin: MiniBossPlugin = {
     a.y = Math.max(PAD, Math.min(LOGICAL_H - PAD, a.y + (Math.random() - 0.5) * 8));
     b.x = Math.max(PAD, Math.min(LOGICAL_W - PAD, b.x + (Math.random() - 0.5) * 8));
     b.y = Math.max(PAD, Math.min(LOGICAL_H - PAD, b.y + (Math.random() - 0.5) * 8));
+
+    const distAfter = distance(a, b);
+
+    logger.info({
+      miniBoss: 'race-condition',
+      event: 'tick',
+      lobbyId: ctx.lobbyId,
+      timeRemaining: mb.timeRemaining,
+      threadAHp: a.hp,
+      threadBHp: b.hp,
+      distBefore: Math.round(distBefore),
+      distAfter: Math.round(distAfter),
+      driftSpeed: drift,
+      collisionDistance: COLLISION_DISTANCE,
+      gapToCollision: Math.round(distAfter - COLLISION_DISTANCE),
+    }, '[RaceCondition] Tick');
   },
 
   checkVictory(ctx: GameContext): boolean {
     const mb = ctx.state.miniBoss;
     if (!mb) return false;
-    return mb.entities.every(e => e.hp <= 0);
+    const victory = mb.entities.every(e => e.hp <= 0);
+    if (victory) {
+      logger.info({
+        miniBoss: 'race-condition',
+        event: 'victory',
+        lobbyId: ctx.lobbyId,
+        timeRemaining: mb.timeRemaining,
+      }, '[RaceCondition] Victory condition met');
+    }
+    return victory;
   },
 };

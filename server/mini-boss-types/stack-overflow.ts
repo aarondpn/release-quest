@@ -1,4 +1,5 @@
 import { LOGICAL_W, LOGICAL_H } from '../../shared/constants.ts';
+import logger from '../logger.ts';
 import type { GameContext, MiniBossPlugin, MiniBossEntity } from '../types.ts';
 
 const BOSS_HP = 30;
@@ -60,6 +61,24 @@ export const stackOverflowPlugin: MiniBossPlugin = {
     };
     mb.data = data as unknown as Record<string, unknown>;
 
+    logger.info({
+      miniBoss: 'stack-overflow',
+      event: 'init',
+      lobbyId: ctx.lobbyId,
+      constants: {
+        BOSS_HP,
+        HEAT_PER_CLICK,
+        HEAT_DECAY_PER_TICK,
+        OVERHEAT_THRESHOLD,
+        LOCKOUT_DURATION_MS,
+        BOSS_HEAL_ON_OVERHEAT,
+        COOLANT_HEAT_REDUCTION,
+        COOLANT_SPAWN_INTERVAL,
+        timeLimit: 40,
+      },
+      note: `Overheat at ${OVERHEAT_THRESHOLD} heat. ${Math.floor(OVERHEAT_THRESHOLD / HEAT_PER_CLICK)} clicks = overheat. Net heat/click at 1/s = ${HEAT_PER_CLICK - HEAT_DECAY_PER_TICK} → heat will accumulate!`,
+    }, '[StackOverflow] Boss initialized');
+
     return [{
       id: 'mb_boss',
       x: LOGICAL_W / 2,
@@ -70,7 +89,7 @@ export const stackOverflowPlugin: MiniBossPlugin = {
     }];
   },
 
-  onClick(ctx: GameContext, _pid: string, entityId: string): void {
+  onClick(ctx: GameContext, pid: string, entityId: string): void {
     const mb = ctx.state.miniBoss;
     if (!mb) return;
 
@@ -80,22 +99,63 @@ export const stackOverflowPlugin: MiniBossPlugin = {
     // Check lockout
     if (data.lockedOut) {
       if (now < data.lockoutEndsAt) {
+        const remainingMs = data.lockoutEndsAt - now;
+        logger.info({
+          miniBoss: 'stack-overflow',
+          event: 'click-blocked-lockout',
+          lobbyId: ctx.lobbyId,
+          pid,
+          entityId,
+          remainingLockoutMs: remainingMs,
+          heat: data.heat,
+        }, '[StackOverflow] Click ignored — still locked out');
         return; // still locked out, ignore click
       }
       // Lockout expired during click handling
       data.lockedOut = false;
       data._extra.lockedOut = false;
+      logger.info({
+        miniBoss: 'stack-overflow',
+        event: 'lockout-expired',
+        lobbyId: ctx.lobbyId,
+        heat: data.heat,
+      }, '[StackOverflow] Lockout expired during click');
     }
 
     const entity = mb.entities.find(e => e.id === entityId);
-    if (!entity || entity.hp <= 0) return;
+    if (!entity || entity.hp <= 0) {
+      logger.info({
+        miniBoss: 'stack-overflow',
+        event: 'click-no-entity',
+        lobbyId: ctx.lobbyId,
+        pid,
+        entityId,
+        entityFound: !!entity,
+        entityHp: entity?.hp,
+      }, '[StackOverflow] Click on missing/dead entity');
+      return;
+    }
 
     // Clicking a coolant pickup
     if (entity.variant === 'coolant') {
+      const heatBefore = data.heat;
       data.heat = Math.max(0, data.heat - COOLANT_HEAT_REDUCTION);
       data._extra.heat = data.heat;
       // Remove coolant
       mb.entities = mb.entities.filter(e => e.id !== entityId);
+
+      logger.info({
+        miniBoss: 'stack-overflow',
+        event: 'coolant-collected',
+        lobbyId: ctx.lobbyId,
+        pid,
+        coolantId: entityId,
+        heatBefore,
+        heatAfter: data.heat,
+        heatReduced: heatBefore - data.heat,
+        remainingCoolants: mb.entities.filter(e => e.variant === 'coolant').length,
+      }, '[StackOverflow] Coolant collected');
+
       ctx.events.emit({
         type: 'mini-boss-entity-update',
         entities: mb.entities,
@@ -106,6 +166,8 @@ export const stackOverflowPlugin: MiniBossPlugin = {
 
     // Clicking the boss
     if (entity.variant === 'boss') {
+      const heatBefore = data.heat;
+      const bossHpBefore = entity.hp;
       data.heat += HEAT_PER_CLICK;
 
       if (data.heat >= OVERHEAT_THRESHOLD) {
@@ -115,6 +177,21 @@ export const stackOverflowPlugin: MiniBossPlugin = {
         data.heat = LOCKOUT_HEAT_RESET;
         entity.hp = Math.min(entity.maxHp, entity.hp + BOSS_HEAL_ON_OVERHEAT);
         data._extra = { heat: data.heat, lockedOut: true };
+
+        logger.warn({
+          miniBoss: 'stack-overflow',
+          event: 'overheat',
+          lobbyId: ctx.lobbyId,
+          pid,
+          heatBefore,
+          heatAtOverheat: OVERHEAT_THRESHOLD,
+          heatResetTo: LOCKOUT_HEAT_RESET,
+          bossHpBefore,
+          bossHpAfter: entity.hp,
+          healAmount: BOSS_HEAL_ON_OVERHEAT,
+          lockoutMs: LOCKOUT_DURATION_MS,
+          timeRemaining: mb.timeRemaining,
+        }, '[StackOverflow] OVERHEAT — boss healed, player locked out');
 
         ctx.events.emit({
           type: 'mini-boss-entity-update',
@@ -128,6 +205,20 @@ export const stackOverflowPlugin: MiniBossPlugin = {
       // Normal damage
       entity.hp--;
       data._extra.heat = data.heat;
+
+      logger.info({
+        miniBoss: 'stack-overflow',
+        event: 'click-damage',
+        lobbyId: ctx.lobbyId,
+        pid,
+        heatBefore,
+        heatAfter: data.heat,
+        heatUntilOverheat: OVERHEAT_THRESHOLD - data.heat,
+        bossHpBefore,
+        bossHpAfter: entity.hp,
+        timeRemaining: mb.timeRemaining,
+      }, '[StackOverflow] Boss hit');
+
       ctx.events.emit({
         type: 'mini-boss-entity-update',
         entities: mb.entities,
@@ -149,9 +240,17 @@ export const stackOverflowPlugin: MiniBossPlugin = {
     if (data.lockedOut && now >= data.lockoutEndsAt) {
       data.lockedOut = false;
       data._extra.lockedOut = false;
+      logger.info({
+        miniBoss: 'stack-overflow',
+        event: 'lockout-expired-tick',
+        lobbyId: ctx.lobbyId,
+        heat: data.heat,
+        timeRemaining: mb.timeRemaining,
+      }, '[StackOverflow] Lockout expired (tick)');
     }
 
     // Decay heat
+    const heatBefore = data.heat;
     if (!data.lockedOut) {
       const decayRate = boss.hp <= BOSS_HP * 0.25 ? HEAT_DECAY_SLOW : HEAT_DECAY_PER_TICK;
       data.heat = Math.max(0, data.heat - decayRate);
@@ -166,13 +265,17 @@ export const stackOverflowPlugin: MiniBossPlugin = {
     boss.y = Math.max(pad, Math.min(LOGICAL_H - pad, boss.y + Math.sin(angle) * speed));
 
     // Remove expired coolants
+    const coolantsBefore = mb.entities.filter(e => e.variant === 'coolant').length;
     mb.entities = mb.entities.filter(
       e => e.variant !== 'coolant' || !e.spawnedAt || (now - e.spawnedAt) < COOLANT_LIFETIME_MS
     );
+    const coolantsAfter = mb.entities.filter(e => e.variant === 'coolant').length;
+    const expiredCount = coolantsBefore - coolantsAfter;
 
     // Spawn coolant
     data.ticksSinceCoolant++;
     const spawnInterval = boss.hp <= BOSS_HP * 0.5 ? COOLANT_SPAWN_SLOW : COOLANT_SPAWN_INTERVAL;
+    let coolantSpawned = false;
     if (data.ticksSinceCoolant >= spawnInterval) {
       data.ticksSinceCoolant = 0;
       const pos = randomPos();
@@ -186,13 +289,40 @@ export const stackOverflowPlugin: MiniBossPlugin = {
         variant: 'coolant',
         spawnedAt: now,
       });
+      coolantSpawned = true;
     }
+
+    logger.info({
+      miniBoss: 'stack-overflow',
+      event: 'tick',
+      lobbyId: ctx.lobbyId,
+      timeRemaining: mb.timeRemaining,
+      bossHp: boss.hp,
+      bossMaxHp: boss.maxHp,
+      heat: data.heat,
+      heatDecayed: heatBefore - data.heat,
+      lockedOut: data.lockedOut,
+      activeCoolants: mb.entities.filter(e => e.variant === 'coolant').length,
+      expiredCoolants: expiredCount,
+      coolantSpawned,
+      ticksSinceCoolant: data.ticksSinceCoolant,
+      nextCoolantInTicks: spawnInterval - data.ticksSinceCoolant,
+    }, '[StackOverflow] Tick');
   },
 
   checkVictory(ctx: GameContext): boolean {
     const mb = ctx.state.miniBoss;
     if (!mb) return false;
     const boss = mb.entities.find(e => e.variant === 'boss');
-    return !boss || boss.hp <= 0;
+    const victory = !boss || boss.hp <= 0;
+    if (victory) {
+      logger.info({
+        miniBoss: 'stack-overflow',
+        event: 'victory',
+        lobbyId: ctx.lobbyId,
+        timeRemaining: mb.timeRemaining,
+      }, '[StackOverflow] Victory condition met');
+    }
+    return victory;
   },
 };

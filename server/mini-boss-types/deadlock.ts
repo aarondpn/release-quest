@@ -1,4 +1,5 @@
 import { LOGICAL_W, LOGICAL_H } from '../../shared/constants.ts';
+import logger from '../logger.ts';
 import type { GameContext, MiniBossPlugin, MiniBossEntity } from '../types.ts';
 
 const BOSS_HP = 30;
@@ -114,6 +115,29 @@ export const deadlockPlugin: MiniBossPlugin = {
     startShowingPhase(data);
     mb.data = data as unknown as Record<string, unknown>;
 
+    const showDurationMs = SHOW_PAUSE_MS + sequenceLengthForRound(1) * SHOW_DURATION_PER_LOCK_MS + SHOW_PAUSE_MS;
+    logger.info({
+      miniBoss: 'deadlock',
+      event: 'init',
+      lobbyId: ctx.lobbyId,
+      constants: {
+        BOSS_HP,
+        DAMAGE_PER_SEQUENCE,
+        HEAL_ON_FAIL,
+        LOCK_COUNT,
+        SHOW_DURATION_PER_LOCK_MS,
+        SHOW_PAUSE_MS,
+        timeLimit: 40,
+      },
+      round1: {
+        sequenceLength: sequenceLengthForRound(1),
+        showDurationMs,
+        sequence: data.sequence,
+        sequenceIds: data._extra.sequence,
+      },
+      note: `3 rounds needed (10+10+10 = 30 HP). Round seq lengths: 3, 4, 5. Show duration r1: ${showDurationMs}ms.`,
+    }, '[Deadlock] Boss initialized');
+
     const positions = lockPositions();
     return positions.map((pos, i) => ({
       id: 'mb_lock_' + i,
@@ -125,7 +149,7 @@ export const deadlockPlugin: MiniBossPlugin = {
     }));
   },
 
-  onClick(ctx: GameContext, _pid: string, entityId: string): void {
+  onClick(ctx: GameContext, pid: string, entityId: string): void {
     const mb = ctx.state.miniBoss;
     if (!mb) return;
 
@@ -134,17 +158,47 @@ export const deadlockPlugin: MiniBossPlugin = {
 
     // Ignore clicks during showing phase
     if (data.phase === 'showing') {
-      if (now < data.showingUntil) return;
+      if (now < data.showingUntil) {
+        const remainingMs = data.showingUntil - now;
+        logger.info({
+          miniBoss: 'deadlock',
+          event: 'click-blocked-showing',
+          lobbyId: ctx.lobbyId,
+          pid,
+          entityId,
+          remainingShowMs: remainingMs,
+          sequence: data.sequence,
+        }, '[Deadlock] Click ignored — still in showing phase');
+        return;
+      }
       // Showing phase just ended, transition to input
       data.phase = 'input';
       data._extra.phase = 'input';
+      logger.info({
+        miniBoss: 'deadlock',
+        event: 'phase-transition',
+        lobbyId: ctx.lobbyId,
+        from: 'showing',
+        to: 'input',
+        sequence: data.sequence,
+        sequenceIds: data._extra.sequence,
+        timeRemaining: mb.timeRemaining,
+      }, '[Deadlock] Phase transition: showing → input');
     }
 
     // Parse lock index from entity ID
     const match = entityId.match(/^mb_lock_(\d+)$/);
-    if (!match) return;
+    if (!match) {
+      logger.info({
+        miniBoss: 'deadlock',
+        event: 'click-invalid-entity',
+        lobbyId: ctx.lobbyId,
+        pid,
+        entityId,
+      }, '[Deadlock] Click on non-lock entity');
+      return;
+    }
     const clickedIndex = parseInt(match[1], 10);
-
     const expectedIndex = data.sequence[data.inputIndex];
 
     if (clickedIndex === expectedIndex) {
@@ -152,15 +206,54 @@ export const deadlockPlugin: MiniBossPlugin = {
       data.inputIndex++;
       data._extra.inputIndex = data.inputIndex;
 
+      logger.info({
+        miniBoss: 'deadlock',
+        event: 'click-correct',
+        lobbyId: ctx.lobbyId,
+        pid,
+        clickedLock: clickedIndex,
+        expectedLock: expectedIndex,
+        inputProgress: `${data.inputIndex}/${data.sequence.length}`,
+        round: data.round,
+        bossHp: data.bossHp,
+      }, '[Deadlock] Correct lock clicked');
+
       if (data.inputIndex >= data.sequence.length) {
         // Sequence complete! Deal damage
+        const hpBefore = data.bossHp;
         data.bossHp = Math.max(0, data.bossHp - DAMAGE_PER_SEQUENCE);
         data._extra.bossHp = data.bossHp;
         data.round++;
 
+        logger.info({
+          miniBoss: 'deadlock',
+          event: 'sequence-complete',
+          lobbyId: ctx.lobbyId,
+          pid,
+          round: data.round - 1,
+          bossHpBefore: hpBefore,
+          bossHpAfter: data.bossHp,
+          damage: DAMAGE_PER_SEQUENCE,
+          timeRemaining: mb.timeRemaining,
+        }, '[Deadlock] Sequence complete — boss takes damage');
+
         if (data.bossHp > 0) {
           // Start next round
           startShowingPhase(data);
+          const showDurationMs = SHOW_PAUSE_MS + sequenceLengthForRound(data.round) * SHOW_DURATION_PER_LOCK_MS + SHOW_PAUSE_MS;
+          logger.info({
+            miniBoss: 'deadlock',
+            event: 'round-start',
+            lobbyId: ctx.lobbyId,
+            round: data.round,
+            sequenceLength: data.sequence.length,
+            sequence: data.sequence,
+            sequenceIds: data._extra.sequence,
+            showDurationMs,
+            bossHp: data.bossHp,
+            timeRemaining: mb.timeRemaining,
+          }, '[Deadlock] New round started');
+
           ctx.events.emit({
             type: 'mini-boss-entity-update',
             entities: mb.entities,
@@ -185,9 +278,26 @@ export const deadlockPlugin: MiniBossPlugin = {
       });
     } else {
       // Wrong click! Boss heals, restart sequence
+      const hpBefore = data.bossHp;
       data.bossHp = Math.min(BOSS_HP, data.bossHp + HEAL_ON_FAIL);
       data._extra.bossHp = data.bossHp;
       startShowingPhase(data);
+
+      logger.warn({
+        miniBoss: 'deadlock',
+        event: 'click-wrong',
+        lobbyId: ctx.lobbyId,
+        pid,
+        clickedLock: clickedIndex,
+        expectedLock: expectedIndex,
+        inputProgressAtFail: `${data.inputIndex}/${data.sequence.length}`,
+        round: data.round,
+        bossHpBefore: hpBefore,
+        bossHpAfter: data.bossHp,
+        healAmount: HEAL_ON_FAIL,
+        newSequence: data.sequence,
+        timeRemaining: mb.timeRemaining,
+      }, '[Deadlock] Wrong lock — boss heals, sequence reset');
 
       ctx.events.emit({
         type: 'mini-boss-entity-update',
@@ -209,13 +319,44 @@ export const deadlockPlugin: MiniBossPlugin = {
     if (data.phase === 'showing' && now >= data.showingUntil) {
       data.phase = 'input';
       data._extra.phase = 'input';
+      logger.info({
+        miniBoss: 'deadlock',
+        event: 'phase-transition-tick',
+        lobbyId: ctx.lobbyId,
+        from: 'showing',
+        to: 'input',
+        sequence: data.sequence,
+        timeRemaining: mb.timeRemaining,
+      }, '[Deadlock] Phase transition via tick: showing → input');
     }
+
+    logger.info({
+      miniBoss: 'deadlock',
+      event: 'tick',
+      lobbyId: ctx.lobbyId,
+      timeRemaining: mb.timeRemaining,
+      phase: data.phase,
+      round: data.round,
+      bossHp: data.bossHp,
+      inputProgress: data.phase === 'input' ? `${data.inputIndex}/${data.sequence.length}` : 'n/a',
+      showingRemainingMs: data.phase === 'showing' ? Math.max(0, data.showingUntil - now) : 0,
+    }, '[Deadlock] Tick');
   },
 
   checkVictory(ctx: GameContext): boolean {
     const mb = ctx.state.miniBoss;
     if (!mb) return false;
     const data = mb.data as unknown as DeadlockData;
-    return data.bossHp <= 0;
+    const victory = data.bossHp <= 0;
+    if (victory) {
+      logger.info({
+        miniBoss: 'deadlock',
+        event: 'victory',
+        lobbyId: ctx.lobbyId,
+        timeRemaining: mb.timeRemaining,
+        roundsCompleted: data.round - 1,
+      }, '[Deadlock] Victory condition met');
+    }
+    return victory;
   },
 };
