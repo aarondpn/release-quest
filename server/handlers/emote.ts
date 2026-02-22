@@ -35,8 +35,7 @@ export const handleEmote: MessageHandler = async ({ ws, msg, pid, playerInfo }) 
   const emoteId = msg.emoteId as string;
 
   // Validate emote exists
-  const emote = EMOTE_MAP.get(emoteId);
-  if (!emote) return;
+  if (!EMOTE_MAP.has(emoteId)) return;
 
   // Must be in a lobby
   const lobbyId = lobby.getLobbyForPlayer(pid);

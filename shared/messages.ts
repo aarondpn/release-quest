@@ -1079,7 +1079,7 @@ export interface ShopCatalogItem {
   description: string;
   price: number;
   rarity: string;
-  category?: string;
+  category: 'avatar' | 'emote';
 }
 
 export interface ShopCatalogMsg {

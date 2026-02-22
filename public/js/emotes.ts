@@ -8,6 +8,9 @@ const BINDING_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
 let _sendMessage: SendMessageFn | null = null;
 
+// Cached bindings — invalidated on set/reset
+let _cachedBindings: Map<string, string> | null = null;
+
 export function getDefaultBindings(): Map<string, string> {
   const map = new Map<string, string>();
   for (const emote of EMOTE_CATALOG) {
@@ -19,20 +22,29 @@ export function getDefaultBindings(): Map<string, string> {
 }
 
 export function getEmoteBindings(): Map<string, string> {
+  if (_cachedBindings) return _cachedBindings;
   try {
     const raw = localStorage.getItem(BINDINGS_STORAGE_KEY);
     if (raw) {
+      const defaults = getDefaultBindings();
       const obj = JSON.parse(raw) as Record<string, string>;
       const map = new Map<string, string>();
       for (const key of BINDING_KEYS) {
         if (obj[key] && EMOTE_MAP.has(obj[key])) {
           map.set(key, obj[key]);
+        } else if (defaults.has(key)) {
+          map.set(key, defaults.get(key)!);
         }
       }
-      if (map.size > 0) return map;
+      if (map.size > 0) {
+        _cachedBindings = map;
+        return map;
+      }
     }
   } catch { /* ignore */ }
-  return getDefaultBindings();
+  const defaults = getDefaultBindings();
+  _cachedBindings = defaults;
+  return defaults;
 }
 
 export function setEmoteBinding(key: string, emoteId: string): void {
@@ -55,12 +67,14 @@ export function setEmoteBinding(key: string, emoteId: string): void {
 
 export function resetEmoteBindings(): void {
   localStorage.removeItem(BINDINGS_STORAGE_KEY);
+  _cachedBindings = null;
 }
 
 function _saveBindings(bindings: Map<string, string>): void {
   const obj: Record<string, string> = {};
   for (const [k, v] of bindings) obj[k] = v;
   localStorage.setItem(BINDINGS_STORAGE_KEY, JSON.stringify(obj));
+  _cachedBindings = bindings;
 }
 
 // ── Animated SVG emotes ──
@@ -341,8 +355,18 @@ const EMOTE_SVGS: Record<string, string> = {
   </svg>`,
 };
 
+let _svgUid = 0;
+
+/** Returns the SVG string with unique filter/clipPath IDs to avoid collisions */
 export function getEmoteSvg(emoteId: string): string | null {
-  return EMOTE_SVGS[emoteId] || null;
+  const svg = EMOTE_SVGS[emoteId];
+  if (!svg) return null;
+  const uid = 'e' + (++_svgUid);
+  // Replace all id="..." and url(#...) / href="#..." references with unique suffixed versions
+  return svg
+    .replace(/id="([^"]+)"/g, (_m, id) => `id="${id}-${uid}"`)
+    .replace(/url\(#([^)]+)\)/g, (_m, id) => `url(#${id}-${uid})`)
+    .replace(/href="#([^"]+)"/g, (_m, id) => `href="#${id}-${uid}"`);
 }
 
 export function initEmotes(sendFn: SendMessageFn): void {

@@ -25,8 +25,5 @@ export const EMOTE_CATALOG: EmoteDefinition[] = [
 /** Lookup by emote id */
 export const EMOTE_MAP = new Map(EMOTE_CATALOG.map(e => [e.id, e]));
 
-/** Lookup by keyboard key */
-export const EMOTE_BY_KEY = new Map(EMOTE_CATALOG.map(e => [e.key, e]));
-
 /** Set of free emote ids */
 export const FREE_EMOTE_IDS = new Set(EMOTE_CATALOG.filter(e => !e.premium).map(e => e.id));

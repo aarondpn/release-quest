@@ -5,6 +5,7 @@ import * as network from './network.ts';
 import * as lobby from './lobby.ts';
 import * as game from './game.ts';
 import { broadcastSystemChat, removePlayerFromChat } from './handlers/chat.ts';
+import { removePlayerEmoteState } from './handlers/emote.ts';
 
 /**
  * Get the game context for a specific player
@@ -32,6 +33,7 @@ export async function handleLeaveLobby(ws: WebSocket, pid: string, lobbyId: numb
   const info = playerInfo.get(pid);
   broadcastSystemChat(lobbyId, `${info?.name || 'Unknown'} left`);
   removePlayerFromChat(lobbyId, pid);
+  removePlayerEmoteState(pid);
   network.wsToLobby.delete(ws);
   network.removeClientFromLobby(lobbyId, ws);
 

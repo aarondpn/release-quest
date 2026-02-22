@@ -1,8 +1,7 @@
 import { dom, clientState, activateLobbyTab } from './state.ts';
 import { SHOP_AVATARS, renderIcon, COIN_SVG } from './avatars.ts';
 import { escapeHtml, showToast } from './utils.ts';
-import { getEmoteSvg } from './emotes.ts';
-import { EMOTE_MAP } from '../../shared/emotes.ts';
+import { getEmoteSvg, getEmoteBindings } from './emotes.ts';
 import type { SendMessageFn } from './client-types.ts';
 import type { ShopCatalogMsg, ShopPurchaseResultMsg } from '../../shared/messages.ts';
 
@@ -138,8 +137,11 @@ function renderAvatarCard(item: ShopCatalogItem, isGuest: boolean): string {
 function renderEmoteCard(item: ShopCatalogItem, isGuest: boolean): string {
   const owned = _ownedItems.has(item.id);
   const emoteSvg = getEmoteSvg(item.id) || '';
-  const emote = EMOTE_MAP.get(item.id);
-  const keyLabel = emote ? emote.key : '';
+  // Show the user's current binding for this emote, not the catalog default
+  let keyLabel = '';
+  for (const [k, v] of getEmoteBindings()) {
+    if (v === item.id) { keyLabel = k; break; }
+  }
   const safeId = escapeHtml(item.id);
   const safeRarity = escapeHtml(item.rarity);
 
