@@ -5,3 +5,4 @@ dist/
 *.min.css
 *.min.js.map
 .env
+.claude/
