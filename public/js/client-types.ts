@@ -186,6 +186,8 @@ export interface DomRefs {
   mapScreen: HTMLElement | null;
   eventScreen: HTMLElement | null;
   restScreen: HTMLElement | null;
+  miniBossScreen: HTMLElement | null;
+  rewardScreen: HTMLElement | null;
   nameEntry: HTMLElement | null;
   nameInput: HTMLInputElement | null;
   iconPicker: HTMLElement | null;

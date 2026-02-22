@@ -9,7 +9,9 @@ import type {
   ShopBuyMsg, ShopReadyMsg, SelectRoleMsg, ChatMessageMsg,
   GetLeaderboardMsg, GetMyStatsMsg, GetRecordingsMsg,
   ShareRecordingMsg, UnshareRecordingMsg, GetQuestsMsg, GetBalanceMsg,
-  GetShopCatalogMsg, ShopSeenMsg, ShopPurchaseMsg, MapVoteMsg, EventVoteMsg, RestVoteMsg, DevCommandMsg,
+  GetShopCatalogMsg, ShopSeenMsg, ShopPurchaseMsg, MapVoteMsg, EventVoteMsg, RestVoteMsg,
+  MiniBossClickMsg, EncounterRewardContinueMsg,
+  DevCommandMsg,
 } from '../../shared/messages.ts';
 
 // --- No-payload messages ---
@@ -236,6 +238,15 @@ const restVoteSchema = z.object({
   option: z.enum(['rest', 'train']),
 }) satisfies ZodType<RestVoteMsg>;
 
+const miniBossClickSchema = z.object({
+  type: z.literal('mini-boss-click'),
+  entityId: z.string().max(64),
+}) satisfies ZodType<MiniBossClickMsg>;
+
+const encounterRewardContinueSchema = z.object({
+  type: z.literal('encounter-reward-continue'),
+}) satisfies ZodType<EncounterRewardContinueMsg>;
+
 // --- Dev mode ---
 
 const devCommandSchema = z.object({
@@ -288,4 +299,6 @@ export const staticSchemas: Record<string, ZodType> = {
   'map-vote': mapVoteSchema,
   'event-vote': eventVoteSchema,
   'rest-vote': restVoteSchema,
+  'mini-boss-click': miniBossClickSchema,
+  'encounter-reward-continue': encounterRewardContinueSchema,
 };

@@ -83,6 +83,7 @@ export function calcScore(state: GameState, rawPoints: number): number {
   let multiplier = diffConfig.scoreMultiplier;
   if (state.persistentScoreMultiplier) multiplier *= state.persistentScoreMultiplier;
   if (state.eventModifiers?.scoreMultiplier) multiplier *= state.eventModifiers.scoreMultiplier;
+  if (state.eliteConfig?.scoreMultiplier) multiplier *= state.eliteConfig.scoreMultiplier;
   return Math.round(rawPoints * multiplier);
 }
 

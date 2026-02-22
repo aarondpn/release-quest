@@ -7,6 +7,7 @@ import * as powerups from './powerups.ts';
 import * as shop from './shop.ts';
 import * as stats from './stats.ts';
 import * as roguelike from './roguelike.ts';
+import * as elite from './elite.ts';
 import { createMatchLog } from './match-logger.ts';
 import { startRecording, stopRecording } from './recording.ts';
 import * as db from './db.ts';
@@ -158,15 +159,32 @@ export function checkGameState(ctx: GameContext): void {
     }
 
     const cfg = currentLevelConfig(state);
-    const allSpawned = state.bugsSpawned >= cfg.bugsTotal;
+    // Elites manually control bugsSpawned — bypass row-scaled bugsTotal check
+    const allSpawned = state.eliteConfig
+      ? true
+      : state.bugsSpawned >= cfg.bugsTotal;
     const noneAlive = Object.keys(state.bugs).length === 0;
 
     if (allSpawned && noneAlive) {
+      // Elite wave check: if elite config is active and more waves remain, trigger next wave
+      if (state.eliteConfig && state.eliteConfig.wavesSpawned < state.eliteConfig.wavesTotal) {
+        bugs.clearSpawnTimer(ctx);
+        elite.onEliteWaveCheck(ctx);
+        return;
+      }
+
       bugs.clearSpawnTimer(ctx);
       if (ctx.matchLog) {
         const next = state.level >= MAX_LEVEL ? 'boss' : state.level + 1;
         ctx.matchLog.log('level-complete', { level: state.level, ...(typeof next === 'number' ? { nextLevel: next } : { next }) });
       }
+
+      // If elite encounter, complete it instead of normal level transition
+      if (state.eliteConfig) {
+        elite.onEliteWaveCheck(ctx);
+        return;
+      }
+
       ctx.events.emit({
         type: 'level-complete',
         level: state.level,
@@ -222,4 +240,6 @@ export function resetToLobby(ctx: GameContext): void {
   state.eventModifiers = undefined;
   state.eventVotes = undefined;
   state.activeEventId = undefined;
+  state.eliteConfig = undefined;
+  state.miniBoss = undefined;
 }

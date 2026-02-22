@@ -22,6 +22,9 @@ import { handleShopCatalog, handleShopPurchaseResult, requestShopCatalog } from 
 import { renderMap, updateVotes, highlightSelectedNode, showVoteTimer, hideVoteTimer, updateMapStats, updateMapSidebar, initMapSend } from './roguelike-map-ui.ts';
 import { showEventScreen, updateEventVotes, updateEventTimer, resolveEvent } from './event-ui.ts';
 import { showRestScreen, updateRestVotes, updateRestTimer, resolveRest } from './rest-ui.ts';
+import { showEliteBanner, removeEliteBanner } from './elite-ui.ts';
+import { showMiniBossScreen, updateMiniBossEntities, updateMiniBossTick, resolveMiniBoss } from './mini-boss-ui.ts';
+import { showRewardScreen, hideRewardScreen } from './reward-ui.ts';
 import type { SendMessageFn, ServerMessage } from './client-types.ts';
 
 function updateQaHitbox(): void {
@@ -1408,6 +1411,46 @@ export function handleMessageInternal(msg: ServerMessage): void {
     case 'rest-resolved': {
       resolveRest(msg);
       updateHUD(undefined, undefined, msg.hpAfter);
+      break;
+    }
+
+    // Elite
+
+    case 'elite-start': {
+      showEliteBanner(msg);
+      break;
+    }
+
+    // Mini-Boss
+
+    case 'mini-boss-spawn': {
+      hideAllScreens();
+      showMiniBossScreen(msg);
+      showLiveDashboard();
+      break;
+    }
+
+    case 'mini-boss-tick': {
+      updateMiniBossTick(msg);
+      break;
+    }
+
+    case 'mini-boss-entity-update': {
+      updateMiniBossEntities(msg);
+      break;
+    }
+
+    case 'mini-boss-defeated': {
+      resolveMiniBoss(msg);
+      if (msg.newHp !== undefined) updateHUD(undefined, undefined, msg.newHp);
+      break;
+    }
+
+    // Encounter reward
+
+    case 'encounter-reward': {
+      hideRewardScreen();
+      showRewardScreen(msg);
       break;
     }
   }

@@ -5,7 +5,7 @@
 import type {
   AuthUser, BugVariant, ShopItem, LeaderboardEntry, StatsData,
   QuestEntry, GamePhase, WirePlayer, RubberDuck, HotfixHammer,
-  GameMode, RoguelikeMap, MapNodeType, EventDefinition,
+  GameMode, RoguelikeMap, MapNodeType, EventDefinition, MiniBossEntity,
 } from './types.ts';
 
 // ─── Client → Server messages ────────────────────────────────────────────────
@@ -286,6 +286,15 @@ export interface RestVoteMsg {
   option: 'rest' | 'train';
 }
 
+export interface MiniBossClickMsg {
+  type: 'mini-boss-click';
+  entityId: string;
+}
+
+export interface EncounterRewardContinueMsg {
+  type: 'encounter-reward-continue';
+}
+
 export interface DevCommandMsg {
   type: 'dev-command';
   command: string;
@@ -333,6 +342,8 @@ export type ClientMessage =
   | MapVoteMsg
   | EventVoteMsg
   | RestVoteMsg
+  | MiniBossClickMsg
+  | EncounterRewardContinueMsg
   | DevCommandMsg;
 
 // ─── Server → Client messages ────────────────────────────────────────────────
@@ -1144,6 +1155,62 @@ export interface RestResolvedMsg {
   newScoreMultiplier: number;
 }
 
+// Elite encounters
+
+export interface EliteStartMsg {
+  type: 'elite-start';
+  eliteType: string;
+  title: string;
+  icon: string;
+  description: string;
+  scoreMultiplier: number;
+  waveIndex: number;
+  wavesTotal: number;
+}
+
+// Mini-boss encounters
+
+export interface MiniBossSpawnMsg {
+  type: 'mini-boss-spawn';
+  miniBossType: string;
+  title: string;
+  icon: string;
+  description: string;
+  timeLimit: number;
+  entities: MiniBossEntity[];
+}
+
+export interface MiniBossTickMsg {
+  type: 'mini-boss-tick';
+  timeRemaining: number;
+  entities: MiniBossEntity[];
+}
+
+export interface MiniBossEntityUpdateMsg {
+  type: 'mini-boss-entity-update';
+  entities: MiniBossEntity[];
+  warning?: string;
+}
+
+export interface MiniBossDefeatedMsg {
+  type: 'mini-boss-defeated';
+  victory: boolean;
+  hpChange?: number;
+  newHp?: number;
+}
+
+// Encounter reward (shared by elite + mini-boss)
+
+export interface EncounterRewardMsg {
+  type: 'encounter-reward';
+  encounterType: 'elite' | 'mini_boss';
+  title: string;
+  scoreGained: number;
+  freeItem?: { id: string; name: string; icon: string; description: string } | null;
+  totalScore: number;
+  soloMode: boolean;
+}
+
 export type ServerMessage =
   // Connection
   | WelcomeMsg
@@ -1262,4 +1329,13 @@ export type ServerMessage =
   // Rest
   | RestStartMsg
   | RestVoteUpdateMsg
-  | RestResolvedMsg;
+  | RestResolvedMsg
+  // Elite
+  | EliteStartMsg
+  // Mini-boss
+  | MiniBossSpawnMsg
+  | MiniBossTickMsg
+  | MiniBossEntityUpdateMsg
+  | MiniBossDefeatedMsg
+  // Encounter reward
+  | EncounterRewardMsg;

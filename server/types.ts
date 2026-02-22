@@ -8,12 +8,12 @@ export type {
   GamePhase, WirePlayer, BugVariant, ShopItem, RubberDuck, HotfixHammer,
   LeaderboardEntry, StatsData, AuthUser, QuestEntry, RecordingEvent, MouseMoveEvent,
   MapNodeType, GameMode, MapNode, RoguelikeMap, EventOption, EventDefinition,
-  EventModifiers,
+  EventModifiers, MiniBossEntity,
 } from '../shared/types.ts';
 
 export type { ClientMessage, ServerMessage } from '../shared/messages.ts';
 
-import type { GamePhase, WirePlayer, ShopItem, RubberDuck, HotfixHammer, AuthUser, RecordingEvent, GameMode, RoguelikeMap, EventModifiers } from '../shared/types.ts';
+import type { GamePhase, WirePlayer, ShopItem, RubberDuck, HotfixHammer, AuthUser, RecordingEvent, GameMode, RoguelikeMap, EventModifiers, MiniBossEntity } from '../shared/types.ts';
 
 export interface ActiveBuff {
   itemId: string;
@@ -169,6 +169,38 @@ export interface BossTypePluginInterface {
   schemas?: Record<string, ZodType>;
 }
 
+export interface EliteConfig {
+  eliteType: string;
+  title: string;
+  icon: string;
+  description: string;
+  scoreMultiplier: number;
+  hpDamageMultiplier: number;
+  wavesTotal: number;
+  wavesSpawned: number;
+}
+
+export interface MiniBossState {
+  type: string;
+  entities: MiniBossEntity[];
+  timeRemaining: number;
+  timeLimit: number;
+  data: Record<string, unknown>;
+}
+
+export interface MiniBossPlugin {
+  typeKey: string;
+  displayName: string;
+  icon: string;
+  description: string;
+  timeLimit: number;
+  defeatPenalty: number;
+  init(ctx: GameContext): MiniBossEntity[];
+  onClick(ctx: GameContext, pid: string, entityId: string): void;
+  onTick(ctx: GameContext): void;
+  checkVictory(ctx: GameContext): boolean;
+}
+
 export interface DuckBuff {
   expiresAt: number;
 }
@@ -202,6 +234,8 @@ export interface GameState {
   activeEventId?: string;
   persistentScoreMultiplier?: number;
   restVotes?: Record<string, string>;
+  eliteConfig?: EliteConfig;
+  miniBoss?: MiniBossState;
 }
 
 export interface GameCounters {

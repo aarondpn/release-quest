@@ -70,6 +70,8 @@ export const dom: DomRefs = {
   mapScreen: null,
   eventScreen: null,
   restScreen: null,
+  miniBossScreen: null,
+  rewardScreen: null,
   nameEntry: null,
   nameInput: null,
   iconPicker: null,
@@ -202,6 +204,8 @@ export function initDom(): void {
   dom.mapScreen = document.getElementById('map-screen');
   dom.eventScreen = document.getElementById('event-screen');
   dom.restScreen = document.getElementById('rest-screen');
+  dom.miniBossScreen = document.getElementById('mini-boss-screen');
+  dom.rewardScreen = document.getElementById('reward-screen');
   dom.nameEntry = document.getElementById('name-entry');
   dom.nameInput = document.getElementById('name-input') as HTMLInputElement | null;
   dom.iconPicker = document.getElementById('icon-picker');

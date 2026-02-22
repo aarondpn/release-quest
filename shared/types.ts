@@ -2,7 +2,7 @@
 // Both server/types.ts and public/js/client-types.ts re-export these so
 // existing consumer imports remain unchanged.
 
-export type GamePhase = 'lobby' | 'playing' | 'shopping' | 'boss' | 'gameover' | 'win' | 'map_view' | 'event' | 'resting';
+export type GamePhase = 'lobby' | 'playing' | 'shopping' | 'boss' | 'gameover' | 'win' | 'map_view' | 'event' | 'resting' | 'mini_boss';
 
 export type MapNodeType = 'bug_level' | 'elite' | 'shop' | 'event' | 'rest' | 'mini_boss' | 'boss';
 export type GameMode = 'classic' | 'roguelike';
@@ -146,4 +146,15 @@ export interface MouseMoveEvent {
   playerId: string;
   x: number;
   y: number;
+}
+
+export interface MiniBossEntity {
+  id: string;
+  x: number;
+  y: number;
+  hp: number;
+  maxHp: number;
+  isOriginal?: boolean;
+  spawnedAt?: number;
+  frozen?: boolean;
 }

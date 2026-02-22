@@ -128,6 +128,9 @@ export function generateMap(seed: number, _difficulty: string = 'medium'): Rogue
   // Validate: at least 1 shop reachable on every path from row 0 to boss
   validateShopAccess(nodes, rowNodes, rng);
 
+  // Place elite and mini-boss nodes on some bug_level nodes
+  placeElitesAndMiniBosses(nodes, rowNodes, rng);
+
   return { nodes, currentNodeId: null, seed };
 }
 
@@ -193,6 +196,66 @@ function hasShopOnPath(nodes: MapNode[], startId: string): boolean {
     }
   }
   return false;
+}
+
+function placeElitesAndMiniBosses(nodes: MapNode[], rowNodes: string[][], rng: () => number): void {
+  const nodeMap = new Map(nodes.map(n => [n.id, n]));
+  const maxElites = 2;
+  const maxMiniBosses = 1;
+
+  // Collect bug_level nodes from rows 2-4 (eligible for elite)
+  const eliteCandidates: MapNode[] = [];
+  for (let row = 2; row < Math.min(5, rowNodes.length - 1); row++) {
+    for (const id of rowNodes[row]) {
+      const node = nodeMap.get(id)!;
+      if (node.type === 'bug_level') eliteCandidates.push(node);
+    }
+  }
+
+  // Shuffle and pick up to maxElites
+  for (let i = eliteCandidates.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [eliteCandidates[i], eliteCandidates[j]] = [eliteCandidates[j], eliteCandidates[i]];
+  }
+
+  const eliteIds = new Set<string>();
+  for (let i = 0; i < Math.min(maxElites, eliteCandidates.length); i++) {
+    const node = eliteCandidates[i];
+    node.type = 'elite';
+    node.label = NODE_LABELS.elite;
+    node.icon = NODE_ICONS.elite;
+    eliteIds.add(node.id);
+  }
+
+  // Collect bug_level nodes from rows 3-4 for mini-boss (not adjacent to elites)
+  const miniBossCandidates: MapNode[] = [];
+  for (let row = 3; row < Math.min(5, rowNodes.length - 1); row++) {
+    for (const id of rowNodes[row]) {
+      const node = nodeMap.get(id)!;
+      if (node.type !== 'bug_level') continue;
+      // Check adjacency: no elite should connect to this node or this node connect to an elite
+      let adjacentToElite = false;
+      for (const n of nodes) {
+        if (eliteIds.has(n.id) && n.connections.includes(id)) { adjacentToElite = true; break; }
+      }
+      if (!adjacentToElite && !node.connections.some(c => eliteIds.has(c))) {
+        miniBossCandidates.push(node);
+      }
+    }
+  }
+
+  // Shuffle and pick up to maxMiniBosses
+  for (let i = miniBossCandidates.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [miniBossCandidates[i], miniBossCandidates[j]] = [miniBossCandidates[j], miniBossCandidates[i]];
+  }
+
+  for (let i = 0; i < Math.min(maxMiniBosses, miniBossCandidates.length); i++) {
+    const node = miniBossCandidates[i];
+    node.type = 'mini_boss';
+    node.label = NODE_LABELS.mini_boss;
+    node.icon = NODE_ICONS.mini_boss;
+  }
 }
 
 export function getReachableNodes(map: RoguelikeMap, currentNodeId: string | null): string[] {

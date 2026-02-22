@@ -7,6 +7,8 @@ import * as shop from './shop.ts';
 import * as powerups from './powerups.ts';
 import * as events from './events.ts';
 import * as rest from './rest.ts';
+import * as elite from './elite.ts';
+import * as miniBoss from './mini-boss.ts';
 import logger from './logger.ts';
 import type { GameContext } from './types.ts';
 
@@ -168,13 +170,7 @@ function navigateToNode(ctx: GameContext, nodeId: string): void {
 
   switch (node.type) {
     case 'bug_level':
-    case 'elite':
-    case 'mini_boss':
-      // elite/mini_boss behave like bug_level for now
-      if (node.type !== 'bug_level') {
-        logger.warn({ lobbyId: ctx.lobbyId, nodeType: node.type }, 'Unimplemented node type, treating as bug_level');
-      }
-      state.level = node.row + 1; // 1-indexed
+      state.level = node.row + 1;
       ctx.lifecycle.transition(state, 'playing');
 
       ctx.events.emit({
@@ -188,6 +184,14 @@ function navigateToNode(ctx: GameContext, nodeId: string): void {
       startLevel(ctx);
       powerups.startDuckSpawning(ctx);
       powerups.startHammerSpawning(ctx);
+      break;
+
+    case 'elite':
+      elite.startElite(ctx, nodeId);
+      break;
+
+    case 'mini_boss':
+      miniBoss.startMiniBoss(ctx, nodeId);
       break;
 
     case 'rest':

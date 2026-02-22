@@ -7407,3 +7407,337 @@ body.qa-hitbox-active .arena .bug::before {
   white-space: pre-line;
   animation: event-result-enter 0.4s ease-out;
 }
+
+/* ── Elite Banner ── */
+
+.elite-banner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 200;
+  text-align: center;
+  padding: 30px 50px;
+  background: linear-gradient(135deg, rgba(20, 10, 40, 0.95), rgba(60, 20, 80, 0.95));
+  border: 2px solid #ff6b35;
+  border-radius: 16px;
+  box-shadow: 0 0 40px rgba(255, 107, 53, 0.5);
+  animation: elite-banner-enter 0.5s ease-out;
+  pointer-events: none;
+}
+
+.elite-banner.fade-out {
+  animation: elite-banner-exit 0.5s ease-in forwards;
+}
+
+.elite-banner-icon {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
+
+.elite-banner-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  color: #ff6b35;
+  margin-bottom: 8px;
+  text-shadow: 0 0 10px rgba(255, 107, 53, 0.6);
+}
+
+.elite-banner-desc {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #ddd;
+  margin-bottom: 8px;
+  line-height: 1.6;
+}
+
+.elite-banner-mult {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: #ffd700;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+}
+
+@keyframes elite-banner-enter {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes elite-banner-exit {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to { opacity: 0; transform: translate(-50%, -50%) scale(1.1); }
+}
+
+/* ── Mini-Boss Screen ── */
+
+#mini-boss-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 20px;
+}
+
+.mini-boss-header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.mini-boss-icon {
+  font-size: 40px;
+  margin-bottom: 4px;
+}
+
+.mini-boss-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  color: #e74c3c;
+  margin-bottom: 4px;
+  text-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+}
+
+.mini-boss-desc {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #ddd;
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.mini-boss-timer {
+  display: inline-block;
+  padding: 4px 12px;
+  background: rgba(231, 76, 60, 0.2);
+  border: 1px solid rgba(231, 76, 60, 0.4);
+  border-radius: 8px;
+}
+
+.mini-boss-timer-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  color: #e74c3c;
+}
+
+.mini-boss-timer-text.urgent {
+  color: #ff4444;
+  animation: timer-pulse 0.5s ease-in-out infinite;
+}
+
+@keyframes timer-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.mini-boss-arena {
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  aspect-ratio: 8 / 5;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.mini-boss-entity {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  transition: left 0.3s ease, top 0.3s ease, opacity 0.3s ease;
+  text-align: center;
+  user-select: none;
+}
+
+.mini-boss-entity:hover:not(.defeated) {
+  transform: translate(-50%, -50%) scale(1.15);
+}
+
+.mini-boss-entity.defeated {
+  opacity: 0.3;
+  pointer-events: none;
+  filter: grayscale(1);
+}
+
+.mini-boss-entity.frozen {
+  animation: entity-freeze 0.3s ease;
+  filter: brightness(0.6) saturate(0.5);
+  pointer-events: none;
+}
+
+@keyframes entity-freeze {
+  0%, 100% { transform: translate(-50%, -50%); }
+  25% { transform: translate(-48%, -50%); }
+  75% { transform: translate(-52%, -50%); }
+}
+
+.mini-boss-entity.original {
+  filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6));
+}
+
+.mini-boss-entity-icon {
+  font-size: 36px;
+  line-height: 1;
+}
+
+.mini-boss-entity-hp {
+  width: 50px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  margin: 4px auto 0;
+  overflow: hidden;
+}
+
+.mini-boss-entity-hp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #e74c3c, #2ecc71);
+  border-radius: 2px;
+  transition: width 0.2s ease;
+}
+
+.mini-boss-result {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  padding: 20px 40px;
+  border-radius: 12px;
+  animation: mini-boss-result-enter 0.5s ease-out;
+}
+
+.mini-boss-result.victory {
+  background: rgba(46, 204, 113, 0.2);
+  border: 2px solid rgba(46, 204, 113, 0.6);
+}
+
+.mini-boss-result.defeat {
+  background: rgba(231, 76, 60, 0.2);
+  border: 2px solid rgba(231, 76, 60, 0.6);
+}
+
+.mini-boss-result-icon {
+  font-size: 36px;
+  margin-bottom: 8px;
+}
+
+.mini-boss-result-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  color: #fff;
+}
+
+.mini-boss-result-hp {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: #e74c3c;
+  margin-top: 4px;
+}
+
+@keyframes mini-boss-result-enter {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.mini-boss-warning {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  background: rgba(231, 76, 60, 0.9);
+  border-radius: 8px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #fff;
+  animation: mini-boss-warning-enter 0.3s ease-out;
+  z-index: 10;
+}
+
+@keyframes mini-boss-warning-enter {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ── Reward Screen ── */
+
+#reward-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reward-card {
+  text-align: center;
+  padding: 30px 40px;
+  background: linear-gradient(135deg, rgba(20, 20, 40, 0.95), rgba(40, 20, 60, 0.95));
+  border: 2px solid rgba(255, 215, 0, 0.5);
+  border-radius: 16px;
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.2);
+  animation: reward-enter 0.5s ease-out;
+}
+
+.reward-icon {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
+
+.reward-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  color: #ffd700;
+  margin-bottom: 4px;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.reward-subtitle {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #ddd;
+  margin-bottom: 12px;
+}
+
+.reward-score {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: #54a0ff;
+  margin-bottom: 8px;
+}
+
+.reward-item {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #2ecc71;
+  margin-bottom: 12px;
+}
+
+.reward-continue-btn {
+  display: inline-block;
+  padding: 10px 24px;
+  background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  border: none;
+  border-radius: 8px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: #fff;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.reward-continue-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(108, 92, 231, 0.5);
+}
+
+.reward-auto {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #888;
+  margin-top: 12px;
+}
+
+@keyframes reward-enter {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
