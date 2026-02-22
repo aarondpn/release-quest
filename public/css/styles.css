@@ -6770,7 +6770,7 @@ body.qa-hitbox-active .arena .bug::before {
    ══════════════════════════════════════════════════ */
 
 #map-screen {
-  background: rgba(10, 10, 30, 0.95);
+  background: #07071a;
 }
 
 .map-layout {
@@ -6785,6 +6785,20 @@ body.qa-hitbox-active .arena .bug::before {
   position: relative;
   overflow: hidden;
   min-height: 0;
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(80, 40, 160, 0.14) 0%, transparent 60%),
+    radial-gradient(ellipse at 30% 80%, rgba(20, 60, 160, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 70%, rgba(160, 40, 80, 0.06) 0%, transparent 50%);
+}
+
+.map-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 30px 30px;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .map-edges {
@@ -6797,23 +6811,29 @@ body.qa-hitbox-active .arena .bug::before {
 }
 
 .map-edges line {
-  stroke: #333;
-  stroke-width: 2;
-  stroke-dasharray: 6 4;
-  opacity: 0.4;
+  stroke: rgba(255, 255, 255, 0.09);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 6;
 }
+
 .map-edges line.edge-available {
   stroke: #4ecdc4;
   stroke-width: 2.5;
-  stroke-dasharray: none;
-  opacity: 0.8;
-  filter: drop-shadow(0 0 3px rgba(78,205,196,.5));
+  stroke-dasharray: 8 5;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 4px rgba(78, 205, 196, 0.55));
+  animation: edge-flow 1.4s linear infinite;
 }
+
 .map-edges line.edge-visited {
-  stroke: #555;
+  stroke: rgba(255, 255, 255, 0.22);
   stroke-width: 2;
   stroke-dasharray: none;
-  opacity: 0.5;
+}
+
+@keyframes edge-flow {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -26; }
 }
 
 .map-nodes {
@@ -6825,36 +6845,60 @@ body.qa-hitbox-active .arena .bug::before {
 .map-node {
   position: absolute;
   transform: translate(-50%, -50%);
-  width: 56px;
-  height: 56px;
-  border-radius: 12px;
-  border: 2px solid var(--node-color, #888);
-  background: rgba(20, 20, 50, 0.9);
+  width: 68px;
+  height: 68px;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(160deg, rgba(22, 22, 54, 0.97) 0%, rgba(10, 10, 28, 0.99) 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   cursor: default;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, opacity 0.25s ease;
   z-index: 2;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.map-node::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--node-color, rgba(255, 255, 255, 0.2));
+  border-radius: 13px 13px 0 0;
+  opacity: 0.9;
 }
 
 .map-node-icon {
-  font-size: 18px;
-  line-height: 1;
+  color: var(--node-color, #888);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.map-node-icon svg {
+  display: block;
+  width: 26px;
+  height: 26px;
 }
 
 .map-node-label {
   font-family: 'Press Start 2P', monospace;
   font-size: 5px;
-  color: #aaa;
-  margin-top: 2px;
+  color: rgba(190, 190, 215, 0.7);
+  margin-top: 4px;
   white-space: nowrap;
+  letter-spacing: 0.2px;
 }
 
 .map-node-votes {
   position: absolute;
-  bottom: -10px;
+  bottom: -13px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -6865,68 +6909,108 @@ body.qa-hitbox-active .arena .bug::before {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.3);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 4px currentColor;
 }
 
 /* Node states */
 .map-node.available {
   cursor: pointer;
-  animation: map-node-pulse 2s ease-in-out infinite;
   border-color: var(--node-color, #4ecdc4);
-  box-shadow: 0 0 12px rgba(78, 205, 196, 0.3);
+  box-shadow:
+    0 0 0 1px var(--node-color, #4ecdc4) inset,
+    0 0 14px var(--node-color, rgba(78,205,196,.4)),
+    0 4px 16px rgba(0, 0, 0, 0.5);
+  animation: map-node-pulse 2.2s ease-in-out infinite;
 }
+
 .map-node.available:hover {
-  transform: translate(-50%, -50%) scale(1.15);
-  box-shadow: 0 0 20px var(--node-color, rgba(78,205,196,.6));
+  transform: translate(-50%, -50%) scale(1.14);
+  box-shadow:
+    0 0 0 1px var(--node-color, #4ecdc4) inset,
+    0 0 26px var(--node-color, rgba(78,205,196,.6)),
+    0 8px 24px rgba(0, 0, 0, 0.6);
 }
 
 .map-node.visited {
-  opacity: 0.35;
-  border-color: #555;
+  opacity: 0.25;
+  border-color: rgba(255, 255, 255, 0.07);
+  filter: grayscale(60%);
+  box-shadow: none;
+}
+
+.map-node.visited::before {
+  opacity: 0.25;
 }
 
 .map-node.current {
   border-color: #ffe66d;
-  box-shadow: 0 0 15px rgba(255, 230, 109, 0.4);
+  box-shadow:
+    0 0 0 1px #ffe66d inset,
+    0 0 18px rgba(255, 230, 109, 0.4),
+    0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.map-node.current::before {
+  background: #ffe66d;
 }
 
 .map-node.locked {
-  opacity: 0.3;
-  border-color: #444;
+  opacity: 0.18;
+  border-color: rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+}
+
+.map-node.locked::before {
+  opacity: 0.12;
 }
 
 .map-node.my-vote {
   border-color: #ffe66d;
-  box-shadow: 0 0 18px rgba(255, 230, 109, 0.5);
-  transform: translate(-50%, -50%) scale(1.1);
+  box-shadow:
+    0 0 0 1px #ffe66d inset,
+    0 0 22px rgba(255, 230, 109, 0.5),
+    0 4px 16px rgba(0, 0, 0, 0.5);
+  transform: translate(-50%, -50%) scale(1.08);
 }
 
 .map-node.selected {
   border-color: #ffe66d;
-  box-shadow: 0 0 25px rgba(255, 230, 109, 0.7);
-  animation: map-node-select 0.6s ease-out;
+  box-shadow: 0 0 32px rgba(255, 230, 109, 0.75);
+  animation: map-node-select 0.6s ease-out forwards;
 }
 
 @keyframes map-node-pulse {
-  0%, 100% { box-shadow: 0 0 8px rgba(78, 205, 196, 0.2); }
-  50% { box-shadow: 0 0 18px rgba(78, 205, 196, 0.5); }
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px var(--node-color, #4ecdc4) inset,
+      0 0 10px var(--node-color, rgba(78,205,196,.3)),
+      0 4px 16px rgba(0, 0, 0, 0.5);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px var(--node-color, #4ecdc4) inset,
+      0 0 22px var(--node-color, rgba(78,205,196,.6)),
+      0 4px 16px rgba(0, 0, 0, 0.5);
+  }
 }
 
 @keyframes map-node-select {
   0% { transform: translate(-50%, -50%) scale(1); }
-  50% { transform: translate(-50%, -50%) scale(1.3); }
+  50% { transform: translate(-50%, -50%) scale(1.28); }
   100% { transform: translate(-50%, -50%) scale(1.1); }
 }
 
 /* Sidebar */
 .map-sidebar {
-  width: 140px;
-  background: rgba(15, 15, 40, 0.95);
-  border-left: 1px solid #2a2a4a;
-  padding: 12px 10px;
+  width: 162px;
+  background: rgba(6, 6, 20, 0.98);
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 16px 12px 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  box-shadow: -3px 0 24px rgba(0, 0, 0, 0.5);
 }
 
 .map-sidebar-title {
@@ -6934,28 +7018,35 @@ body.qa-hitbox-active .arena .bug::before {
   font-size: 8px;
   color: #ffe66d;
   text-align: center;
-  letter-spacing: 2px;
+  letter-spacing: 3px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 230, 109, 0.1);
 }
 
 .map-stats {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .map-stat {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  padding: 4px 6px;
-  background: rgba(255,255,255,0.04);
-  border-radius: 4px;
+  row-gap: 5px;
+  padding: 7px 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .map-stat-label {
   font-family: 'Press Start 2P', monospace;
-  font-size: 6px;
-  color: #888;
+  font-size: 5.5px;
+  color: rgba(140, 140, 175, 0.85);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
 }
 
 .map-stat-value {
@@ -6967,14 +7058,14 @@ body.qa-hitbox-active .arena .bug::before {
 .map-vote-timer {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
   align-items: center;
 }
 
 .map-timer-bar {
   width: 100%;
   height: 4px;
-  background: #333;
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -6995,49 +7086,49 @@ body.qa-hitbox-active .arena .bug::before {
 .map-vote-status {
   font-family: 'Press Start 2P', monospace;
   font-size: 6px;
-  color: #888;
+  color: rgba(140, 140, 175, 0.75);
   text-align: center;
 }
 
 .map-hint {
   font-family: 'Press Start 2P', monospace;
-  font-size: 6px;
-  color: #555;
+  font-size: 5.5px;
+  color: rgba(100, 100, 145, 0.6);
   text-align: center;
   margin-top: auto;
+  line-height: 1.7;
 }
 
 .map-hp-bar {
+  flex: 0 0 100%;
   width: 100%;
   height: 6px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.07);
   border-radius: 3px;
   overflow: hidden;
-  margin-top: 4px;
 }
 
 .map-hp-bar-fill {
   height: 100%;
-  background: #4ecdc4;
+  background: linear-gradient(90deg, #2ed573, #4ecdc4);
   border-radius: 3px;
-  transition: width 0.5s ease;
+  transition: width 0.5s ease, background 0.4s ease;
 }
 
 .map-hp-bar-fill.medium {
-  background: #ffe66d;
+  background: linear-gradient(90deg, #ffe66d, #ffa502);
 }
 
 .map-hp-bar-fill.low {
-  background: #ff6b6b;
+  background: linear-gradient(90deg, #ff4757, #ff6b6b);
 }
 
 .map-buffs {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  gap: 5px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .map-buffs.hidden {
@@ -7046,27 +7137,30 @@ body.qa-hitbox-active .arena .bug::before {
 
 .map-buff-item {
   font-family: 'Press Start 2P', monospace;
-  font-size: 7px;
-  color: #aaa;
-  padding: 4px 8px;
+  font-size: 6px;
+  color: rgba(175, 175, 210, 0.9);
+  padding: 5px 7px;
   background: rgba(255, 255, 255, 0.04);
   border-radius: 6px;
-  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.06);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 1px;
 }
 
 .map-buff-item.score-bonus {
   color: #ffe66d;
-  background: rgba(255, 230, 109, 0.08);
-  border: 1px solid rgba(255, 230, 109, 0.15);
+  background: rgba(255, 230, 109, 0.07);
+  border-color: rgba(255, 230, 109, 0.15);
 }
 
 .map-buff-item.event-mod {
   color: #ff9ff3;
-  background: rgba(255, 159, 243, 0.08);
-  border: 1px solid rgba(255, 159, 243, 0.15);
+  background: rgba(255, 159, 243, 0.07);
+  border-color: rgba(255, 159, 243, 0.15);
   font-size: 5px;
 }
 
@@ -8198,16 +8292,16 @@ body.qa-hitbox-active .arena .bug::before {
     flex-direction: row;
     flex-wrap: wrap;
     border-left: none;
-    border-top: 1px solid #2a2a4a;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
     padding: 8px;
     gap: 6px;
   }
   .map-sidebar-title { display: none; }
   .map-stats { flex-direction: row; gap: 8px; }
-  .map-buffs { flex-direction: row; flex-wrap: wrap; margin-top: 0; padding-top: 0; border-top: none; }
+  .map-buffs { flex-direction: row; flex-wrap: wrap; padding-top: 0; border-top: none; }
   .map-hint { display: none; }
-  .map-node { width: 44px; height: 44px; }
-  .map-node-icon { font-size: 14px; }
+  .map-node { width: 52px; height: 52px; }
+  .map-node-icon svg { width: 20px; height: 20px; }
   .map-node-label { font-size: 4px; }
 
   .event-card, .rest-card {

@@ -222,6 +222,8 @@ export interface GameState {
   pipelineChains: Record<string, PipelineChain>;
   playerBuffs: Record<string, ActiveBuff[]>;
   shopReadyPlayers?: Set<string>;
+  shopOpenedAt?: number;
+  shopDuration?: number;
   gameStartedAt?: number;
   difficulty: string;
   customConfig?: CustomDifficultyConfig;

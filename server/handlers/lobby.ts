@@ -8,6 +8,7 @@ import * as db from '../db.ts';
 import * as lobby from '../lobby.ts';
 import { getCtxForPlayer, handleLeaveLobby as doLeaveLobby, broadcastLobbyList, augmentLobbies } from '../helpers.ts';
 import { initChatForLobby, getLobbyModerator, removePlayerFromChat, broadcastSystemChat } from './chat.ts';
+import { getShopSnapshot } from '../shop.ts';
 
 // Returns true if the same registered user (by userId) or the same guest session
 // (by guestToken) already occupies a player or spectator slot in the lobby under
@@ -163,6 +164,12 @@ export const handleJoinLobby: MessageHandler = async ({ ws, msg, pid, playerInfo
       ...getStateSnapshot(ctx.state),
     } as ServerMessage);
 
+    // If joining mid-shop, re-send the shop-open so the client renders the shop + timer
+    const shopSnap = getShopSnapshot(ctx.state);
+    if (shopSnap) {
+      network.send(ws, shopSnap as unknown as ServerMessage);
+    }
+
     // Notify others in the lobby
     network.broadcastToLobby(lobbyId, {
       type: 'player-joined',
@@ -259,6 +266,12 @@ export const handleJoinLobbyByCode: MessageHandler = async ({ ws, msg, pid, play
       creatorId: getLobbyModerator(lobbyId),
       ...getStateSnapshot(ctx.state),
     } as ServerMessage);
+
+    // If joining mid-shop, re-send the shop-open so the client renders the shop + timer
+    const shopSnap = getShopSnapshot(ctx.state);
+    if (shopSnap) {
+      network.send(ws, shopSnap as unknown as ServerMessage);
+    }
 
     network.broadcastToLobby(lobbyId, {
       type: 'player-joined',
