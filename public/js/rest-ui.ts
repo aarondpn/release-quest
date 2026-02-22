@@ -1,4 +1,5 @@
 import { dom, clientState } from './state.ts';
+import { VOTE_TIMER_MS } from '../../shared/constants.ts';
 import type { SendMessageFn, ClientPlayer } from './client-types.ts';
 import type { RestStartMsg, RestResolvedMsg } from '../../shared/messages.ts';
 
@@ -105,7 +106,7 @@ export function updateRestTimer(timeRemaining: number): void {
 
   const secs = Math.ceil(timeRemaining / 1000);
   text.textContent = secs + 's';
-  fill.style.width = Math.max(0, (timeRemaining / 15000) * 100) + '%';
+  fill.style.width = Math.max(0, (timeRemaining / VOTE_TIMER_MS) * 100) + '%';
 }
 
 export function resolveRest(msg: RestResolvedMsg): void {

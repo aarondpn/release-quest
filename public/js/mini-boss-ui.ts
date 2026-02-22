@@ -36,6 +36,7 @@ export function showMiniBossScreen(msg: {
   const arena = document.createElement('div');
   arena.className = 'mini-boss-arena';
   arena.id = 'mini-boss-arena';
+  arena.dataset.miniBossType = msg.miniBossType;
   screen.appendChild(arena);
 
   renderEntities(arena, msg.entities, msg.miniBossType);
@@ -150,8 +151,7 @@ export function updateMiniBossEntities(msg: {
   const newEntities = msg.entities.filter(e => !existingIds.has(e.id));
   if (newEntities.length > 0) {
     // Determine type from first entity for icon
-    const firstExisting = arena.querySelector<HTMLElement>('[data-entity-id]');
-    const type = firstExisting?.classList.contains('original') ? 'stack-overflow' : 'stack-overflow';
+    const type = arena.dataset.miniBossType || 'stack-overflow';
     for (const entity of newEntities) {
       const el = document.createElement('div');
       el.className = 'mini-boss-entity';

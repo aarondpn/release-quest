@@ -491,6 +491,8 @@ export interface SpectatorJoinedMsg {
   duckBuff: { expiresAt: number } | null;
   hotfixHammer: HotfixHammer | null;
   boss: WireBossSnapshot | null;
+  gameMode?: GameMode;
+  roguelikeMap?: RoguelikeMap;
 }
 
 export interface SpectatorCountMsg {
@@ -1083,6 +1085,7 @@ export interface RoguelikeMapMsg {
 export interface MapViewMsg {
   type: 'map-view';
   currentNodeId: string | null;
+  visitedNodeIds: string[];
   availableNodes: string[];
   soloMode: boolean;
   hp: number;

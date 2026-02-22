@@ -1,15 +1,6 @@
 import { ROGUELIKE_CONFIG } from './config.ts';
+import { mulberry32 } from './rng.ts';
 import type { RoguelikeMap, MapNode, MapNodeType } from './types.ts';
-
-function mulberry32(seed: number): () => number {
-  let s = seed | 0;
-  return () => {
-    s = (s + 0x6D2B79F5) | 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 const NODE_ICONS: Record<MapNodeType, string> = {
   bug_level: '\u{1F41B}',
@@ -35,9 +26,9 @@ function pickNodeType(rng: () => number, row: number, totalRows: number): MapNod
   if (row === 0) return 'bug_level'; // row 0 always bug_level — no currency yet
   if (row === totalRows - 1) return 'bug_level'; // last gameplay row before boss
   const roll = rng();
-  if (roll < 0.10) return 'rest';
-  if (roll < 0.25) return 'event';
-  if (roll < 0.45) return 'shop';
+  if (roll < 0.15) return 'rest';
+  if (roll < 0.30) return 'event';
+  if (roll < 0.50) return 'shop';
   return 'bug_level';
 }
 
@@ -150,32 +141,50 @@ function breakConsecutiveType(nodes: MapNode[], nodeType: MapNodeType): void {
 }
 
 function validateShopAccess(nodes: MapNode[], rowNodes: string[][], rng: () => number): void {
-  // BFS from each starting node to check if a shop is reachable
+  const nodeMap = new Map(nodes.map(n => [n.id, n]));
   const startIds = rowNodes[0];
-  let anyPathMissingShop = false;
 
+  // Check EVERY starting node has a path to a shop
   for (const startId of startIds) {
     if (!hasShopOnPath(nodes, startId)) {
-      anyPathMissingShop = true;
-      break;
-    }
-  }
-
-  if (anyPathMissingShop) {
-    // Fixup: convert a random mid-row bug_level to shop
-    const midRows = rowNodes.slice(1, rowNodes.length - 2); // skip first, last gameplay, and boss
-    for (const rowIds of midRows) {
-      for (const id of rowIds) {
-        const node = nodes.find(n => n.id === id)!;
-        if (node.type === 'bug_level') {
-          node.type = 'shop';
-          node.label = NODE_LABELS.shop;
-          node.icon = NODE_ICONS.shop;
-          return;
+      // Find a node on a path from this start that can be converted to shop
+      const reachable = getReachableFromStart(nodeMap, startId);
+      const midRows = rowNodes.slice(1, rowNodes.length - 2);
+      let placed = false;
+      for (const rowIds of midRows) {
+        for (const id of rowIds) {
+          if (reachable.has(id)) {
+            const node = nodeMap.get(id)!;
+            if (node.type === 'bug_level') {
+              node.type = 'shop';
+              node.label = NODE_LABELS.shop;
+              node.icon = NODE_ICONS.shop;
+              placed = true;
+              break;
+            }
+          }
         }
+        if (placed) break;
       }
     }
   }
+}
+
+function getReachableFromStart(nodeMap: Map<string, MapNode>, startId: string): Set<string> {
+  const visited = new Set<string>();
+  const queue = [startId];
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    if (visited.has(id)) continue;
+    visited.add(id);
+    const node = nodeMap.get(id);
+    if (node) {
+      for (const connId of node.connections) {
+        if (!visited.has(connId)) queue.push(connId);
+      }
+    }
+  }
+  return visited;
 }
 
 function hasShopOnPath(nodes: MapNode[], startId: string): boolean {

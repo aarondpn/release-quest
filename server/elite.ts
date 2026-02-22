@@ -4,30 +4,11 @@ import { randomPosition, getPlayerScores } from './state.ts';
 import { createTimerBag } from './timer-bag.ts';
 import { spawnEntity } from './bugs.ts';
 import { getKevlarDamageMultiplier } from './shop.ts';
+import { mulberry32, hashString } from './rng.ts';
 import * as game from './game.ts';
 import * as roguelike from './roguelike.ts';
 import logger from './logger.ts';
 import type { GameContext, EliteConfig, BugEntity, LevelConfigEntry } from './types.ts';
-
-// ── Seeded RNG ──
-
-function mulberry32(seed: number): () => number {
-  let s = seed | 0;
-  return () => {
-    s = (s + 0x6D2B79F5) | 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function hashString(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
-  }
-  return hash;
-}
 
 // ── Elite selection ──
 
@@ -168,10 +149,13 @@ function completeElite(ctx: GameContext): void {
 }
 
 export function handleEncounterRewardContinue(ctx: GameContext): void {
+  const { state } = ctx;
+  // Guard: only proceed if an encounter reward is actually pending
+  if (!state.eliteConfig && !state.miniBoss) return;
+
   ctx.timers.lobby.clear('eliteRewardDone');
   ctx.timers.lobby.clear('miniBossRewardDone');
 
-  const { state } = ctx;
   state.eliteConfig = undefined;
   state.miniBoss = undefined;
 

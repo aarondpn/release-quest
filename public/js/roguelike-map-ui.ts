@@ -4,6 +4,11 @@ import type { SendMessageFn } from './client-types.ts';
 let _sendMessage: SendMessageFn | null = null;
 export function initMapSend(fn: SendMessageFn): void { _sendMessage = fn; }
 
+// State for edge redraw on resize
+let _lastMap: RoguelikeMap | null = null;
+let _lastAvailableSet: Set<string> | null = null;
+let _resizeHandler: (() => void) | null = null;
+
 const NODE_COLORS: Record<string, string> = {
   bug_level: '#ff6b6b',
   shop: '#4ecdc4',
@@ -85,45 +90,67 @@ export function renderMap(
     nodeEls.set(node.id, el);
   }
 
-  // Draw edges
-  requestAnimationFrame(() => {
-    const containerRect = container.getBoundingClientRect();
-    for (const node of map.nodes) {
-      const fromEl = nodeEls.get(node.id);
-      if (!fromEl) continue;
+  // Store state for resize redraws
+  _lastMap = map;
+  _lastAvailableSet = availableSet;
 
-      for (const connId of node.connections) {
-        const toEl = nodeEls.get(connId);
-        if (!toEl) continue;
+  // Draw edges (initial + on resize)
+  requestAnimationFrame(() => drawEdges(container, svgEl, map, availableSet));
 
-        const fromRect = fromEl.getBoundingClientRect();
-        const toRect = toEl.getBoundingClientRect();
-
-        const x1 = fromRect.left - containerRect.left + fromRect.width / 2;
-        const y1 = fromRect.top - containerRect.top + fromRect.height / 2;
-        const x2 = toRect.left - containerRect.left + toRect.width / 2;
-        const y2 = toRect.top - containerRect.top + toRect.height / 2;
-
-        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line.setAttribute('x1', String(x1));
-        line.setAttribute('y1', String(y1));
-        line.setAttribute('x2', String(x2));
-        line.setAttribute('y2', String(y2));
-
-        // Highlight edges to available nodes
-        const toNode = map.nodes.find(n => n.id === connId);
-        if (node.visited || node.id === map.currentNodeId || (map.currentNodeId === null && node.row === 0)) {
-          if (availableSet.has(connId)) {
-            line.classList.add('edge-available');
-          } else if (toNode?.visited) {
-            line.classList.add('edge-visited');
-          }
-        }
-
-        svgEl.appendChild(line);
-      }
+  // Add resize listener for edge redraw
+  if (_resizeHandler) window.removeEventListener('resize', _resizeHandler);
+  _resizeHandler = () => {
+    if (_lastMap && _lastAvailableSet) {
+      drawEdges(container, svgEl, _lastMap, _lastAvailableSet);
     }
-  });
+  };
+  window.addEventListener('resize', _resizeHandler);
+}
+
+function drawEdges(
+  container: HTMLElement,
+  svgEl: SVGSVGElement,
+  map: RoguelikeMap,
+  availableSet: Set<string>,
+): void {
+  svgEl.innerHTML = '';
+  const containerRect = container.getBoundingClientRect();
+
+  for (const node of map.nodes) {
+    const fromEl = container.querySelector<HTMLElement>(`[data-node-id="${node.id}"]`);
+    if (!fromEl) continue;
+
+    for (const connId of node.connections) {
+      const toEl = container.querySelector<HTMLElement>(`[data-node-id="${connId}"]`);
+      if (!toEl) continue;
+
+      const fromRect = fromEl.getBoundingClientRect();
+      const toRect = toEl.getBoundingClientRect();
+
+      const x1 = fromRect.left - containerRect.left + fromRect.width / 2;
+      const y1 = fromRect.top - containerRect.top + fromRect.height / 2;
+      const x2 = toRect.left - containerRect.left + toRect.width / 2;
+      const y2 = toRect.top - containerRect.top + toRect.height / 2;
+
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', String(x1));
+      line.setAttribute('y1', String(y1));
+      line.setAttribute('x2', String(x2));
+      line.setAttribute('y2', String(y2));
+
+      // Highlight edges to available nodes
+      const toNode = map.nodes.find(n => n.id === connId);
+      if (node.visited || node.id === map.currentNodeId || (map.currentNodeId === null && node.row === 0)) {
+        if (availableSet.has(connId)) {
+          line.classList.add('edge-available');
+        } else if (toNode?.visited) {
+          line.classList.add('edge-visited');
+        }
+      }
+
+      svgEl.appendChild(line);
+    }
+  }
 }
 
 export function updateVotes(

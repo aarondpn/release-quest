@@ -1,7 +1,7 @@
 import { LOGICAL_W, LOGICAL_H } from '../../shared/constants.ts';
 import type { GameContext, MiniBossPlugin, MiniBossEntity } from '../types.ts';
 
-let nextEntityId = 1;
+const MAX_CLONES = 12;
 
 function randomPos(): { x: number; y: number } {
   const pad = 60;
@@ -19,10 +19,11 @@ export const stackOverflowPlugin: MiniBossPlugin = {
   timeLimit: 30,
   defeatPenalty: 20,
 
-  init(_ctx: GameContext): MiniBossEntity[] {
-    nextEntityId = 1;
+  init(ctx: GameContext): MiniBossEntity[] {
+    const mb = ctx.state.miniBoss!;
+    mb.data._nextEntityId = 2;
     return [{
-      id: 'mb_' + (nextEntityId++),
+      id: 'mb_1',
       x: LOGICAL_W / 2,
       y: LOGICAL_H / 2,
       hp: 5,
@@ -45,13 +46,22 @@ export const stackOverflowPlugin: MiniBossPlugin = {
         entities: mb.entities,
       });
     } else {
-      // Clicking a clone: spawn 2 more clones
-      const pos1 = randomPos();
-      const pos2 = randomPos();
-      mb.entities.push(
-        { id: 'mb_' + (nextEntityId++), x: pos1.x, y: pos1.y, hp: 1, maxHp: 1, spawnedAt: Date.now() },
-        { id: 'mb_' + (nextEntityId++), x: pos2.x, y: pos2.y, hp: 1, maxHp: 1, spawnedAt: Date.now() },
-      );
+      // Clicking a clone: spawn 2 more clones (up to cap)
+      const cloneCount = mb.entities.filter(e => !e.isOriginal).length;
+      if (cloneCount < MAX_CLONES) {
+        const nextId = (mb.data._nextEntityId as number) || 100;
+        const toSpawn = Math.min(2, MAX_CLONES - cloneCount);
+        const pos1 = randomPos();
+        const newEntities: MiniBossEntity[] = [
+          { id: 'mb_' + nextId, x: pos1.x, y: pos1.y, hp: 1, maxHp: 1, spawnedAt: Date.now() },
+        ];
+        if (toSpawn > 1) {
+          const pos2 = randomPos();
+          newEntities.push({ id: 'mb_' + (nextId + 1), x: pos2.x, y: pos2.y, hp: 1, maxHp: 1, spawnedAt: Date.now() });
+        }
+        mb.data._nextEntityId = nextId + toSpawn;
+        mb.entities.push(...newEntities);
+      }
       // Shuffle all entity positions to make it harder to track
       for (const e of mb.entities) {
         const np = randomPos();

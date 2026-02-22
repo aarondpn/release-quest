@@ -1,5 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { VOTE_TIMER_MS } from '../shared/constants.ts';
+import { mulberry32 } from './rng.ts';
 import type { DifficultyConfig, CustomDifficultyConfig, CosmeticShopItem } from './types.ts';
 
 export const DEV_MODE = process.env.DEV_MODE === 'true';
@@ -78,16 +80,6 @@ export function getWeekBoundaries(): { weekStart: Date; weekEnd: Date; weekNumbe
   return { weekStart, weekEnd, weekNumber };
 }
 
-function mulberry32(seed: number): () => number {
-  let s = seed | 0;
-  return () => {
-    s = (s + 0x6D2B79F5) | 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 let _cachedRotation: { items: CosmeticShopItem[]; rotationEndUtc: string } | null = null;
 let _cachedRotationWeek = -1;
 
@@ -137,7 +129,7 @@ export const ELITE_CONFIG = {
       icon: '\u{1F4A7}',
       description: '3 simultaneous memory leaks with accelerating growth',
       scoreMultiplier: 3,
-      hpDamageMultiplier: 2,
+      hpDamageMultiplier: 1.5,
       wavesTotal: 1,
     },
     'merge-conflict-chain': {
@@ -158,7 +150,7 @@ export const MINI_BOSS_CONFIG = {
 
 export const ROGUELIKE_CONFIG = {
   mapRows: 5,
-  voteTimerMs: 15000,
+  voteTimerMs: VOTE_TIMER_MS,
   rowScaling: {
     1: { bugsTotal: 7,  escapeTime: 5500, spawnRate: 2300, maxOnScreen: 2 },
     2: { bugsTotal: 10, escapeTime: 4500, spawnRate: 1900, maxOnScreen: 3 },

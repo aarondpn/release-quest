@@ -2,6 +2,7 @@ import { ROGUELIKE_CONFIG, getDifficultyConfig } from './config.ts';
 import { generateMap, getReachableNodes, markNodeVisited } from './roguelike-map.ts';
 import { getPlayerScores } from './state.ts';
 import { startLevel } from './game.ts';
+import { tallyVotes, isSoloMode } from './vote-utils.ts';
 import * as boss from './boss.ts';
 import * as shop from './shop.ts';
 import * as powerups from './powerups.ts';
@@ -38,8 +39,7 @@ export function showMapView(ctx: GameContext): void {
   state.mapVotes = {};
 
   const available = getReachableNodes(state.roguelikeMap, state.roguelikeMap.currentNodeId);
-  const playerCount = Object.keys(state.players).length;
-  const soloMode = playerCount <= 1;
+  const soloMode = isSoloMode(state.players);
   const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
 
   // Collect unique active buff item IDs
@@ -62,9 +62,12 @@ export function showMapView(ctx: GameContext): void {
     if (parts.length > 0) eventModifierLabel = parts.join(', ');
   }
 
+  const visitedNodeIds = state.roguelikeMap.nodes.filter(n => n.visited).map(n => n.id);
+
   ctx.events.emit({
     type: 'map-view',
     currentNodeId: state.roguelikeMap.currentNodeId,
+    visitedNodeIds,
     availableNodes: available,
     soloMode,
     hp: state.hp,
@@ -93,8 +96,7 @@ export function handleNodeVote(ctx: GameContext, pid: string, nodeId: string): v
   if (!state.mapVotes) state.mapVotes = {};
   state.mapVotes[pid] = nodeId;
 
-  const playerCount = Object.keys(state.players).length;
-  const soloMode = playerCount <= 1;
+  const soloMode = isSoloMode(state.players);
 
   if (soloMode) {
     // Solo: immediate navigation
@@ -111,7 +113,7 @@ export function handleNodeVote(ctx: GameContext, pid: string, nodeId: string): v
 
   // Check if all players voted
   const votedCount = Object.keys(state.mapVotes).length;
-  if (votedCount >= playerCount) {
+  if (votedCount >= Object.keys(state.players).length) {
     resolveVote(ctx);
   }
 }
@@ -122,25 +124,15 @@ function resolveVote(ctx: GameContext): void {
 
   if (!state.roguelikeMap || !state.mapVotes) return;
 
+  // Grab votes and immediately clear to prevent re-entrancy
+  const votes = state.mapVotes;
+  state.mapVotes = undefined;
+
   const available = getReachableNodes(state.roguelikeMap, state.roguelikeMap.currentNodeId);
   if (available.length === 0) return;
 
-  // Count votes per node
-  const voteCounts: Record<string, number> = {};
-  for (const nodeId of Object.values(state.mapVotes)) {
-    voteCounts[nodeId] = (voteCounts[nodeId] || 0) + 1;
-  }
-
-  // Find winner: majority wins, ties broken by first in available list
-  let winnerNodeId = available[0];
-  let maxVotes = 0;
-  for (const nodeId of available) {
-    const count = voteCounts[nodeId] || 0;
-    if (count > maxVotes) {
-      maxVotes = count;
-      winnerNodeId = nodeId;
-    }
-  }
+  // Count votes and find winner
+  const winnerNodeId = tallyVotes(votes, available);
 
   const winnerNode = state.roguelikeMap.nodes.find(n => n.id === winnerNodeId);
   if (!winnerNode) return;

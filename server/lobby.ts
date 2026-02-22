@@ -161,6 +161,9 @@ export async function leaveLobby(lobbyId: number, playerId: string): Promise<voi
   if (mem) {
     delete mem.state.players[playerId];
     delete mem.state.playerBuffs[playerId];
+    if (mem.state.mapVotes) delete mem.state.mapVotes[playerId];
+    if (mem.state.eventVotes) delete mem.state.eventVotes[playerId];
+    if (mem.state.restVotes) delete mem.state.restVotes[playerId];
 
     // Auto-delete empty lobbies — check both in-memory and DB
     const inMemoryEmpty = Object.keys(mem.state.players).length === 0;

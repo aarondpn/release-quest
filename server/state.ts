@@ -77,13 +77,14 @@ export function currentLevelConfig(state: GameState): LevelConfigEntry {
   return result;
 }
 
-/** Apply the difficulty score multiplier to raw points. */
+/** Apply the difficulty score multiplier to raw points. Caps combined multiplier at 10x. */
 export function calcScore(state: GameState, rawPoints: number): number {
   const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
   let multiplier = diffConfig.scoreMultiplier;
   if (state.persistentScoreMultiplier) multiplier *= state.persistentScoreMultiplier;
   if (state.eventModifiers?.scoreMultiplier) multiplier *= state.eventModifiers.scoreMultiplier;
   if (state.eliteConfig?.scoreMultiplier) multiplier *= state.eliteConfig.scoreMultiplier;
+  multiplier = Math.min(multiplier, 10);
   return Math.round(rawPoints * multiplier);
 }
 

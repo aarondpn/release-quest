@@ -117,17 +117,16 @@ export function openShop(ctx: GameContext): void {
     nextLevel: state.level >= MAX_LEVEL ? 'boss' : state.level + 1,
   });
 
-  // In roguelike mode, no auto-close — players must click Ready
-  if (state.gameMode !== 'roguelike') {
-    ctx.timers.lobby.setTimeout('shopTimer', () => {
-      try {
-        closeShop(ctx);
-      } catch (err) {
-        const logCtx = createLobbyLogger(ctx.lobbyId.toString());
-        logCtx.error({ err }, 'Error closing shop');
-      }
-    }, diffConfig.shop.duration);
-  }
+  // In roguelike mode, use a longer fallback timeout (players must click Ready, but don't let it hang forever)
+  const shopTimeout = state.gameMode === 'roguelike' ? diffConfig.shop.duration * 3 : diffConfig.shop.duration;
+  ctx.timers.lobby.setTimeout('shopTimer', () => {
+    try {
+      closeShop(ctx);
+    } catch (err) {
+      const logCtx = createLobbyLogger(ctx.lobbyId.toString());
+      logCtx.error({ err }, 'Error closing shop');
+    }
+  }, shopTimeout);
 }
 
 export function handleBuy(ctx: GameContext, pid: string, itemId: string): void {

@@ -1,28 +1,10 @@
 import { getMiniBossType, getMiniBossKeys } from './mini-boss-types/index.ts';
 import * as roguelike from './roguelike.ts';
 import { endGame } from './game.ts';
+import { awardScore } from './state.ts';
+import { mulberry32, hashString } from './rng.ts';
 import logger from './logger.ts';
 import type { GameContext, MiniBossState } from './types.ts';
-
-// ── Seeded RNG ──
-
-function mulberry32(seed: number): () => number {
-  let s = seed | 0;
-  return () => {
-    s = (s + 0x6D2B79F5) | 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function hashString(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
-  }
-  return hash;
-}
 
 export function pickMiniBoss(seed: number, nodeId: string): string {
   const keys = getMiniBossKeys();
@@ -151,11 +133,18 @@ function endMiniBoss(ctx: GameContext, victory: boolean): void {
     const playerCount = Object.keys(state.players).length;
     const soloMode = playerCount <= 1;
 
+    // Award score to all players for defeating the mini-boss
+    const rawReward = 50;
+    let scoreGained = 0;
+    for (const pid of Object.keys(state.players)) {
+      scoreGained = awardScore(ctx, pid, rawReward);
+    }
+
     ctx.events.emit({
       type: 'encounter-reward',
       encounterType: 'mini_boss',
       title: plugin?.displayName || 'Mini-Boss',
-      scoreGained: 0,
+      scoreGained,
       freeItem: null,
       totalScore: state.score,
       soloMode,

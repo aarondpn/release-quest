@@ -38,14 +38,14 @@ export const raceConditionPlugin: MiniBossPlugin = {
     const b = mb.entities.find(e => e.id === 'mb_thread_b');
     if (!a || !b) return;
 
-    // If HP difference > 20% of maxHp, weaker heals to full
+    // If HP difference > 20% of maxHp, weaker heals by 2 (not to full)
     const maxHp = a.maxHp;
     const threshold = maxHp * 0.2;
     const diff = Math.abs(a.hp - b.hp);
 
     if (diff > threshold && a.hp > 0 && b.hp > 0) {
       const weaker = a.hp > b.hp ? b : a;
-      weaker.hp = weaker.maxHp;
+      weaker.hp = Math.min(weaker.hp + 2, weaker.maxHp);
       ctx.events.emit({
         type: 'mini-boss-entity-update',
         entities: mb.entities,

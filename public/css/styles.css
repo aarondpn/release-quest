@@ -7741,3 +7741,47 @@ body.qa-hitbox-active .arena .bug::before {
   from { opacity: 0; transform: scale(0.8); }
   to { opacity: 1; transform: scale(1); }
 }
+
+/* ══════════════════════════════════════════════════
+   ROGUELIKE RESPONSIVE
+   ══════════════════════════════════════════════════ */
+
+@media (max-width: 600px) {
+  .map-layout {
+    flex-direction: column;
+  }
+  .map-sidebar {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-left: none;
+    border-top: 1px solid #2a2a4a;
+    padding: 8px;
+    gap: 6px;
+  }
+  .map-sidebar-title { display: none; }
+  .map-stats { flex-direction: row; gap: 8px; }
+  .map-buffs { flex-direction: row; flex-wrap: wrap; margin-top: 0; padding-top: 0; border-top: none; }
+  .map-hint { display: none; }
+  .map-node { width: 44px; height: 44px; }
+  .map-node-icon { font-size: 14px; }
+  .map-node-label { font-size: 4px; }
+
+  .event-card, .rest-card {
+    padding: 16px 20px;
+    max-width: 100%;
+  }
+  .event-icon, .rest-icon { font-size: 32px; margin-bottom: 8px; }
+  .event-title, .rest-title { font-size: 11px; }
+  .event-option-icon, .rest-option-icon { font-size: 18px; }
+
+  .elite-banner { padding: 16px 24px; }
+  .elite-banner-icon { font-size: 32px; }
+  .elite-banner-title { font-size: 12px; }
+
+  #mini-boss-screen { padding: 10px; }
+  .mini-boss-icon { font-size: 28px; }
+  .mini-boss-title { font-size: 10px; }
+
+  .reward-card { padding: 16px 20px; min-width: auto; width: 90%; }
+}

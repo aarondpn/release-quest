@@ -1,28 +1,10 @@
-import { getPlayerScores } from './state.ts';
+import { getPlayerScores, awardScore } from './state.ts';
 import * as roguelike from './roguelike.ts';
 import { endGame } from './game.ts';
+import { mulberry32, hashString } from './rng.ts';
+import { tallyVotes, isSoloMode } from './vote-utils.ts';
 import logger from './logger.ts';
 import type { GameContext, EventDefinition, EventModifiers } from './types.ts';
-
-// ── Seeded RNG (reused from roguelike-map.ts) ──
-
-function mulberry32(seed: number): () => number {
-  let s = seed | 0;
-  return () => {
-    s = (s + 0x6D2B79F5) | 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function hashString(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
-  }
-  return hash;
-}
 
 // ── Event pool ──
 
@@ -113,9 +95,12 @@ const EVENT_POOL: EventPoolEntry[] = [
         { id: 'ignore', label: 'Liegen lassen', description: 'Sicherheit geht vor', icon: '\u{1F6AB}' },
       ],
     },
-    resolve(optionId) {
+    resolve(optionId, ctx) {
       if (optionId === 'plug') {
-        const lucky = Math.random() < 0.5;
+        // Use seeded RNG for deterministic outcome in roguelike
+        const seed = (ctx.state.roguelikeMap?.seed ?? Date.now()) + hashString('usb-stick-outcome');
+        const rng = mulberry32(seed);
+        const lucky = rng() < 0.5;
         if (lucky) {
           return {
             modifiers: { scoreChange: 50 },
@@ -195,8 +180,7 @@ export function showEvent(ctx: GameContext, nodeId: string): void {
 
   ctx.lifecycle.transition(state, 'event');
 
-  const playerCount = Object.keys(state.players).length;
-  const soloMode = playerCount <= 1;
+  const soloMode = isSoloMode(state.players);
 
   logger.info({ lobbyId: ctx.lobbyId, eventId: event.id, soloMode }, 'Event shown');
 
@@ -227,8 +211,7 @@ export function handleEventVote(ctx: GameContext, pid: string, optionId: string)
   if (!state.eventVotes) state.eventVotes = {};
   state.eventVotes[pid] = optionId;
 
-  const playerCount = Object.keys(state.players).length;
-  const soloMode = playerCount <= 1;
+  const soloMode = isSoloMode(state.players);
 
   if (soloMode) {
     resolveEventVote(ctx);
@@ -244,7 +227,7 @@ export function handleEventVote(ctx: GameContext, pid: string, optionId: string)
 
   // Check if all players voted
   const votedCount = Object.keys(state.eventVotes).length;
-  if (votedCount >= playerCount) {
+  if (votedCount >= Object.keys(state.players).length) {
     resolveEventVote(ctx);
   }
 }
@@ -258,22 +241,13 @@ function resolveEventVote(ctx: GameContext): void {
   const entry = EVENT_POOL.find(e => e.definition.id === state.activeEventId);
   if (!entry) return;
 
-  // Count votes per option
-  const voteCounts: Record<string, number> = {};
-  for (const optId of Object.values(state.eventVotes)) {
-    voteCounts[optId] = (voteCounts[optId] || 0) + 1;
-  }
+  // Grab votes and immediately clear to prevent re-entrancy
+  const votes = state.eventVotes;
+  state.eventVotes = undefined;
 
-  // Find winner: majority wins, ties → first option
-  let chosenOptionId = entry.definition.options[0].id;
-  let maxVotes = 0;
-  for (const opt of entry.definition.options) {
-    const count = voteCounts[opt.id] || 0;
-    if (count > maxVotes) {
-      maxVotes = count;
-      chosenOptionId = opt.id;
-    }
-  }
+  // Count votes and find winner
+  const candidates = entry.definition.options.map(o => o.id);
+  const chosenOptionId = tallyVotes(votes, candidates);
 
   // Resolve effects
   const { modifiers, summary } = entry.resolve(chosenOptionId, ctx);
@@ -288,7 +262,15 @@ function resolveEventVote(ctx: GameContext): void {
   }
   if (modifiers.scoreChange) {
     scoreChange = modifiers.scoreChange;
-    state.score += modifiers.scoreChange;
+    // Distribute score evenly among all players via awardScore
+    const playerIds = Object.keys(state.players);
+    if (playerIds.length > 0) {
+      const perPlayer = Math.floor(modifiers.scoreChange / playerIds.length);
+      const remainder = modifiers.scoreChange - perPlayer * playerIds.length;
+      for (let i = 0; i < playerIds.length; i++) {
+        awardScore(ctx, playerIds[i], perPlayer + (i === 0 ? remainder : 0));
+      }
+    }
   }
 
   // Store combat modifiers for next fight
@@ -332,8 +314,7 @@ function resolveEventVote(ctx: GameContext): void {
     return;
   }
 
-  // Clear vote state
-  state.eventVotes = undefined;
+  // Clear remaining vote state
   state.activeEventId = undefined;
   state.voteDeadline = undefined;
 

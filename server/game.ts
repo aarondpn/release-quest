@@ -44,7 +44,8 @@ export function endGame(ctx: GameContext, outcome: string, win: boolean): void {
     players: getPlayerScores(state),
   });
   const hasCustom = state.customConfig && Object.keys(state.customConfig).length > 0;
-  if (!hasCustom && ctx.playerInfo) stats.recordGameEnd(state, ctx.playerInfo, win);
+  const isRoguelike = state.gameMode === 'roguelike';
+  if (!hasCustom && !isRoguelike && ctx.playerInfo) stats.recordGameEnd(state, ctx.playerInfo, win);
 
   // Save recording for logged-in players
   if (recording && ctx.playerInfo) {
@@ -82,6 +83,7 @@ export function startGame(ctx: GameContext): void {
   state.level = 1;
   state.playerBuffs = {};
   state.boss = null;
+  state.persistentScoreMultiplier = undefined;
   state.gameStartedAt = Date.now();
 
   ctx.matchLog = createMatchLog(lobbyId);
@@ -242,4 +244,6 @@ export function resetToLobby(ctx: GameContext): void {
   state.activeEventId = undefined;
   state.eliteConfig = undefined;
   state.miniBoss = undefined;
+  state.persistentScoreMultiplier = undefined;
+  state.restVotes = undefined;
 }

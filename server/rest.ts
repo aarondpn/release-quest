@@ -1,5 +1,6 @@
 import { ROGUELIKE_CONFIG, REST_CONFIG, getDifficultyConfig } from './config.ts';
 import * as roguelike from './roguelike.ts';
+import { tallyVotes, isSoloMode } from './vote-utils.ts';
 import logger from './logger.ts';
 import type { GameContext } from './types.ts';
 
@@ -11,8 +12,7 @@ export function showRest(ctx: GameContext): void {
   state.restVotes = {};
   ctx.lifecycle.transition(state, 'resting');
 
-  const playerCount = Object.keys(state.players).length;
-  const soloMode = playerCount <= 1;
+  const soloMode = isSoloMode(state.players);
   const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
 
   logger.info({ lobbyId: ctx.lobbyId, soloMode }, 'Rest node shown');
@@ -43,8 +43,7 @@ export function handleRestVote(ctx: GameContext, pid: string, option: string): v
   if (!state.restVotes) state.restVotes = {};
   state.restVotes[pid] = option;
 
-  const playerCount = Object.keys(state.players).length;
-  const soloMode = playerCount <= 1;
+  const soloMode = isSoloMode(state.players);
 
   if (soloMode) {
     resolveRestVote(ctx);
@@ -60,7 +59,7 @@ export function handleRestVote(ctx: GameContext, pid: string, option: string): v
 
   // Check if all players voted
   const votedCount = Object.keys(state.restVotes).length;
-  if (votedCount >= playerCount) {
+  if (votedCount >= Object.keys(state.players).length) {
     resolveRestVote(ctx);
   }
 }
@@ -71,14 +70,12 @@ function resolveRestVote(ctx: GameContext): void {
 
   if (!state.restVotes) return;
 
-  // Count votes
-  const voteCounts: Record<string, number> = { rest: 0, train: 0 };
-  for (const opt of Object.values(state.restVotes)) {
-    voteCounts[opt] = (voteCounts[opt] || 0) + 1;
-  }
+  // Grab votes and immediately clear to prevent re-entrancy
+  const votes = state.restVotes;
+  state.restVotes = undefined;
 
-  // Majority wins; tie goes to 'rest' (healing)
-  const chosenOption: 'rest' | 'train' = voteCounts.train > voteCounts.rest ? 'train' : 'rest';
+  // Majority wins; tie goes to 'rest' (healing) since it's first in the candidates list
+  const chosenOption = tallyVotes(votes, ['rest', 'train']) as 'rest' | 'train';
 
   const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
 
@@ -102,8 +99,7 @@ function resolveRestVote(ctx: GameContext): void {
     newScoreMultiplier: state.persistentScoreMultiplier ?? 1,
   });
 
-  // Clear vote state
-  state.restVotes = undefined;
+  // Clear remaining vote state
   state.voteDeadline = undefined;
 
   // After delay, return to map

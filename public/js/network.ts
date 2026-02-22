@@ -388,8 +388,8 @@ export function handleMessageInternal(msg: ServerMessage): void {
       clientState.currentPhase = msg.phase;
 
       // Restore roguelike state for reconnection
-      if ((msg as any).gameMode) clientState.gameMode = (msg as any).gameMode;
-      if ((msg as any).roguelikeMap) clientState.roguelikeMap = (msg as any).roguelikeMap;
+      if (msg.gameMode) clientState.gameMode = msg.gameMode;
+      if (msg.roguelikeMap) clientState.roguelikeMap = msg.roguelikeMap;
 
       if (msg.phase === 'lobby') { showStartScreen(); updateLobbyRolePicker(); hideLiveDashboard(); }
       else if (msg.phase === 'gameover') { showGameOverScreen(msg.score, msg.level, msg.players || []); hideLiveDashboard(); }
@@ -456,9 +456,22 @@ export function handleMessageInternal(msg: ServerMessage): void {
       if (msg.phase === 'boss') dom.levelEl!.textContent = 'BOSS';
       clientState.currentPhase = msg.phase;
 
+      // Restore roguelike state for spectators
+      if (msg.gameMode) clientState.gameMode = msg.gameMode;
+      if (msg.roguelikeMap) clientState.roguelikeMap = msg.roguelikeMap;
+
       if (msg.phase === 'lobby') { showStartScreen(); hideLiveDashboard(); }
       else if (msg.phase === 'gameover') { showGameOverScreen(msg.score, msg.level, msg.players || []); hideLiveDashboard(); }
       else if (msg.phase === 'win') { showWinScreen(msg.score, msg.players || []); hideLiveDashboard(); }
+      else if (msg.phase === 'map_view' && clientState.roguelikeMap) {
+        hideAllScreens();
+        if (dom.mapScreen) dom.mapScreen.classList.remove('hidden');
+        showLiveDashboard();
+      }
+      else if (msg.phase === 'event' || msg.phase === 'resting') {
+        hideAllScreens();
+        showLiveDashboard();
+      }
       else if (msg.phase === 'shopping') { hideAllScreens(); showLiveDashboard(); }
       else { hideAllScreens(); showLiveDashboard(); }
 
@@ -1341,6 +1354,10 @@ export function handleMessageInternal(msg: ServerMessage): void {
       if (dom.mapScreen) dom.mapScreen.classList.remove('hidden');
       showLiveDashboard();
       if (clientState.roguelikeMap) {
+        clientState.roguelikeMap.currentNodeId = msg.currentNodeId;
+        for (const node of clientState.roguelikeMap.nodes) {
+          node.visited = msg.visitedNodeIds.includes(node.id);
+        }
         renderMap(clientState.roguelikeMap, msg.availableNodes, clientState.players);
       }
       updateMapSidebar({
