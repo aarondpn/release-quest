@@ -22,6 +22,7 @@ import { initRestSend } from './rest-ui.ts';
 import { initEliteSend } from './elite-ui.ts';
 import { initMiniBossSend } from './mini-boss-ui.ts';
 import { initRewardSend } from './reward-ui.ts';
+import { initEmotes } from './emotes.ts';
 import type { DifficultyPreset } from './client-types.ts';
 import type { LobbyCustomConfig } from '../../shared/messages.ts';
 
@@ -487,6 +488,9 @@ initRewardSend(sendMessage);
 
 // Initialize cosmetic shop
 initShopSend(sendMessage);
+
+// Initialize emotes
+initEmotes(sendMessage);
 
 // ── Auth handlers ──
 dom.authShowLoginBtn!.addEventListener('click', showAuthOverlay);

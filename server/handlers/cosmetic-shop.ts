@@ -1,15 +1,19 @@
 import type { MessageHandler } from './types.ts';
-import { COSMETIC_SHOP_MAP, getWeeklyRotation } from '../config.ts';
+import { COSMETIC_SHOP_MAP, COSMETIC_SHOP_CATALOG, getWeeklyRotation } from '../config.ts';
 import * as network from '../network.ts';
 import * as db from '../db.ts';
+
+// Emotes are always available (not rotation-gated)
+const EMOTE_SHOP_ITEMS = COSMETIC_SHOP_CATALOG.filter(i => i.category === 'emote');
 
 export const handleGetShopCatalog: MessageHandler = async ({ ws, pid, playerInfo }) => {
   const info = playerInfo.get(pid);
   const rotation = getWeeklyRotation();
+  const allItems = [...rotation.items, ...EMOTE_SHOP_ITEMS];
   if (!info?.userId) {
     network.send(ws, {
       type: 'shop-catalog',
-      rotatingItems: rotation.items,
+      rotatingItems: allItems,
       rotationEndUtc: rotation.rotationEndUtc,
       owned: [],
       balance: 0,
@@ -29,7 +33,7 @@ export const handleGetShopCatalog: MessageHandler = async ({ ws, pid, playerInfo
     const owned = inventory.map(i => i.item_id);
     network.send(ws, {
       type: 'shop-catalog',
-      rotatingItems: rotation.items,
+      rotatingItems: allItems,
       rotationEndUtc: rotation.rotationEndUtc,
       owned,
       balance,
@@ -38,7 +42,7 @@ export const handleGetShopCatalog: MessageHandler = async ({ ws, pid, playerInfo
   } catch {
     network.send(ws, {
       type: 'shop-catalog',
-      rotatingItems: rotation.items,
+      rotatingItems: allItems,
       rotationEndUtc: rotation.rotationEndUtc,
       owned: [],
       balance: 0,
@@ -95,11 +99,14 @@ export const handleShopPurchase: MessageHandler = async ({ ws, msg, pid, playerI
     network.send(ws, { type: 'shop-purchase-result', success: false, error: 'Item not found' });
     return;
   }
-  // Verify item is in the current weekly rotation
-  const rotation = getWeeklyRotation();
-  if (!rotation.items.some(i => i.id === itemId)) {
-    network.send(ws, { type: 'shop-purchase-result', success: false, error: 'Item not currently available' });
-    return;
+  // Verify item is in the current weekly rotation or is an always-available emote
+  const isEmote = item.category === 'emote';
+  if (!isEmote) {
+    const rotation = getWeeklyRotation();
+    if (!rotation.items.some(i => i.id === itemId)) {
+      network.send(ws, { type: 'shop-purchase-result', success: false, error: 'Item not currently available' });
+      return;
+    }
   }
   try {
     const result = await db.purchaseItem(info.userId, itemId, item.category, item.price);

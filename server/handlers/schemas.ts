@@ -6,7 +6,7 @@ import type {
   LeaveLobbyMsg, JoinSpectateMsg, LeaveSpectateMsg, StartGameMsg,
   ClickBugMsg, ClickBossMsg, ClickDuckMsg, ClickHammerMsg, CursorMoveMsg,
   ClickBreakpointMsg, ClickMemoryLeakStartMsg, ClickMemoryLeakCompleteMsg,
-  ShopBuyMsg, ShopReadyMsg, SelectRoleMsg, ChatMessageMsg,
+  ShopBuyMsg, ShopReadyMsg, SelectRoleMsg, ChatMessageMsg, EmoteMsg,
   GetLeaderboardMsg, GetMyStatsMsg, GetRecordingsMsg,
   ShareRecordingMsg, UnshareRecordingMsg, GetQuestsMsg, GetBalanceMsg,
   GetShopCatalogMsg, ShopSeenMsg, ShopPurchaseMsg, MapVoteMsg, EventVoteMsg, RestVoteMsg,
@@ -200,6 +200,13 @@ const clickMemoryLeakCompleteSchema = z.object({
   bugId: z.string().max(64),
 }) satisfies ZodType<ClickMemoryLeakCompleteMsg>;
 
+// --- Emote ---
+
+const emoteSchema = z.object({
+  type: z.literal('emote'),
+  emoteId: z.string().max(32),
+}) satisfies ZodType<EmoteMsg>;
+
 // --- Chat ---
 
 const chatMessageSchema = z.object({
@@ -290,6 +297,7 @@ export const staticSchemas: Record<string, ZodType> = {
   'click-memory-leak-start': clickMemoryLeakStartSchema,
   'click-memory-leak-complete': clickMemoryLeakCompleteSchema,
   'chat-message': chatMessageSchema,
+  'emote': emoteSchema,
   'shop-buy': shopBuySchema,
   'shop-ready': shopReadySchema,
   'dev-command': devCommandSchema,
