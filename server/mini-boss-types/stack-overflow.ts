@@ -2,62 +2,57 @@ import { LOGICAL_W, LOGICAL_H } from '../../shared/constants.ts';
 import logger from '../logger.ts';
 import type { GameContext, MiniBossPlugin, MiniBossEntity } from '../types.ts';
 
-const BOSS_HP = 22;           // was 30 — too much for 40s solo; player hit 2 HP remaining
-const HEAT_PER_CLICK = 15;
-const HEAT_DECAY_PER_TICK = 11; // was 8 — net heat/click was +7, now +4; slightly more forgiving pace
-const HEAT_DECAY_SLOW = 7;    // was 5 — below 25% boss HP
-const OVERHEAT_THRESHOLD = 100;
-const LOCKOUT_DURATION_MS = 2500; // was 3000ms
-const BOSS_HEAL_ON_OVERHEAT = 4;  // was 8 — one overheat was costing ~3s of progress
-const LOCKOUT_HEAT_RESET = 55;
-const COOLANT_HEAT_REDUCTION = 30;
-const COOLANT_LIFETIME_MS = 3500;
-const COOLANT_SPAWN_INTERVAL = 5; // ticks (seconds)
-const COOLANT_SPAWN_SLOW = 7; // below 50% boss HP
+const BOSS_HP = 15;
+const FRAME_LIFETIME_MS = 3000;
+const OVERFLOW_THRESHOLD = 6;
+const OVERFLOW_HEAL = 3;
+const EXPIRED_FRAME_HEAL = 1;
+const RECURSIVE_TICK_INTERVAL = 8;
+const PAD = 70;
 
-interface OverheatData {
-  heat: number;
-  lockedOut: boolean;
-  lockoutEndsAt: number;
-  ticksSinceCoolant: number;
-  _nextCoolantId: number;
+interface StackPurgeData {
+  bossHp: number;
+  tickCount: number;
+  _nextFrameId: number;
   _extra: {
-    heat: number;
-    lockedOut: boolean;
+    bossHp: number;
+    bossMaxHp: number;
+    overflow: boolean;
   };
 }
 
 function randomPos(): { x: number; y: number } {
-  const pad = 80;
   return {
-    x: pad + Math.random() * (LOGICAL_W - pad * 2),
-    y: pad + Math.random() * (LOGICAL_H - pad * 2),
+    x: PAD + Math.random() * (LOGICAL_W - PAD * 2),
+    y: PAD + Math.random() * (LOGICAL_H - PAD * 2),
   };
 }
 
-function bossSpeed(hp: number): number {
-  if (hp <= BOSS_HP * 0.25) return 40;
-  if (hp <= BOSS_HP * 0.5) return 25;
-  return 15;
+function spawnRate(bossHp: number): number {
+  if (bossHp < 5) return 3;
+  if (bossHp < 10) return 2;
+  return 1;
 }
 
 export const stackOverflowPlugin: MiniBossPlugin = {
   typeKey: 'stack-overflow',
-  displayName: 'Stack Overflow',
+  displayName: 'Stack Purge',
   icon: '\u{1F525}',
-  description: 'Don\'t overheat! Spam-clicking locks you out and heals the boss.',
-  timeLimit: 40,
-  defeatPenalty: 25,
+  description: 'Pop the stack frames before they overflow! Click frames to eliminate them.',
+  timeLimit: 30,
+  defeatPenalty: 20,
 
   init(ctx: GameContext): MiniBossEntity[] {
     const mb = ctx.state.miniBoss!;
-    const data: OverheatData = {
-      heat: 0,
-      lockedOut: false,
-      lockoutEndsAt: 0,
-      ticksSinceCoolant: 0,
-      _nextCoolantId: 1,
-      _extra: { heat: 0, lockedOut: false },
+    const data: StackPurgeData = {
+      bossHp: BOSS_HP,
+      tickCount: 0,
+      _nextFrameId: 1,
+      _extra: {
+        bossHp: BOSS_HP,
+        bossMaxHp: BOSS_HP,
+        overflow: false,
+      },
     };
     mb.data = data as unknown as Record<string, unknown>;
 
@@ -67,261 +62,233 @@ export const stackOverflowPlugin: MiniBossPlugin = {
       lobbyId: ctx.lobbyId,
       constants: {
         BOSS_HP,
-        HEAT_PER_CLICK,
-        HEAT_DECAY_PER_TICK,
-        OVERHEAT_THRESHOLD,
-        LOCKOUT_DURATION_MS,
-        BOSS_HEAL_ON_OVERHEAT,
-        COOLANT_HEAT_REDUCTION,
-        COOLANT_SPAWN_INTERVAL,
-        timeLimit: 40,
+        FRAME_LIFETIME_MS,
+        OVERFLOW_THRESHOLD,
+        OVERFLOW_HEAL,
+        EXPIRED_FRAME_HEAL,
+        RECURSIVE_TICK_INTERVAL,
+        timeLimit: 30,
       },
-      note: `Overheat at ${OVERHEAT_THRESHOLD} heat. ${Math.floor(OVERHEAT_THRESHOLD / HEAT_PER_CLICK)} clicks = overheat. Net heat/click at 1/s = ${HEAT_PER_CLICK - HEAT_DECAY_PER_TICK} → heat will accumulate!`,
-    }, '[StackOverflow] Boss initialized');
+      note: `${OVERFLOW_THRESHOLD} frames triggers overflow (+${OVERFLOW_HEAL} boss HP). Each expired frame heals ${EXPIRED_FRAME_HEAL} HP.`,
+    }, '[StackPurge] Boss initialized');
 
-    return [{
-      id: 'mb_boss',
-      x: LOGICAL_W / 2,
-      y: LOGICAL_H / 2,
-      hp: BOSS_HP,
-      maxHp: BOSS_HP,
-      variant: 'boss',
-    }];
+    const now = Date.now();
+    const firstPos = randomPos();
+    return [
+      {
+        id: 'mb_boss',
+        x: LOGICAL_W / 2,
+        y: LOGICAL_H / 2,
+        hp: BOSS_HP,
+        maxHp: BOSS_HP,
+        variant: 'boss',
+      },
+      {
+        id: 'mb_frame_0',
+        x: firstPos.x,
+        y: firstPos.y,
+        hp: 1,
+        maxHp: 1,
+        variant: 'frame',
+        spawnedAt: now,
+      },
+    ];
   },
 
   onClick(ctx: GameContext, pid: string, entityId: string): void {
     const mb = ctx.state.miniBoss;
     if (!mb) return;
 
-    const data = mb.data as unknown as OverheatData;
+    const data = mb.data as unknown as StackPurgeData;
+    const entity = mb.entities.find(e => e.id === entityId);
+    if (!entity || entity.hp <= 0) return;
+
+    // Boss entity at center is decorative — ignore clicks on it
+    if (entity.variant === 'boss') return;
+
     const now = Date.now();
 
-    // Check lockout
-    if (data.lockedOut) {
-      if (now < data.lockoutEndsAt) {
-        const remainingMs = data.lockoutEndsAt - now;
-        logger.info({
-          miniBoss: 'stack-overflow',
-          event: 'click-blocked-lockout',
-          lobbyId: ctx.lobbyId,
-          pid,
-          entityId,
-          remainingLockoutMs: remainingMs,
-          heat: data.heat,
-        }, '[StackOverflow] Click ignored — still locked out');
-        return; // still locked out, ignore click
-      }
-      // Lockout expired during click handling
-      data.lockedOut = false;
-      data._extra.lockedOut = false;
-      logger.info({
-        miniBoss: 'stack-overflow',
-        event: 'lockout-expired',
-        lobbyId: ctx.lobbyId,
-        heat: data.heat,
-      }, '[StackOverflow] Lockout expired during click');
-    }
+    if (entity.variant === 'recursive-frame') {
+      // Recursive frame: 2 damage but spawns 2 new frames nearby
+      const hpBefore = data.bossHp;
+      data.bossHp = Math.max(0, data.bossHp - 2);
+      data._extra.bossHp = data.bossHp;
 
-    const entity = mb.entities.find(e => e.id === entityId);
-    if (!entity || entity.hp <= 0) {
+      mb.entities = mb.entities.filter(e => e.id !== entityId);
+
+      // Spawn 2 new regular frames nearby
+      const spread = 80;
+      for (let i = 0; i < 2; i++) {
+        const nx = Math.max(PAD, Math.min(LOGICAL_W - PAD, entity.x + (Math.random() - 0.5) * spread * 2));
+        const ny = Math.max(PAD, Math.min(LOGICAL_H - PAD, entity.y + (Math.random() - 0.5) * spread * 2));
+        mb.entities.push({
+          id: 'mb_frame_' + data._nextFrameId++,
+          x: nx,
+          y: ny,
+          hp: 1,
+          maxHp: 1,
+          variant: 'frame',
+          spawnedAt: now,
+        });
+      }
+
+      const bossEnt = mb.entities.find(e => e.variant === 'boss');
+      if (bossEnt) bossEnt.hp = data.bossHp;
+
       logger.info({
         miniBoss: 'stack-overflow',
-        event: 'click-no-entity',
+        event: 'recursive-frame-click',
         lobbyId: ctx.lobbyId,
         pid,
         entityId,
-        entityFound: !!entity,
-        entityHp: entity?.hp,
-      }, '[StackOverflow] Click on missing/dead entity');
-      return;
-    }
-
-    // Clicking a coolant pickup
-    if (entity.variant === 'coolant') {
-      const heatBefore = data.heat;
-      data.heat = Math.max(0, data.heat - COOLANT_HEAT_REDUCTION);
-      data._extra.heat = data.heat;
-      // Remove coolant
+        bossHpBefore: hpBefore,
+        bossHpAfter: data.bossHp,
+        activeFrames: mb.entities.filter(e => e.variant === 'frame' || e.variant === 'recursive-frame').length,
+        timeRemaining: mb.timeRemaining,
+      }, '[StackPurge] Recursive frame popped — 2 damage, 2 new frames spawned');
+    } else {
+      // Regular frame: 1 damage
+      const hpBefore = data.bossHp;
+      data.bossHp = Math.max(0, data.bossHp - 1);
+      data._extra.bossHp = data.bossHp;
       mb.entities = mb.entities.filter(e => e.id !== entityId);
 
-      logger.info({
-        miniBoss: 'stack-overflow',
-        event: 'coolant-collected',
-        lobbyId: ctx.lobbyId,
-        pid,
-        coolantId: entityId,
-        heatBefore,
-        heatAfter: data.heat,
-        heatReduced: heatBefore - data.heat,
-        remainingCoolants: mb.entities.filter(e => e.variant === 'coolant').length,
-      }, '[StackOverflow] Coolant collected');
-
-      ctx.events.emit({
-        type: 'mini-boss-entity-update',
-        entities: mb.entities,
-        extra: { ...data._extra },
-      });
-      return;
-    }
-
-    // Clicking the boss
-    if (entity.variant === 'boss') {
-      const heatBefore = data.heat;
-      const bossHpBefore = entity.hp;
-      data.heat += HEAT_PER_CLICK;
-
-      if (data.heat >= OVERHEAT_THRESHOLD) {
-        // OVERHEAT! Lockout + boss heals
-        data.lockedOut = true;
-        data.lockoutEndsAt = now + LOCKOUT_DURATION_MS;
-        data.heat = LOCKOUT_HEAT_RESET;
-        entity.hp = Math.min(entity.maxHp, entity.hp + BOSS_HEAL_ON_OVERHEAT);
-        data._extra = { heat: data.heat, lockedOut: true };
-
-        logger.warn({
-          miniBoss: 'stack-overflow',
-          event: 'overheat',
-          lobbyId: ctx.lobbyId,
-          pid,
-          heatBefore,
-          heatAtOverheat: OVERHEAT_THRESHOLD,
-          heatResetTo: LOCKOUT_HEAT_RESET,
-          bossHpBefore,
-          bossHpAfter: entity.hp,
-          healAmount: BOSS_HEAL_ON_OVERHEAT,
-          lockoutMs: LOCKOUT_DURATION_MS,
-          timeRemaining: mb.timeRemaining,
-        }, '[StackOverflow] OVERHEAT — boss healed, player locked out');
-
-        ctx.events.emit({
-          type: 'mini-boss-entity-update',
-          entities: mb.entities,
-          warning: 'OVERHEATED! Locked out for 3s — boss heals!',
-          extra: { ...data._extra },
-        });
-        return;
-      }
-
-      // Normal damage
-      entity.hp--;
-      data._extra.heat = data.heat;
+      const bossEnt = mb.entities.find(e => e.variant === 'boss');
+      if (bossEnt) bossEnt.hp = data.bossHp;
 
       logger.info({
         miniBoss: 'stack-overflow',
-        event: 'click-damage',
+        event: 'frame-click',
         lobbyId: ctx.lobbyId,
         pid,
-        heatBefore,
-        heatAfter: data.heat,
-        heatUntilOverheat: OVERHEAT_THRESHOLD - data.heat,
-        bossHpBefore,
-        bossHpAfter: entity.hp,
+        entityId,
+        bossHpBefore: hpBefore,
+        bossHpAfter: data.bossHp,
+        activeFrames: mb.entities.filter(e => e.variant === 'frame' || e.variant === 'recursive-frame').length,
         timeRemaining: mb.timeRemaining,
-      }, '[StackOverflow] Boss hit');
-
-      ctx.events.emit({
-        type: 'mini-boss-entity-update',
-        entities: mb.entities,
-        extra: { ...data._extra },
-      });
+      }, '[StackPurge] Frame popped');
     }
+
+    ctx.events.emit({
+      type: 'mini-boss-entity-update',
+      entities: mb.entities,
+      extra: { ...data._extra },
+    });
   },
 
   onTick(ctx: GameContext): void {
     const mb = ctx.state.miniBoss;
     if (!mb) return;
 
-    const data = mb.data as unknown as OverheatData;
+    const data = mb.data as unknown as StackPurgeData;
     const now = Date.now();
-    const boss = mb.entities.find(e => e.variant === 'boss');
-    if (!boss) return;
+    data.tickCount++;
 
-    // Check lockout expiry
-    if (data.lockedOut && now >= data.lockoutEndsAt) {
-      data.lockedOut = false;
-      data._extra.lockedOut = false;
-      logger.info({
-        miniBoss: 'stack-overflow',
-        event: 'lockout-expired-tick',
-        lobbyId: ctx.lobbyId,
-        heat: data.heat,
-        timeRemaining: mb.timeRemaining,
-      }, '[StackOverflow] Lockout expired (tick)');
-    }
-
-    // Decay heat
-    const heatBefore = data.heat;
-    if (!data.lockedOut) {
-      const decayRate = boss.hp <= BOSS_HP * 0.25 ? HEAT_DECAY_SLOW : HEAT_DECAY_PER_TICK;
-      data.heat = Math.max(0, data.heat - decayRate);
-      data._extra.heat = data.heat;
-    }
-
-    // Move boss
-    const speed = bossSpeed(boss.hp);
-    const angle = Math.random() * Math.PI * 2;
-    const pad = 60;
-    boss.x = Math.max(pad, Math.min(LOGICAL_W - pad, boss.x + Math.cos(angle) * speed));
-    boss.y = Math.max(pad, Math.min(LOGICAL_H - pad, boss.y + Math.sin(angle) * speed));
-
-    // Remove expired coolants
-    const coolantsBefore = mb.entities.filter(e => e.variant === 'coolant').length;
-    mb.entities = mb.entities.filter(
-      e => e.variant !== 'coolant' || !e.spawnedAt || (now - e.spawnedAt) < COOLANT_LIFETIME_MS
+    // Expire old frames, heal boss for each expired one
+    const expiredFrames = mb.entities.filter(
+      e => (e.variant === 'frame' || e.variant === 'recursive-frame') &&
+        e.spawnedAt !== undefined && (now - e.spawnedAt!) >= FRAME_LIFETIME_MS
     );
-    const coolantsAfter = mb.entities.filter(e => e.variant === 'coolant').length;
-    const expiredCount = coolantsBefore - coolantsAfter;
+    let expiredCount = 0;
+    for (const frame of expiredFrames) {
+      data.bossHp = Math.min(BOSS_HP, data.bossHp + EXPIRED_FRAME_HEAL);
+      mb.entities = mb.entities.filter(e => e.id !== frame.id);
+      expiredCount++;
+    }
 
-    // Spawn coolant
-    data.ticksSinceCoolant++;
-    const spawnInterval = boss.hp <= BOSS_HP * 0.5 ? COOLANT_SPAWN_SLOW : COOLANT_SPAWN_INTERVAL;
-    let coolantSpawned = false;
-    if (data.ticksSinceCoolant >= spawnInterval) {
-      data.ticksSinceCoolant = 0;
+    // Check overflow threshold AFTER expiry
+    const activeFrames = mb.entities.filter(e => e.variant === 'frame' || e.variant === 'recursive-frame');
+    if (activeFrames.length >= OVERFLOW_THRESHOLD) {
+      data.bossHp = Math.min(BOSS_HP, data.bossHp + OVERFLOW_HEAL);
+      mb.entities = mb.entities.filter(e => e.variant === 'boss');
+      data._extra.bossHp = data.bossHp;
+      data._extra.overflow = true;
+
+      const bossEnt = mb.entities.find(e => e.variant === 'boss');
+      if (bossEnt) bossEnt.hp = data.bossHp;
+
+      logger.warn({
+        miniBoss: 'stack-overflow',
+        event: 'overflow',
+        lobbyId: ctx.lobbyId,
+        framesClearedCount: activeFrames.length,
+        bossHp: data.bossHp,
+        healAmount: OVERFLOW_HEAL,
+        timeRemaining: mb.timeRemaining,
+      }, '[StackPurge] OVERFLOW — boss healed, all frames cleared');
+
+      ctx.events.emit({
+        type: 'mini-boss-entity-update',
+        entities: mb.entities,
+        warning: 'STACK OVERFLOW! Boss healed!',
+        extra: { ...data._extra },
+      });
+      data._extra.overflow = false;
+
+      // Spawn a fresh frame after clearing
       const pos = randomPos();
-      const coolantId = 'mb_coolant_' + data._nextCoolantId++;
       mb.entities.push({
-        id: coolantId,
+        id: 'mb_frame_' + data._nextFrameId++,
         x: pos.x,
         y: pos.y,
         hp: 1,
         maxHp: 1,
-        variant: 'coolant',
+        variant: 'frame',
         spawnedAt: now,
       });
-      coolantSpawned = true;
+      return;
     }
+
+    // Spawn new frames based on boss HP phase
+    const rate = spawnRate(data.bossHp);
+    const isRecursiveTick = data.tickCount % RECURSIVE_TICK_INTERVAL === 0;
+    for (let i = 0; i < rate; i++) {
+      const isRecursive = i === 0 && isRecursiveTick;
+      const pos = randomPos();
+      mb.entities.push({
+        id: 'mb_frame_' + data._nextFrameId++,
+        x: pos.x,
+        y: pos.y,
+        hp: 1,
+        maxHp: 1,
+        variant: isRecursive ? 'recursive-frame' : 'frame',
+        spawnedAt: now,
+      });
+    }
+
+    // Sync boss entity HP
+    const bossEnt = mb.entities.find(e => e.variant === 'boss');
+    if (bossEnt) bossEnt.hp = data.bossHp;
+
+    data._extra.bossHp = data.bossHp;
+    data._extra.overflow = false;
 
     logger.info({
       miniBoss: 'stack-overflow',
       event: 'tick',
       lobbyId: ctx.lobbyId,
+      tickCount: data.tickCount,
+      bossHp: data.bossHp,
+      expiredFrames: expiredCount,
+      activeFrames: mb.entities.filter(e => e.variant === 'frame' || e.variant === 'recursive-frame').length,
+      spawnRate: rate,
+      isRecursiveTick,
       timeRemaining: mb.timeRemaining,
-      bossHp: boss.hp,
-      bossMaxHp: boss.maxHp,
-      heat: data.heat,
-      heatDecayed: heatBefore - data.heat,
-      lockedOut: data.lockedOut,
-      activeCoolants: mb.entities.filter(e => e.variant === 'coolant').length,
-      expiredCoolants: expiredCount,
-      coolantSpawned,
-      ticksSinceCoolant: data.ticksSinceCoolant,
-      nextCoolantInTicks: spawnInterval - data.ticksSinceCoolant,
-    }, '[StackOverflow] Tick');
+    }, '[StackPurge] Tick');
   },
 
   checkVictory(ctx: GameContext): boolean {
     const mb = ctx.state.miniBoss;
     if (!mb) return false;
-    const boss = mb.entities.find(e => e.variant === 'boss');
-    const victory = !boss || boss.hp <= 0;
+    const data = mb.data as unknown as StackPurgeData;
+    const victory = data.bossHp <= 0;
     if (victory) {
       logger.info({
         miniBoss: 'stack-overflow',
         event: 'victory',
         lobbyId: ctx.lobbyId,
         timeRemaining: mb.timeRemaining,
-      }, '[StackOverflow] Victory condition met');
+      }, '[StackPurge] Victory condition met');
     }
     return victory;
   },

@@ -2,27 +2,34 @@ import { LOGICAL_W, LOGICAL_H } from '../../shared/constants.ts';
 import logger from '../logger.ts';
 import type { GameContext, MiniBossPlugin, MiniBossEntity } from '../types.ts';
 
-const THREAD_HP = 12;
+const THREAD_HP = 5;
+const SYNC_ZONE_RADIUS = 60;
+const SYNC_ZONE_TIMEOUT_TICKS = 5;
+const SYNC_TIMEOUT_HEAL = 1;
 const PUSH_RADIUS = 120;
 const PUSH_DISTANCE = 75;
-const COLLISION_DISTANCE = 55;
-const COLLISION_COOLDOWN_MS = 600;
-const DRIFT_SPEED = 3; // px/tick away from each other
-const DRIFT_FAST = 6; // below 50% HP
-const SLIPPERY_PUSH = 100; // push distance below 25% HP
+const THREAD_SPEED = 15;
+const THREAD_SPEED_FAST = 25;
+const DUAL_CAPTURE_DAMAGE = 3;
 const PAD = 50;
 
-interface HerdData {
-  lastCollisionAt: number;
+interface ThreadCorralData {
+  syncZoneX: number;
+  syncZoneY: number;
+  syncZoneTimer: number; // ticks remaining until timeout
+  tickCount: number;
   _extra: {
-    collisionFlash: boolean;
+    syncActive: boolean;
+    syncTimer: number;
+    captureFlash: boolean;
   };
 }
 
-function clampPos(x: number, y: number): { x: number; y: number } {
+function randomSyncZonePos(): { x: number; y: number } {
+  const pad = 80;
   return {
-    x: Math.max(PAD, Math.min(LOGICAL_W - PAD, x)),
-    y: Math.max(PAD, Math.min(LOGICAL_H - PAD, y)),
+    x: pad + Math.random() * (LOGICAL_W - pad * 2),
+    y: pad + Math.random() * (LOGICAL_H - pad * 2),
   };
 }
 
@@ -34,29 +41,68 @@ function distance(a: { x: number; y: number }, b: { x: number; y: number }): num
 
 function normalize(dx: number, dy: number): { nx: number; ny: number } {
   const len = Math.sqrt(dx * dx + dy * dy);
-  if (len < 0.001) return { nx: 1, ny: 0 };
+  if (len < 0.001) return { nx: Math.random() > 0.5 ? 1 : -1, ny: 0 };
   return { nx: dx / len, ny: dy / len };
+}
+
+function clampPos(x: number, y: number): { x: number; y: number } {
+  return {
+    x: Math.max(PAD, Math.min(LOGICAL_W - PAD, x)),
+    y: Math.max(PAD, Math.min(LOGICAL_H - PAD, y)),
+  };
+}
+
+function threadSpeed(hp: number): number {
+  return hp < 3 ? THREAD_SPEED_FAST : THREAD_SPEED;
+}
+
+function checkCaptures(
+  threads: MiniBossEntity[],
+  syncZone: { x: number; y: number }
+): { captured: MiniBossEntity[]; dual: boolean } {
+  const captured = threads.filter(t => t.hp > 0 && distance(t, syncZone) <= SYNC_ZONE_RADIUS);
+  return { captured, dual: captured.length >= 2 };
+}
+
+function repositionSyncZone(data: ThreadCorralData, mb: { entities: MiniBossEntity[] }): void {
+  const newPos = randomSyncZonePos();
+  data.syncZoneX = newPos.x;
+  data.syncZoneY = newPos.y;
+  data.syncZoneTimer = SYNC_ZONE_TIMEOUT_TICKS;
+  data._extra.syncTimer = SYNC_ZONE_TIMEOUT_TICKS;
+  const syncEnt = mb.entities.find(e => e.variant === 'sync-zone');
+  if (syncEnt) {
+    syncEnt.x = newPos.x;
+    syncEnt.y = newPos.y;
+  }
 }
 
 export const raceConditionPlugin: MiniBossPlugin = {
   typeKey: 'race-condition',
-  displayName: 'Race Condition',
+  displayName: 'Thread Corral',
   icon: '\u{1F3CE}\uFE0F',
-  description: 'Push the threads into each other! Click near a thread to shove it.',
-  timeLimit: 45,
+  description: 'Push threads into the sync zone! Both threads together = bonus damage.',
+  timeLimit: 35,
   defeatPenalty: 20,
 
   init(ctx: GameContext): MiniBossEntity[] {
     const mb = ctx.state.miniBoss!;
-    const data: HerdData = {
-      lastCollisionAt: 0,
-      _extra: { collisionFlash: false },
+    const syncPos = randomSyncZonePos();
+    const data: ThreadCorralData = {
+      syncZoneX: syncPos.x,
+      syncZoneY: syncPos.y,
+      syncZoneTimer: SYNC_ZONE_TIMEOUT_TICKS,
+      tickCount: 0,
+      _extra: {
+        syncActive: true,
+        syncTimer: SYNC_ZONE_TIMEOUT_TICKS,
+        captureFlash: false,
+      },
     };
     mb.data = data as unknown as Record<string, unknown>;
 
     const posA = { x: LOGICAL_W * 0.2, y: LOGICAL_H * 0.3 + Math.random() * LOGICAL_H * 0.4 };
     const posB = { x: LOGICAL_W * 0.8, y: LOGICAL_H * 0.3 + Math.random() * LOGICAL_H * 0.4 };
-    const initDist = distance(posA, posB);
 
     logger.info({
       miniBoss: 'race-condition',
@@ -64,19 +110,20 @@ export const raceConditionPlugin: MiniBossPlugin = {
       lobbyId: ctx.lobbyId,
       constants: {
         THREAD_HP,
+        SYNC_ZONE_RADIUS,
+        SYNC_ZONE_TIMEOUT_TICKS,
+        SYNC_TIMEOUT_HEAL,
         PUSH_RADIUS,
         PUSH_DISTANCE,
-        COLLISION_DISTANCE,
-        COLLISION_COOLDOWN_MS,
-        DRIFT_SPEED,
-        DRIFT_FAST,
-        SLIPPERY_PUSH,
-        timeLimit: 45,
+        THREAD_SPEED,
+        THREAD_SPEED_FAST,
+        DUAL_CAPTURE_DAMAGE,
+        timeLimit: 35,
       },
       initialPositions: { a: posA, b: posB },
-      initialDistance: Math.round(initDist),
-      note: `Threads need to be within ${COLLISION_DISTANCE}px to collide. They drift apart by ${DRIFT_SPEED}px/tick. Each collision deals 1 HP to both threads (${THREAD_HP} HP each = ${THREAD_HP} collisions needed).`,
-    }, '[RaceCondition] Boss initialized');
+      syncZone: syncPos,
+      note: `Single capture = 1 damage. Dual capture = ${DUAL_CAPTURE_DAMAGE} damage each. Zone times out every ${SYNC_ZONE_TIMEOUT_TICKS} ticks (heals 1 HP).`,
+    }, '[ThreadCorral] Boss initialized');
 
     return [
       {
@@ -97,54 +144,38 @@ export const raceConditionPlugin: MiniBossPlugin = {
         variant: 'thread-b',
         label: 'B',
       },
+      {
+        id: 'mb_sync_zone',
+        x: syncPos.x,
+        y: syncPos.y,
+        hp: 1,
+        maxHp: 1,
+        variant: 'sync-zone',
+      },
     ];
   },
 
   onClick(ctx: GameContext, pid: string, _entityId: string, clickPos?: { x: number; y: number }): void {
     const mb = ctx.state.miniBoss;
-    if (!mb || !clickPos) {
-      logger.info({
-        miniBoss: 'race-condition',
-        event: 'click-no-pos',
-        lobbyId: ctx.lobbyId,
-        pid,
-        hasClickPos: !!clickPos,
-      }, '[RaceCondition] Click ignored — no click position');
-      return;
-    }
+    if (!mb || !clickPos) return;
 
-    const data = mb.data as unknown as HerdData;
-    const threads = mb.entities.filter(e => e.hp > 0);
-    if (threads.length < 2) {
-      logger.info({
-        miniBoss: 'race-condition',
-        event: 'click-not-enough-threads',
-        lobbyId: ctx.lobbyId,
-        pid,
-        aliveThreads: threads.length,
-      }, '[RaceCondition] Click ignored — fewer than 2 threads alive');
-      return;
-    }
-
-    const minHp = Math.min(...threads.map(t => t.hp));
-    const pushDist = minHp <= THREAD_HP * 0.25 ? SLIPPERY_PUSH : PUSH_DISTANCE;
-
-    const distToA = distance(threads[0], clickPos);
-    const distToB = distance(threads[1], clickPos);
-    const threadDist = distance(threads[0], threads[1]);
+    const data = mb.data as unknown as ThreadCorralData;
+    const threads = mb.entities.filter(
+      e => (e.variant === 'thread-a' || e.variant === 'thread-b') && e.hp > 0
+    );
+    if (threads.length === 0) return;
 
     let pushed = false;
     const pushedThreads: string[] = [];
 
-    // Push threads near click position
+    // Push threads within range away from click point
     for (const thread of threads) {
       const dist = distance(thread, clickPos);
       if (dist < PUSH_RADIUS) {
-        // Push away from click
         const dx = thread.x - clickPos.x;
         const dy = thread.y - clickPos.y;
         const { nx, ny } = normalize(dx, dy);
-        const pos = clampPos(thread.x + nx * pushDist, thread.y + ny * pushDist);
+        const pos = clampPos(thread.x + nx * PUSH_DISTANCE, thread.y + ny * PUSH_DISTANCE);
         thread.x = pos.x;
         thread.y = pos.y;
         pushed = true;
@@ -153,86 +184,63 @@ export const raceConditionPlugin: MiniBossPlugin = {
     }
 
     if (!pushed) {
-      logger.info({
-        miniBoss: 'race-condition',
-        event: 'click-out-of-range',
-        lobbyId: ctx.lobbyId,
-        pid,
-        clickPos,
-        distToA: Math.round(distToA),
-        distToB: Math.round(distToB),
-        pushRadius: PUSH_RADIUS,
-        threadDist: Math.round(threadDist),
-      }, '[RaceCondition] Click too far from any thread');
       return;
     }
 
-    // Check collision between threads
-    const now = Date.now();
-    const [a, b] = threads;
-    const distAfterPush = distance(a, b);
-    const timeSinceCollision = now - data.lastCollisionAt;
-    const collisionReady = distAfterPush < COLLISION_DISTANCE && timeSinceCollision > COLLISION_COOLDOWN_MS;
+    // Check sync zone captures after push
+    const syncZone = { x: data.syncZoneX, y: data.syncZoneY };
+    const { captured, dual } = checkCaptures(threads, syncZone);
 
-    if (a && b && collisionReady) {
-      data.lastCollisionAt = now;
+    if (captured.length > 0) {
+      if (dual) {
+        for (const t of captured) {
+          t.hp = Math.max(0, t.hp - DUAL_CAPTURE_DAMAGE);
+        }
+        logger.info({
+          miniBoss: 'race-condition',
+          event: 'dual-capture',
+          lobbyId: ctx.lobbyId,
+          pid,
+          damage: DUAL_CAPTURE_DAMAGE * 2,
+          threadAHp: threads.find(t => t.variant === 'thread-a')?.hp,
+          threadBHp: threads.find(t => t.variant === 'thread-b')?.hp,
+          timeRemaining: mb.timeRemaining,
+        }, '[ThreadCorral] DUAL CAPTURE — both threads take 3 damage each');
+      } else {
+        captured[0].hp = Math.max(0, captured[0].hp - 1);
+        logger.info({
+          miniBoss: 'race-condition',
+          event: 'capture',
+          lobbyId: ctx.lobbyId,
+          pid,
+          threadId: captured[0].id,
+          threadHp: captured[0].hp,
+          timeRemaining: mb.timeRemaining,
+        }, '[ThreadCorral] Thread captured in sync zone');
+      }
 
-      // Damage both
-      a.hp--;
-      b.hp--;
-
-      // Bounce apart
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      const { nx, ny } = normalize(dx, dy);
-      const bounceDistance = 80;
-      const posA = clampPos(a.x - nx * bounceDistance, a.y - ny * bounceDistance);
-      const posB = clampPos(b.x + nx * bounceDistance, b.y + ny * bounceDistance);
-      a.x = posA.x;
-      a.y = posA.y;
-      b.x = posB.x;
-      b.y = posB.y;
-
-      data._extra.collisionFlash = true;
-
-      logger.info({
-        miniBoss: 'race-condition',
-        event: 'collision',
-        lobbyId: ctx.lobbyId,
-        pid,
-        threadDistBeforePush: Math.round(threadDist),
-        threadDistAfterPush: Math.round(distAfterPush),
-        collisionDistance: COLLISION_DISTANCE,
-        threadAHp: a.hp,
-        threadBHp: b.hp,
-        timeRemaining: mb.timeRemaining,
-      }, '[RaceCondition] COLLISION — both threads take damage');
+      repositionSyncZone(data, mb);
+      data._extra.captureFlash = true;
+      data._extra.syncActive = true;
 
       ctx.events.emit({
         type: 'mini-boss-entity-update',
         entities: mb.entities,
         extra: { ...data._extra },
       });
-      data._extra.collisionFlash = false;
+      data._extra.captureFlash = false;
       return;
     }
 
     logger.info({
       miniBoss: 'race-condition',
-      event: 'click-push',
+      event: 'push',
       lobbyId: ctx.lobbyId,
       pid,
-      clickPos,
       pushedThreads,
-      pushDistance: pushDist,
-      threadDistBeforePush: Math.round(threadDist),
-      threadDistAfterPush: Math.round(distAfterPush),
-      collisionDistance: COLLISION_DISTANCE,
-      collisionBlocked: distAfterPush < COLLISION_DISTANCE && timeSinceCollision <= COLLISION_COOLDOWN_MS,
-      collisionCooldownRemainingMs: Math.max(0, COLLISION_COOLDOWN_MS - timeSinceCollision),
-      threadAHp: a?.hp,
-      threadBHp: b?.hp,
-    }, '[RaceCondition] Threads pushed');
+      clickPos,
+      timeRemaining: mb.timeRemaining,
+    }, '[ThreadCorral] Threads pushed');
 
     ctx.events.emit({
       type: 'mini-boss-entity-update',
@@ -245,64 +253,116 @@ export const raceConditionPlugin: MiniBossPlugin = {
     const mb = ctx.state.miniBoss;
     if (!mb) return;
 
-    const threads = mb.entities.filter(e => e.hp > 0);
-    if (threads.length < 2) return;
+    const data = mb.data as unknown as ThreadCorralData;
+    data.tickCount++;
 
-    const [a, b] = threads;
-    if (!a || !b) return;
+    const threads = mb.entities.filter(
+      e => (e.variant === 'thread-a' || e.variant === 'thread-b') && e.hp > 0
+    );
 
-    const distBefore = distance(a, b);
+    // Random walk both threads with wall bouncing
+    for (const thread of threads) {
+      const speed = threadSpeed(thread.hp);
+      const angle = Math.random() * Math.PI * 2;
+      const clamped = clampPos(
+        thread.x + Math.cos(angle) * speed,
+        thread.y + Math.sin(angle) * speed
+      );
+      thread.x = clamped.x;
+      thread.y = clamped.y;
+    }
 
-    // Threads drift apart
-    const minHp = Math.min(a.hp, b.hp);
-    const drift = minHp <= THREAD_HP * 0.5 ? DRIFT_FAST : DRIFT_SPEED;
+    // Check sync zone captures after random walk
+    const syncZone = { x: data.syncZoneX, y: data.syncZoneY };
+    const { captured, dual } = checkCaptures(threads, syncZone);
 
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const { nx, ny } = normalize(dx, dy);
+    if (captured.length > 0) {
+      if (dual) {
+        for (const t of captured) t.hp = Math.max(0, t.hp - DUAL_CAPTURE_DAMAGE);
+        logger.info({
+          miniBoss: 'race-condition',
+          event: 'dual-capture-tick',
+          lobbyId: ctx.lobbyId,
+          timeRemaining: mb.timeRemaining,
+        }, '[ThreadCorral] Dual capture via random walk');
+      } else {
+        captured[0].hp = Math.max(0, captured[0].hp - 1);
+        logger.info({
+          miniBoss: 'race-condition',
+          event: 'capture-tick',
+          lobbyId: ctx.lobbyId,
+          threadId: captured[0].id,
+          threadHp: captured[0].hp,
+          timeRemaining: mb.timeRemaining,
+        }, '[ThreadCorral] Thread captured via random walk');
+      }
 
-    // Each thread drifts away from the other
-    const posA = clampPos(a.x - nx * drift, a.y - ny * drift);
-    const posB = clampPos(b.x + nx * drift, b.y + ny * drift);
-    a.x = posA.x;
-    a.y = posA.y;
-    b.x = posB.x;
-    b.y = posB.y;
+      repositionSyncZone(data, mb);
+      data._extra.captureFlash = true;
+      data._extra.syncActive = true;
 
-    // Small random jitter
-    a.x = Math.max(PAD, Math.min(LOGICAL_W - PAD, a.x + (Math.random() - 0.5) * 8));
-    a.y = Math.max(PAD, Math.min(LOGICAL_H - PAD, a.y + (Math.random() - 0.5) * 8));
-    b.x = Math.max(PAD, Math.min(LOGICAL_W - PAD, b.x + (Math.random() - 0.5) * 8));
-    b.y = Math.max(PAD, Math.min(LOGICAL_H - PAD, b.y + (Math.random() - 0.5) * 8));
+      ctx.events.emit({
+        type: 'mini-boss-entity-update',
+        entities: mb.entities,
+        extra: { ...data._extra },
+      });
+      data._extra.captureFlash = false;
+      return;
+    }
 
-    const distAfter = distance(a, b);
+    // Decrement sync zone timer
+    data.syncZoneTimer--;
+    data._extra.syncTimer = data.syncZoneTimer;
+
+    if (data.syncZoneTimer <= 0) {
+      // Zone timed out — heal the most-damaged thread, reposition zone
+      let healedThreadId: string | undefined;
+      if (threads.length > 0) {
+        const lowestHpThread = threads.reduce((a, b) => a.hp <= b.hp ? a : b);
+        lowestHpThread.hp = Math.min(lowestHpThread.maxHp, lowestHpThread.hp + SYNC_TIMEOUT_HEAL);
+        healedThreadId = lowestHpThread.id;
+      }
+
+      repositionSyncZone(data, mb);
+
+      logger.info({
+        miniBoss: 'race-condition',
+        event: 'sync-zone-timeout',
+        lobbyId: ctx.lobbyId,
+        healedThread: healedThreadId,
+        healAmount: SYNC_TIMEOUT_HEAL,
+        timeRemaining: mb.timeRemaining,
+      }, '[ThreadCorral] Sync zone timed out — thread healed, new zone');
+    }
+
+    data._extra.syncActive = true;
+    data._extra.captureFlash = false;
 
     logger.info({
       miniBoss: 'race-condition',
       event: 'tick',
       lobbyId: ctx.lobbyId,
+      tickCount: data.tickCount,
+      syncZoneTimer: data.syncZoneTimer,
+      threads: threads.map(t => ({ id: t.id, hp: t.hp, x: Math.round(t.x), y: Math.round(t.y) })),
       timeRemaining: mb.timeRemaining,
-      threadAHp: a.hp,
-      threadBHp: b.hp,
-      distBefore: Math.round(distBefore),
-      distAfter: Math.round(distAfter),
-      driftSpeed: drift,
-      collisionDistance: COLLISION_DISTANCE,
-      gapToCollision: Math.round(distAfter - COLLISION_DISTANCE),
-    }, '[RaceCondition] Tick');
+    }, '[ThreadCorral] Tick');
   },
 
   checkVictory(ctx: GameContext): boolean {
     const mb = ctx.state.miniBoss;
     if (!mb) return false;
-    const victory = mb.entities.every(e => e.hp <= 0);
+    const threads = mb.entities.filter(
+      e => e.variant === 'thread-a' || e.variant === 'thread-b'
+    );
+    const victory = threads.length > 0 && threads.every(e => e.hp <= 0);
     if (victory) {
       logger.info({
         miniBoss: 'race-condition',
         event: 'victory',
         lobbyId: ctx.lobbyId,
         timeRemaining: mb.timeRemaining,
-      }, '[RaceCondition] Victory condition met');
+      }, '[ThreadCorral] Victory condition met');
     }
     return victory;
   },

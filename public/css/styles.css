@@ -7744,22 +7744,38 @@ body.qa-hitbox-active .arena .bug::before {
   50% { transform: translateY(-4px); }
 }
 
-/* ── Variant: coolant pickup ── */
+/* ── Variant: frame (Stack Purge) ── */
 
-.mini-boss-entity.variant-coolant {
-  filter: drop-shadow(0 0 8px rgba(78, 205, 196, 0.5));
-  animation: mb-coolant-float 1.5s ease-in-out infinite;
+.mini-boss-entity.variant-frame {
+  filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.4));
+  animation: mb-frame-bob 1.2s ease-in-out infinite;
 }
 
-.mini-boss-entity.variant-coolant .mini-boss-entity-icon {
-  width: 32px;
-  height: 32px;
+.mini-boss-entity.variant-frame .mini-boss-entity-icon {
+  width: 36px;
+  height: 36px;
 }
 
-@keyframes mb-coolant-float {
-  0%, 100% { transform: translate(-50%, -50%) rotate(0deg); }
-  25% { transform: translate(-50%, -54%) rotate(3deg); }
-  75% { transform: translate(-50%, -46%) rotate(-3deg); }
+@keyframes mb-frame-bob {
+  0%, 100% { transform: translate(-50%, -50%) translateY(0); }
+  50% { transform: translate(-50%, -50%) translateY(-4px); }
+}
+
+/* ── Variant: recursive-frame (Stack Purge, dangerous) ── */
+
+.mini-boss-entity.variant-recursive-frame {
+  filter: drop-shadow(0 0 12px rgba(255, 107, 107, 0.7));
+  animation: mb-recursive-frame-pulse 0.8s ease-in-out infinite;
+}
+
+.mini-boss-entity.variant-recursive-frame .mini-boss-entity-icon {
+  width: 40px;
+  height: 40px;
+}
+
+@keyframes mb-recursive-frame-pulse {
+  0%, 100% { filter: drop-shadow(0 0 12px rgba(255, 107, 107, 0.7)); }
+  50% { filter: drop-shadow(0 0 20px rgba(255, 107, 107, 1)); }
 }
 
 /* ── Variant: threads (Race Condition) ── */
@@ -7814,18 +7830,39 @@ body.qa-hitbox-active .arena .bug::before {
   100% { transform: scale(2); opacity: 0; }
 }
 
-/* Collision flash */
+/* Overflow flash (Stack Purge) */
 
-.mini-boss-arena.collision-flash {
-  animation: mb-collision-flash 0.4s ease-out;
+.mini-boss-arena.overflow-flash {
+  animation: mb-overflow-flash 0.5s ease-out;
 }
 
-@keyframes mb-collision-flash {
+@keyframes mb-overflow-flash {
   0% {
     box-shadow:
-      inset 0 0 80px rgba(255, 230, 109, 0.3),
-      0 0 40px rgba(255, 230, 109, 0.3);
-    border-color: rgba(255, 230, 109, 0.6);
+      inset 0 0 80px rgba(255, 107, 107, 0.5),
+      0 0 40px rgba(255, 107, 107, 0.4);
+    border-color: rgba(255, 107, 107, 0.8);
+  }
+  100% {
+    box-shadow:
+      inset 0 0 60px rgba(0, 0, 0, 0.4),
+      0 0 24px rgba(78, 205, 196, 0.08);
+    border-color: rgba(78, 205, 196, 0.2);
+  }
+}
+
+/* Capture flash (Thread Corral) */
+
+.mini-boss-arena.capture-flash {
+  animation: mb-capture-flash 0.4s ease-out;
+}
+
+@keyframes mb-capture-flash {
+  0% {
+    box-shadow:
+      inset 0 0 80px rgba(78, 205, 196, 0.5),
+      0 0 40px rgba(78, 205, 196, 0.4);
+    border-color: rgba(78, 205, 196, 0.8);
   }
   100% {
     box-shadow:
@@ -7852,127 +7889,55 @@ body.qa-hitbox-active .arena .bug::before {
   height: 48px;
 }
 
-/* Sequence highlight for deadlock */
+/* Lock lit state (Lock Cascade) */
 
-.mini-boss-entity.sequence-highlight {
+.mini-boss-entity.lock-lit {
   filter: drop-shadow(0 0 16px rgba(255, 230, 109, 0.8));
-  transform: translate(-50%, -50%) scale(1.25);
+  transform: translate(-50%, -50%) scale(1.15);
   z-index: 5;
+  animation: mb-lock-pulse 0.8s ease-in-out infinite;
 }
 
-.mini-boss-arena.showing-sequence .mini-boss-entity {
+@keyframes mb-lock-pulse {
+  0%, 100% { filter: drop-shadow(0 0 16px rgba(255, 230, 109, 0.8)); }
+  50% { filter: drop-shadow(0 0 24px rgba(255, 230, 109, 1)); }
+}
+
+/* Wrong click shake (Lock Cascade) */
+
+.mini-boss-entity.shake-error {
+  animation: mb-shake-error 0.5s ease-out;
+}
+
+@keyframes mb-shake-error {
+  0%, 100% { transform: translate(-50%, -50%); }
+  15% { transform: translate(calc(-50% - 6px), -50%); }
+  30% { transform: translate(calc(-50% + 6px), -50%); }
+  45% { transform: translate(calc(-50% - 4px), -50%); }
+  60% { transform: translate(calc(-50% + 4px), -50%); }
+  75% { transform: translate(calc(-50% - 2px), -50%); }
+}
+
+/* ── Variant: sync-zone (Thread Corral) ── */
+
+.mini-boss-entity.variant-sync-zone {
   pointer-events: none;
-  opacity: 0.35;
-  filter: drop-shadow(0 0 4px rgba(168, 85, 247, 0.15)) brightness(0.6);
-}
-
-.mini-boss-arena.showing-sequence .mini-boss-entity.sequence-highlight {
-  opacity: 1;
-  filter: drop-shadow(0 0 20px rgba(255, 230, 109, 0.9)) brightness(1.1);
-}
-
-/* ── Heat Gauge (Stack Overflow) ── */
-
-.mini-boss-heat-gauge {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-  padding: 6px 14px;
-  background: rgba(255, 107, 107, 0.06);
-  border: 1px solid rgba(255, 107, 107, 0.12);
-  border-radius: 6px;
-  max-width: 360px;
-  width: 100%;
-}
-
-.heat-icon {
-  width: 14px;
-  height: 22px;
-  flex-shrink: 0;
-  opacity: 0.8;
-}
-
-.heat-icon svg { width: 100%; height: 100%; }
-
-.heat-track {
-  flex: 1;
-  height: 10px;
-  background: rgba(0, 0, 0, 0.4);
-  border-radius: 2px;
-  overflow: hidden;
-  position: relative;
-  border: 1px solid rgba(255, 107, 107, 0.15);
-}
-
-.heat-segments {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  gap: 1px;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.heat-segment {
-  flex: 1;
-  border-right: 1px solid rgba(0, 0, 0, 0.3);
-}
-
-.heat-segment:last-child { border-right: none; }
-
-.heat-fill {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  background: linear-gradient(90deg, #f59e0b, #ef4444, #dc2626);
-  transition: width 0.12s ease;
+  animation: mb-sync-zone-pulse 2s ease-in-out infinite;
   z-index: 0;
 }
 
-.heat-fill.overheated {
-  background: #ef4444;
-  animation: mb-heat-overheated 0.2s steps(2) infinite;
+.mini-boss-entity.variant-sync-zone .mini-boss-entity-icon {
+  width: 70px;
+  height: 70px;
+  opacity: 0.7;
 }
 
-@keyframes mb-heat-overheated {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+@keyframes mb-sync-zone-pulse {
+  0%, 100% { opacity: 0.7; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.06); }
 }
 
-.heat-threshold {
-  position: absolute;
-  right: 0;
-  top: -2px;
-  bottom: -2px;
-  width: 2px;
-  background: var(--red);
-  z-index: 2;
-  box-shadow: 0 0 4px rgba(255, 107, 107, 0.6);
-}
-
-.heat-value {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 7px;
-  color: var(--red);
-  min-width: 30px;
-  text-align: right;
-  letter-spacing: 0.5px;
-}
-
-.heat-lockout-badge {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 6px;
-  color: #0f0e17;
-  background: var(--red);
-  padding: 2px 6px;
-  border-radius: 2px;
-  letter-spacing: 1px;
-  animation: mb-heat-overheated 0.3s steps(2) infinite;
-}
-
-/* ── Boss HP (Deadlock) ── */
+/* ── Boss HP (Stack Purge + Lock Cascade) ── */
 
 .mini-boss-boss-hp {
   margin-bottom: 10px;
@@ -7998,10 +7963,10 @@ body.qa-hitbox-active .arena .bug::before {
   letter-spacing: 1px;
 }
 
-.mb-hp-round {
+.mb-hp-streak {
   font-family: 'Press Start 2P', monospace;
   font-size: 6px;
-  color: var(--muted);
+  color: var(--teal);
   letter-spacing: 1px;
 }
 
@@ -8043,28 +8008,6 @@ body.qa-hitbox-active .arena .bug::before {
     rgba(0, 0, 0, 0.1) 6px
   );
   pointer-events: none;
-}
-
-.mb-hp-phase {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 6px;
-  margin-top: 4px;
-  letter-spacing: 1px;
-  text-align: center;
-}
-
-.mb-hp-phase.phase-showing {
-  color: var(--yellow);
-  animation: mb-phase-blink 1s steps(2) infinite;
-}
-
-.mb-hp-phase.phase-input {
-  color: var(--teal);
-}
-
-@keyframes mb-phase-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
 }
 
 /* ── Result Overlay ── */
@@ -8284,7 +8227,7 @@ body.qa-hitbox-active .arena .bug::before {
   .mini-boss-title { font-size: 10px; }
   .mini-boss-entity-icon { width: 36px; height: 36px; }
   .mini-boss-entity.variant-boss .mini-boss-entity-icon { width: 44px; height: 44px; }
-  .mini-boss-heat-gauge, .mini-boss-boss-hp { max-width: 280px; }
+  .mini-boss-boss-hp { max-width: 280px; }
   .mini-boss-arena { max-width: 100%; }
 
   .reward-card { padding: 16px 20px; min-width: auto; width: 90%; }
