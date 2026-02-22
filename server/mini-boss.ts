@@ -165,9 +165,8 @@ function endMiniBoss(ctx: GameContext, victory: boolean): void {
       soloMode,
     });
 
-    state.miniBoss = undefined;
-
     if (state.playground) {
+      state.miniBoss = undefined;
       ctx.timers.lobby.setTimeout('playgroundReturn', () => {
         ctx.lifecycle.transition(state, 'lobby');
         ctx.events.emit({ type: 'playground-ready' });
@@ -177,6 +176,7 @@ function endMiniBoss(ctx: GameContext, victory: boolean): void {
 
     const delay = soloMode ? 100 : 5000;
     ctx.timers.lobby.setTimeout('miniBossRewardDone', () => {
+      state.miniBoss = undefined;
       roguelike.handleNodeComplete(ctx);
     }, delay);
   } else {

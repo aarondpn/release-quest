@@ -117,7 +117,7 @@ export function generateMap(seed: number, _difficulty: string = 'medium'): Rogue
   breakConsecutiveType(nodes, 'rest');
 
   // Validate: at least 1 shop reachable on every path from row 0 to boss
-  validateShopAccess(nodes, rowNodes, rng);
+  validateShopAccess(nodes, rowNodes);
 
   // Place elite and mini-boss nodes on some bug_level nodes
   placeElitesAndMiniBosses(nodes, rowNodes, rng);
@@ -140,7 +140,7 @@ function breakConsecutiveType(nodes: MapNode[], nodeType: MapNodeType): void {
   }
 }
 
-function validateShopAccess(nodes: MapNode[], rowNodes: string[][], rng: () => number): void {
+function validateShopAccess(nodes: MapNode[], rowNodes: string[][]): void {
   const nodeMap = new Map(nodes.map(n => [n.id, n]));
   const startIds = rowNodes[0];
 

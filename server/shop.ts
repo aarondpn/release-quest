@@ -3,7 +3,7 @@ import { createLobbyLogger } from './logger.ts';
 import * as boss from './boss.ts';
 import { startLevel } from './game.ts';
 import * as roguelike from './roguelike.ts';
-import type { GameContext, ShopItem } from './types.ts';
+import type { GameContext, ServerMessage, ShopItem } from './types.ts';
 
 interface ShopItemDef {
   id: string;
@@ -91,7 +91,7 @@ export function getShopItems(difficulty: string): ShopItem[] {
 }
 
 /** Build a shop-open message for a client that joins/reconnects mid-shop. */
-export function getShopSnapshot(state: import('./types.ts').GameState): Record<string, unknown> | null {
+export function getShopSnapshot(state: import('./types.ts').GameState): ServerMessage | null {
   if (state.phase !== 'shopping' || !state.shopOpenedAt || !state.shopDuration) return null;
 
   const elapsed = Date.now() - state.shopOpenedAt;

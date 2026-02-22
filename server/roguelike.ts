@@ -1,7 +1,7 @@
 import { ROGUELIKE_CONFIG, getDifficultyConfig } from './config.ts';
 import { generateMap, getReachableNodes, markNodeVisited } from './roguelike-map.ts';
 import { getPlayerScores } from './state.ts';
-import { startLevel } from './game.ts';
+import { startLevel, resetToLobby } from './game.ts';
 import { tallyVotes, isSoloMode } from './vote-utils.ts';
 import * as boss from './boss.ts';
 import * as shop from './shop.ts';
@@ -15,7 +15,7 @@ import type { GameContext } from './types.ts';
 
 export function startRoguelikeGame(ctx: GameContext): void {
   const { state } = ctx;
-  const seed = Date.now();
+  const seed = Date.now() ^ (Math.random() * 0x7fffffff | 0);
   state.roguelikeMap = generateMap(seed, state.difficulty);
 
   logger.info({ lobbyId: ctx.lobbyId, seed, nodes: state.roguelikeMap.nodes.length }, 'Roguelike map generated');
@@ -166,20 +166,25 @@ function navigateToNode(ctx: GameContext, nodeId: string): void {
 
   switch (node.type) {
     case 'bug_level':
-      state.level = node.row + 1;
-      ctx.lifecycle.transition(state, 'playing');
+      try {
+        state.level = node.row + 1;
+        ctx.lifecycle.transition(state, 'playing');
 
-      ctx.events.emit({
-        type: 'game-start',
-        level: state.level,
-        hp: state.hp,
-        score: state.score,
-        players: getPlayerScores(state),
-      });
+        ctx.events.emit({
+          type: 'game-start',
+          level: state.level,
+          hp: state.hp,
+          score: state.score,
+          players: getPlayerScores(state),
+        });
 
-      startLevel(ctx);
-      powerups.startDuckSpawning(ctx);
-      powerups.startHammerSpawning(ctx);
+        startLevel(ctx);
+        powerups.startDuckSpawning(ctx);
+        powerups.startHammerSpawning(ctx);
+      } catch (err) {
+        logger.error({ lobbyId: ctx.lobbyId, nodeId, err }, 'Failed to start bug level, resetting to lobby');
+        resetToLobby(ctx);
+      }
       break;
 
     case 'elite':

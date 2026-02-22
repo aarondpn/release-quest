@@ -151,9 +151,8 @@ function completeElite(ctx: GameContext): void {
     soloMode,
   });
 
-  state.eliteConfig = undefined;
-
   if (state.playground) {
+    state.eliteConfig = undefined;
     ctx.timers.lobby.setTimeout('playgroundReturn', () => {
       ctx.lifecycle.transition(state, 'lobby');
       ctx.events.emit({ type: 'playground-ready' });
@@ -163,6 +162,7 @@ function completeElite(ctx: GameContext): void {
 
   const delay = soloMode ? 100 : 5000;
   ctx.timers.lobby.setTimeout('eliteRewardDone', () => {
+    state.eliteConfig = undefined;
     roguelike.handleNodeComplete(ctx);
   }, delay);
 }

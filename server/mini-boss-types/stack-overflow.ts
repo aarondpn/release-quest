@@ -189,12 +189,14 @@ export const stackOverflowPlugin: MiniBossPlugin = {
       e => (e.variant === 'frame' || e.variant === 'recursive-frame') &&
         e.spawnedAt !== undefined && (now - e.spawnedAt!) >= FRAME_LIFETIME_MS
     );
-    let expiredCount = 0;
     for (const frame of expiredFrames) {
       data.bossHp = Math.min(BOSS_HP, data.bossHp + EXPIRED_FRAME_HEAL);
-      mb.entities = mb.entities.filter(e => e.id !== frame.id);
-      expiredCount++;
     }
+    if (expiredFrames.length > 0) {
+      const expiredIds = new Set(expiredFrames.map(e => e.id));
+      mb.entities = mb.entities.filter(e => !expiredIds.has(e.id));
+    }
+    const expiredCount = expiredFrames.length;
 
     // Check overflow threshold AFTER expiry
     const activeFrames = mb.entities.filter(e => e.variant === 'frame' || e.variant === 'recursive-frame');

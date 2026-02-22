@@ -7,6 +7,7 @@ export function initMapSend(fn: SendMessageFn): void { _sendMessage = fn; }
 // State for edge redraw on resize
 let _lastMap: RoguelikeMap | null = null;
 let _lastAvailableSet: Set<string> | null = null;
+let _lastNodeEls: Map<string, HTMLElement> | null = null;
 let _resizeHandler: (() => void) | null = null;
 
 const NODE_COLORS: Record<string, string> = {
@@ -150,15 +151,16 @@ export function renderMap(
   // Store state for resize redraws
   _lastMap = map;
   _lastAvailableSet = availableSet;
+  _lastNodeEls = nodeEls;
 
   // Draw edges (initial + on resize)
-  requestAnimationFrame(() => drawEdges(container, svgEl, map, availableSet));
+  requestAnimationFrame(() => drawEdges(container, svgEl, map, availableSet, nodeEls));
 
   // Add resize listener for edge redraw
   if (_resizeHandler) window.removeEventListener('resize', _resizeHandler);
   _resizeHandler = () => {
-    if (_lastMap && _lastAvailableSet) {
-      drawEdges(container, svgEl, _lastMap, _lastAvailableSet);
+    if (_lastMap && _lastAvailableSet && _lastNodeEls) {
+      drawEdges(container, svgEl, _lastMap, _lastAvailableSet, _lastNodeEls);
     }
   };
   window.addEventListener('resize', _resizeHandler);
@@ -169,31 +171,34 @@ function drawEdges(
   svgEl: SVGSVGElement,
   map: RoguelikeMap,
   availableSet: Set<string>,
+  nodeEls: Map<string, HTMLElement>,
 ): void {
   svgEl.innerHTML = '';
   const containerRect = container.getBoundingClientRect();
 
+  // Pre-compute all node center positions in one pass to avoid repeated layout thrashing
+  const nodePositions = new Map<string, { cx: number; cy: number }>();
+  for (const [id, el] of nodeEls) {
+    const rect = el.getBoundingClientRect();
+    nodePositions.set(id, {
+      cx: rect.left - containerRect.left + rect.width / 2,
+      cy: rect.top - containerRect.top + rect.height / 2,
+    });
+  }
+
   for (const node of map.nodes) {
-    const fromEl = container.querySelector<HTMLElement>(`[data-node-id="${node.id}"]`);
-    if (!fromEl) continue;
+    const fromPos = nodePositions.get(node.id);
+    if (!fromPos) continue;
 
     for (const connId of node.connections) {
-      const toEl = container.querySelector<HTMLElement>(`[data-node-id="${connId}"]`);
-      if (!toEl) continue;
-
-      const fromRect = fromEl.getBoundingClientRect();
-      const toRect = toEl.getBoundingClientRect();
-
-      const x1 = fromRect.left - containerRect.left + fromRect.width / 2;
-      const y1 = fromRect.top - containerRect.top + fromRect.height / 2;
-      const x2 = toRect.left - containerRect.left + toRect.width / 2;
-      const y2 = toRect.top - containerRect.top + toRect.height / 2;
+      const toPos = nodePositions.get(connId);
+      if (!toPos) continue;
 
       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', String(x1));
-      line.setAttribute('y1', String(y1));
-      line.setAttribute('x2', String(x2));
-      line.setAttribute('y2', String(y2));
+      line.setAttribute('x1', String(fromPos.cx));
+      line.setAttribute('y1', String(fromPos.cy));
+      line.setAttribute('x2', String(toPos.cx));
+      line.setAttribute('y2', String(toPos.cy));
 
       // Highlight edges to available nodes
       const toNode = map.nodes.find(n => n.id === connId);

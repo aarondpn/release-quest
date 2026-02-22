@@ -167,7 +167,7 @@ export const handleJoinLobby: MessageHandler = async ({ ws, msg, pid, playerInfo
     // If joining mid-shop, re-send the shop-open so the client renders the shop + timer
     const shopSnap = getShopSnapshot(ctx.state);
     if (shopSnap) {
-      network.send(ws, shopSnap as unknown as ServerMessage);
+      network.send(ws, shopSnap);
     }
 
     // Notify others in the lobby
@@ -270,7 +270,7 @@ export const handleJoinLobbyByCode: MessageHandler = async ({ ws, msg, pid, play
     // If joining mid-shop, re-send the shop-open so the client renders the shop + timer
     const shopSnap = getShopSnapshot(ctx.state);
     if (shopSnap) {
-      network.send(ws, shopSnap as unknown as ServerMessage);
+      network.send(ws, shopSnap);
     }
 
     network.broadcastToLobby(lobbyId, {

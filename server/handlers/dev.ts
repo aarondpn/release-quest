@@ -52,7 +52,7 @@ function initPlayground(ctx: GameContext): void {
 
   // Ensure we're in lobby phase
   if (state.phase !== 'lobby') {
-    state.phase = 'lobby';
+    ctx.lifecycle.transition(state, 'lobby');
   }
 }
 

@@ -241,8 +241,8 @@ const restVoteSchema = z.object({
 const miniBossClickSchema = z.object({
   type: z.literal('mini-boss-click'),
   entityId: z.string().max(64),
-  x: z.number().optional(),
-  y: z.number().optional(),
+  x: z.number().finite().min(0).max(800).optional(),
+  y: z.number().finite().min(0).max(500).optional(),
 }) satisfies ZodType<MiniBossClickMsg>;
 
 const encounterRewardContinueSchema = z.object({

@@ -1,4 +1,5 @@
 import { dom } from './state.ts';
+import { escapeHtml } from './utils.ts';
 import type { SendMessageFn } from './client-types.ts';
 import type { MiniBossEntity } from '../../shared/types.ts';
 
@@ -189,12 +190,12 @@ export function showMiniBossScreen(msg: {
   header.innerHTML =
     '<div class="mini-boss-icon">' + headerIcon + '</div>' +
     '<div class="mini-boss-title-row">' +
-      '<div class="mini-boss-title">' + msg.title + '</div>' +
+      '<div class="mini-boss-title">' + escapeHtml(msg.title) + '</div>' +
       '<div class="mini-boss-timer">' +
         '<span class="mini-boss-timer-text">' + msg.timeLimit + 's</span>' +
       '</div>' +
     '</div>' +
-    '<div class="mini-boss-desc">' + msg.description + '</div>';
+    '<div class="mini-boss-desc">' + escapeHtml(msg.description) + '</div>';
   screen.appendChild(header);
 
   // Boss HP bar for stack-overflow and deadlock
