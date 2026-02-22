@@ -1383,10 +1383,11 @@ export function handleMessageInternal(msg: ServerMessage): void {
         activeBuffs: msg.activeBuffs,
         eventModifierLabel: msg.eventModifierLabel,
       });
-      if (!msg.soloMode) {
-        // Timer will be updated via map-vote-update
+      if (!msg.soloMode && msg.voteTimeRemaining) {
+        showVoteTimer(msg.voteTimeRemaining);
+      } else {
+        hideVoteTimer();
       }
-      hideVoteTimer();
       break;
     }
 

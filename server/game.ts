@@ -104,6 +104,18 @@ export function startGame(ctx: GameContext): void {
   state.boss = null;
   state.persistentScoreMultiplier = undefined;
   state.gameStartedAt = Date.now();
+  // Clear stale roguelike/event state from previous game
+  state.roguelikeMap = undefined;
+  state.mapVotes = undefined;
+  state.voteDeadline = undefined;
+  state.eventModifiers = undefined;
+  state.eventVotes = undefined;
+  state.activeEventId = undefined;
+  state.eliteConfig = undefined;
+  state.miniBoss = undefined;
+  state.restVotes = undefined;
+  state.shopOpenedAt = undefined;
+  state.shopDuration = undefined;
 
   ctx.matchLog = createMatchLog(lobbyId);
   startRecording(lobbyId);

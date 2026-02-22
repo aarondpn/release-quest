@@ -1101,6 +1101,7 @@ export interface MapViewMsg {
   persistentScoreMultiplier: number;
   activeBuffs: string[];
   eventModifierLabel?: string;
+  voteTimeRemaining?: number;
 }
 
 export interface MapVoteUpdateMsg {

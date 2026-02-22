@@ -64,6 +64,10 @@ export function showMapView(ctx: GameContext): void {
 
   const visitedNodeIds = state.roguelikeMap.nodes.filter(n => n.visited).map(n => n.id);
 
+  if (!soloMode) {
+    state.voteDeadline = Date.now() + ROGUELIKE_CONFIG.voteTimerMs;
+  }
+
   ctx.events.emit({
     type: 'map-view',
     currentNodeId: state.roguelikeMap.currentNodeId,
@@ -76,10 +80,10 @@ export function showMapView(ctx: GameContext): void {
     persistentScoreMultiplier: state.persistentScoreMultiplier ?? 1,
     activeBuffs: [...buffSet],
     eventModifierLabel,
+    voteTimeRemaining: soloMode ? undefined : ROGUELIKE_CONFIG.voteTimerMs,
   });
 
   if (!soloMode) {
-    state.voteDeadline = Date.now() + ROGUELIKE_CONFIG.voteTimerMs;
     ctx.timers.lobby.setTimeout('mapVoteTimer', () => {
       resolveVote(ctx);
     }, ROGUELIKE_CONFIG.voteTimerMs);

@@ -6857,19 +6857,18 @@ body.qa-hitbox-active .arena .bug::before {
   cursor: default;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, opacity 0.25s ease;
   z-index: 2;
-  overflow: hidden;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
 
 .map-node::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  top: -1px;
+  left: -1px;
+  right: -1px;
   height: 3px;
   background: var(--node-color, rgba(255, 255, 255, 0.2));
-  border-radius: 13px 13px 0 0;
+  border-radius: 14px 14px 0 0;
   opacity: 0.9;
 }
 
@@ -6906,11 +6905,11 @@ body.qa-hitbox-active .arena .bug::before {
 }
 
 .map-vote-dot {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 0 4px currentColor;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 6px currentColor, 0 0 2px rgba(255, 255, 255, 0.3);
 }
 
 /* Node states */

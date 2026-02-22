@@ -246,16 +246,24 @@ export function highlightSelectedNode(nodeId: string): void {
   }
 }
 
+let _voteTimerInterval: ReturnType<typeof setInterval> | null = null;
+let _voteTimerEnd = 0;
+
 export function showVoteTimer(timeRemaining: number): void {
   const timerEl = document.getElementById('map-vote-timer');
   if (!timerEl) return;
 
   timerEl.classList.remove('hidden');
-  const seconds = Math.ceil(timeRemaining / 1000);
   const fill = timerEl.querySelector<HTMLElement>('.map-timer-fill');
   const text = timerEl.querySelector<HTMLElement>('.map-timer-text');
 
+  _voteTimerEnd = Date.now() + timeRemaining;
+
+  // Update text immediately
+  const seconds = Math.ceil(timeRemaining / 1000);
   if (text) text.textContent = `${seconds}s`;
+
+  // Animate the bar via CSS transition
   if (fill) {
     fill.style.transition = 'none';
     fill.style.width = '100%';
@@ -264,11 +272,23 @@ export function showVoteTimer(timeRemaining: number): void {
       fill.style.width = '0%';
     });
   }
+
+  // Count down the seconds text
+  if (_voteTimerInterval) clearInterval(_voteTimerInterval);
+  _voteTimerInterval = setInterval(() => {
+    const remaining = Math.max(0, _voteTimerEnd - Date.now());
+    const secs = Math.ceil(remaining / 1000);
+    if (text) text.textContent = `${secs}s`;
+    if (remaining <= 0) {
+      if (_voteTimerInterval) { clearInterval(_voteTimerInterval); _voteTimerInterval = null; }
+    }
+  }, 250);
 }
 
 export function hideVoteTimer(): void {
   const timerEl = document.getElementById('map-vote-timer');
   if (timerEl) timerEl.classList.add('hidden');
+  if (_voteTimerInterval) { clearInterval(_voteTimerInterval); _voteTimerInterval = null; }
 }
 
 const _SVG_INLINE = 'display:inline-block;vertical-align:middle;margin-right:3px';
