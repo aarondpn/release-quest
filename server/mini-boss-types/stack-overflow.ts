@@ -2,14 +2,14 @@ import { LOGICAL_W, LOGICAL_H } from '../../shared/constants.ts';
 import logger from '../logger.ts';
 import type { GameContext, MiniBossPlugin, MiniBossEntity } from '../types.ts';
 
-const BOSS_HP = 30;
+const BOSS_HP = 22;           // was 30 — too much for 40s solo; player hit 2 HP remaining
 const HEAT_PER_CLICK = 15;
-const HEAT_DECAY_PER_TICK = 8;
-const HEAT_DECAY_SLOW = 5; // below 25% boss HP
+const HEAT_DECAY_PER_TICK = 11; // was 8 — net heat/click was +7, now +4; slightly more forgiving pace
+const HEAT_DECAY_SLOW = 7;    // was 5 — below 25% boss HP
 const OVERHEAT_THRESHOLD = 100;
-const LOCKOUT_DURATION_MS = 3000;
-const BOSS_HEAL_ON_OVERHEAT = 8;
-const LOCKOUT_HEAT_RESET = 60;
+const LOCKOUT_DURATION_MS = 2500; // was 3000ms
+const BOSS_HEAL_ON_OVERHEAT = 4;  // was 8 — one overheat was costing ~3s of progress
+const LOCKOUT_HEAT_RESET = 55;
 const COOLANT_HEAT_REDUCTION = 30;
 const COOLANT_LIFETIME_MS = 3500;
 const COOLANT_SPAWN_INTERVAL = 5; // ticks (seconds)
