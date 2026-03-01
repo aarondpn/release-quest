@@ -62,7 +62,7 @@ export function endGame(ctx: GameContext, outcome: string, win: boolean): void {
     players: getPlayerScores(state),
   });
   const hasCustom = state.customConfig && Object.keys(state.customConfig).length > 0;
-  if (!hasCustom && ctx.playerInfo) stats.recordGameEnd(state, ctx.playerInfo, win);
+  if (!hasCustom && ctx.playerInfo) void stats.recordGameEnd(state, ctx.playerInfo, win);
 
   // Save recording for logged-in players
   if (recording && ctx.playerInfo) {

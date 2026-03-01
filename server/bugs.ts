@@ -141,8 +141,7 @@ export function spawnEliteMinion(ctx: GameContext): void {
   const minionCount = Object.values(state.bugs).filter(b => b.isMinion).length;
   if (minionCount >= ELITE_AMBIENT_CONFIG.maxOnScreen) return;
 
-  const row = state.level as keyof typeof ROGUELIKE_CONFIG.rowScaling;
-  const baseCfg = ROGUELIKE_CONFIG.rowScaling[row] || ROGUELIKE_CONFIG.rowScaling[5];
+  const baseCfg = ROGUELIKE_CONFIG.rowScaling[state.level] || ROGUELIKE_CONFIG.rowScaling[5];
 
   spawnEntity(ctx, {
     phaseCheck: 'playing',

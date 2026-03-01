@@ -297,7 +297,7 @@ function resolveEventVote(ctx: GameContext): void {
 
   ctx.events.emit({
     type: 'event-resolved',
-    eventId: state.activeEventId!,
+    eventId: state.activeEventId,
     chosenOptionId,
     hpChange,
     scoreChange,

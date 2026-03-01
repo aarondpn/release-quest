@@ -75,7 +75,7 @@ function resolveRestVote(ctx: GameContext): void {
   state.restVotes = undefined;
 
   // Majority wins; tie goes to 'rest' (healing) since it's first in the candidates list
-  const chosenOption = tallyVotes(votes, ['rest', 'train']) as 'rest' | 'train';
+  const chosenOption: 'rest' | 'train' = tallyVotes(votes, ['rest', 'train']) === 'train' ? 'train' : 'rest';
 
   const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
 

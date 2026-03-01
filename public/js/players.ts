@@ -7,8 +7,10 @@ export function addRemoteCursor(playerId: string, name: string, color: string, i
   if (playerId === clientState.myId) return;
   if (clientState.remoteCursors[playerId]) {
     const el = clientState.remoteCursors[playerId];
-    (el.querySelector('.remote-cursor-icon') as HTMLElement).innerHTML = renderIcon(icon || '\u{1F431}', 22);
-    (el.querySelector('.remote-cursor-name') as HTMLElement).textContent = name;
+    const iconEl = el.querySelector<HTMLElement>('.remote-cursor-icon');
+    if (iconEl) iconEl.innerHTML = renderIcon(icon || '\u{1F431}', 22);
+    const nameEl = el.querySelector<HTMLElement>('.remote-cursor-name');
+    if (nameEl) nameEl.textContent = name;
     el.style.color = color;
     return;
   }

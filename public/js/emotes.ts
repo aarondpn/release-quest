@@ -27,7 +27,7 @@ export function getEmoteBindings(): Map<string, string> {
     const raw = localStorage.getItem(BINDINGS_STORAGE_KEY);
     if (raw) {
       const defaults = getDefaultBindings();
-      const obj = JSON.parse(raw) as Record<string, string>;
+      const obj: Record<string, string> = JSON.parse(raw);
       const map = new Map<string, string>();
       for (const key of BINDING_KEYS) {
         if (obj[key] && EMOTE_MAP.has(obj[key])) {
@@ -374,7 +374,8 @@ export function initEmotes(sendFn: SendMessageFn): void {
 
   document.addEventListener('keydown', (e: KeyboardEvent) => {
     // Ignore if typing in an input/textarea
-    const tag = (e.target as HTMLElement).tagName;
+    if (!(e.target instanceof HTMLElement)) return;
+    const tag = e.target.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 
     const bindings = getEmoteBindings();

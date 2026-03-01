@@ -210,11 +210,13 @@ export function showDuckBuffOverlay(duration: number): void {
   // In replay mode skip real-time timers; duck-buff-expired handles removal
   if (clientState.isPlayback) return;
 
-  const timer = row.querySelector('.powerup-indicator-timer') as HTMLElement;
+  const timer = row.querySelector<HTMLElement>('.powerup-indicator-timer');
+  if (!timer) return;
+  const timerEl = timer;
   const endTime = Date.now() + duration;
   function tick() {
     const remaining = Math.max(0, endTime - Date.now());
-    timer.textContent = (remaining / 1000).toFixed(1) + 's';
+    timerEl.textContent = (remaining / 1000).toFixed(1) + 's';
   }
   tick();
   _duckBuffInterval = setInterval(tick, 100);
@@ -253,11 +255,13 @@ export function showHammerStunOverlay(duration: number): void {
   // In replay mode skip real-time timers; hammer-stun-expired handles removal
   if (clientState.isPlayback) return;
 
-  const timer = row.querySelector('.powerup-indicator-timer') as HTMLElement;
+  const timer = row.querySelector<HTMLElement>('.powerup-indicator-timer');
+  if (!timer) return;
+  const timerEl = timer;
   const endTime = Date.now() + duration;
   function tick() {
     const remaining = Math.max(0, endTime - Date.now());
-    timer.textContent = (remaining / 1000).toFixed(1) + 's';
+    timerEl.textContent = (remaining / 1000).toFixed(1) + 's';
   }
   tick();
   _hammerStunInterval = setInterval(tick, 100);

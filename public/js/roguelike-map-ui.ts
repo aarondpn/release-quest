@@ -80,7 +80,7 @@ export function renderMap(
   _players: Record<string, { name: string; color: string }>,
 ): void {
   const container = document.getElementById('map-nodes');
-  const svgEl = document.getElementById('map-edges') as unknown as SVGSVGElement;
+  const svgEl = document.querySelector<SVGSVGElement>('#map-edges');
   if (!container || !svgEl) return;
 
   container.innerHTML = '';

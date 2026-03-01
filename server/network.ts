@@ -65,7 +65,7 @@ export function broadcastToLobby(lobbyId: number, msg: ServerMessage, exclude?: 
         logger.error({ err, lobbyId }, 'Error broadcasting to lobby client');
       }
     }
-    recordEvent(lobbyId, msg);
+    recordEvent(lobbyId, { ...msg });
   } catch (err) {
     logger.error({ err, lobbyId }, 'Error in broadcastToLobby');
   }

@@ -15,7 +15,7 @@ export const handleSelectRole: MessageHandler = ({ pid, msg, playerInfo }) => {
   const player = state.players[pid];
   if (!player) return;
 
-  const role = msg.role as string | null;
+  const role = typeof msg.role === 'string' ? msg.role : null;
 
   // Validate role (null = no role / vanilla)
   if (role !== null && !isValidRole(role)) return;

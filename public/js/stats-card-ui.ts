@@ -349,7 +349,7 @@ export function downloadStatsCardPng(): void {
 
   const avatarResult = drawAvatar(c, icon, W / 2, 100, 36);
   if (avatarResult instanceof Promise) {
-    avatarResult.then(finalize);
+    void avatarResult.then(finalize);
   } else {
     finalize();
   }

@@ -141,13 +141,16 @@ export function openShop(msg: ShopOpenMsg): void {
   const feed = document.getElementById('shop-feed')!;
   feed.innerHTML = '';
 
-  const readyBtn = document.getElementById('shop-ready-btn') as HTMLButtonElement;
+  const readyBtn = document.querySelector<HTMLButtonElement>('#shop-ready-btn');
+  if (!readyBtn) return;
   readyBtn.disabled = false;
   readyBtn.textContent = 'READY';
   readyBtn.classList.remove('shop-ready-active');
 
-  const newBtn = readyBtn.cloneNode(true) as HTMLButtonElement;
-  readyBtn.parentNode!.replaceChild(newBtn, readyBtn);
+  const clonedBtn = readyBtn.cloneNode(true);
+  if (!(clonedBtn instanceof HTMLButtonElement)) throw new Error('Expected button element');
+  readyBtn.parentNode!.replaceChild(clonedBtn, readyBtn);
+  const newBtn = clonedBtn;
   newBtn.addEventListener('click', () => {
     sendMessage({ type: 'shop-ready' });
     newBtn.disabled = true;
@@ -278,7 +281,7 @@ function updateAffordability(score: number): void {
   for (const card of cards) {
     const btn = card.querySelector<HTMLButtonElement>('.shop-buy-btn');
     if (!btn) continue;
-    const cost = parseInt(btn.textContent!);
+    const cost = parseInt(btn.textContent);
     if (score < cost) {
       card.classList.add('cannot-afford');
       btn.disabled = true;

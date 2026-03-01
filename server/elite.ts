@@ -92,8 +92,7 @@ function spawnEliteWave(ctx: GameContext): void {
 
   elite.wavesSpawned++;
 
-  const row = state.level as keyof typeof ROGUELIKE_CONFIG.rowScaling;
-  const baseCfg = ROGUELIKE_CONFIG.rowScaling[row] || ROGUELIKE_CONFIG.rowScaling[5];
+  const baseCfg = ROGUELIKE_CONFIG.rowScaling[state.level] || ROGUELIKE_CONFIG.rowScaling[5];
 
   switch (elite.eliteType) {
     case 'super-heisenbug':
@@ -374,10 +373,11 @@ function spawnMegaPipeline(ctx: GameContext, baseCfg: LevelConfigEntry): void {
   if (elite) {
     const chain = state.pipelineChains[chainId];
     chain.onSegmentKilled = () => {
-      if ((elite.data!.pipelineRegens as number) >= MAX_PIPELINE_REGENS) return;
+      const currentRegens = Number(elite.data!.pipelineRegens) || 0;
+      if (currentRegens >= MAX_PIPELINE_REGENS) return;
       if (state.phase !== 'playing') return;
-      elite.data!.pipelineRegens = (elite.data!.pipelineRegens as number) + 1;
-      const regenIndex = elite.data!.pipelineRegens as number;
+      elite.data!.pipelineRegens = currentRegens + 1;
+      const regenIndex = currentRegens + 1;
       headBug._timers.setTimeout(`regen_${regenIndex}`, () => {
         const ch = state.pipelineChains[chainId];
         if (!ch || state.phase !== 'playing') return;
@@ -483,7 +483,7 @@ function spawnMemoryLeakCluster(ctx: GameContext, baseCfg: LevelConfigEntry): vo
         });
         state.bugsRemaining++;
         state.bugsSpawned++;
-        elite.data!.leakDuplications = ((elite.data!.leakDuplications as number) || 0) + 1;
+        elite.data!.leakDuplications = (Number(elite.data!.leakDuplications) || 0) + 1;
       }, 6000);
     }
   }

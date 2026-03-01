@@ -9,8 +9,21 @@ import { createGameLifecycle } from './game-lifecycle.ts';
 import { broadcastToLobby, send, getWsForPlayer, removeClientFromLobby, wsToLobby } from './network.ts';
 import { stopRecording } from './recording.ts';
 import { cleanupChatForLobby } from './handlers/chat.ts';
-import type { ServerMessage } from '../shared/messages.ts';
-import type { LobbyMemory, PlayerData, DbLobbyRow, CustomDifficultyConfig, GameTimers, GameMode } from './types.ts';
+import type { LobbyMemory, PlayerData, DbLobbyRow, CustomDifficultyConfig, GameTimers, GameMode, ServerMessage } from './types.ts';
+
+/** Type-safe bridge from event bus (Record<string, unknown>) to ServerMessage */
+function asServerMessage(msg: Record<string, unknown>): ServerMessage {
+  // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion
+  return msg as unknown as ServerMessage;
+}
+
+/** Extract lobby settings fields with type safety from DB row's Record<string, unknown> */
+function extractLobbySettings(settings: Record<string, unknown>): { difficulty: string; customConfig: CustomDifficultyConfig | undefined; gameMode: GameMode } {
+  const difficulty = typeof settings.difficulty === 'string' ? settings.difficulty : 'medium';
+  const customConfig = (typeof settings.customConfig === 'object' && settings.customConfig !== null ? settings.customConfig : undefined) as CustomDifficultyConfig | undefined;
+  const gameMode: GameMode = settings.gameMode === 'roguelike' || settings.gameMode === 'classic' ? settings.gameMode : 'roguelike';
+  return { difficulty, customConfig, gameMode };
+}
 
 function createGameTimers(): GameTimers {
   return { lobby: createTimerBag(), boss: createTimerBag() };
@@ -21,7 +34,7 @@ function createLobbyMemory(lobbyId: number, difficulty: string, customConfig?: C
   const state = createGameState(difficulty, customConfig, gameMode);
   const events = createEventBus();
   // Trust boundary: event bus payload is always a valid ServerMessage
-  events.on((msg) => broadcastToLobby(lobbyId, msg as unknown as ServerMessage));
+  events.on((msg) => broadcastToLobby(lobbyId, asServerMessage(msg)));
 
   const lifecycle = createGameLifecycle();
 
@@ -137,10 +150,8 @@ export async function joinLobby(lobbyId: number, playerId: string, playerData: P
 
   // Ensure in-memory state exists
   if (!lobbies.has(lobbyId)) {
-    const difficulty = (lobby.settings as any)?.difficulty || 'medium';
-    const customConfig = (lobby.settings as any)?.customConfig;
-    const gameMode = (lobby.settings as any)?.gameMode || 'roguelike';
-    lobbies.set(lobbyId, createLobbyMemory(lobbyId, difficulty, customConfig, gameMode));
+    const s = extractLobbySettings(lobby.settings);
+    lobbies.set(lobbyId, createLobbyMemory(lobbyId, s.difficulty, s.customConfig, s.gameMode));
   }
 
   const mem = lobbies.get(lobbyId)!;
@@ -153,7 +164,7 @@ export async function leaveLobby(lobbyId: number, playerId: string): Promise<voi
   try {
     await db.leaveLobby(lobbyId, playerId);
   } catch (err: unknown) {
-    logger.error({ err: (err as Error).message, lobbyId, playerId }, 'DB leaveLobby failed');
+    logger.error({ err: err instanceof Error ? err.message : String(err), lobbyId, playerId }, 'DB leaveLobby failed');
   }
   playerToLobby.delete(playerId);
 

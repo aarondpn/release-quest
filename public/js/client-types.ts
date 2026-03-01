@@ -9,7 +9,7 @@ export type {
 
 export type { ClientMessage, ServerMessage, LobbyListEntry } from '../../shared/messages.ts';
 
-import type { ClientMessage, LobbyListEntry } from '../../shared/messages.ts';
+import type { ClientMessage, LobbyListEntry, ServerMessage } from '../../shared/messages.ts';
 import type { WirePlayer, BugVariant, QuestEntry, RecordingEvent, MouseMoveEvent, AuthUser, GameMode, RoguelikeMap } from '../../shared/types.ts';
 
 export type SendMessageFn = (msg: ClientMessage) => void;
@@ -70,7 +70,7 @@ export interface PlaybackRecording {
   score: number;
   difficulty: string;
   players?: RecordingPlayerEntry[];
-  events: RecordingEvent[];
+  events: RecordingEvent<ServerMessage>[];
   mouseMovements?: MouseMoveEvent[];
 }
 

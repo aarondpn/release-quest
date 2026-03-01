@@ -89,7 +89,7 @@ export function updateStartButtonState(): void {
       continue;
     }
     btn.style.display = '';
-    (btn as HTMLButtonElement).disabled = !isMod;
+    if (btn instanceof HTMLButtonElement) btn.disabled = !isMod;
     btn.title = isMod ? '' : 'Only the lobby host can start the game';
   }
   const hint = document.getElementById('lobby-host-hint');
@@ -98,7 +98,11 @@ export function updateStartButtonState(): void {
 
 export function showGameOverScreen(score: number, level: number, playerList: ScoreboardEntry[]): void {
   if (playerList && playerList.length >= 2) {
-    showWalkout(playerList as WalkoutPlayer[], () => {
+    const walkoutPlayers: WalkoutPlayer[] = playerList.map(p => ({
+      name: p.name, icon: p.icon || '', score: p.score,
+      color: p.color, bugsSquashed: p.bugsSquashed,
+    }));
+    showWalkout(walkoutPlayers, () => {
       hideAllScreens();
       document.getElementById('final-score')!.textContent = String(score);
       document.getElementById('final-level')!.textContent = String(level);
@@ -118,7 +122,11 @@ export function showGameOverScreen(score: number, level: number, playerList: Sco
 
 export function showWinScreen(score: number, playerList: ScoreboardEntry[]): void {
   if (playerList && playerList.length >= 2) {
-    showWalkout(playerList as WalkoutPlayer[], () => {
+    const walkoutPlayers: WalkoutPlayer[] = playerList.map(p => ({
+      name: p.name, icon: p.icon || '', score: p.score,
+      color: p.color, bugsSquashed: p.bugsSquashed,
+    }));
+    showWalkout(walkoutPlayers, () => {
       hideAllScreens();
       document.getElementById('win-score')!.textContent = String(score);
       renderScoreboard(document.getElementById('win-scoreboard')!, playerList);
@@ -222,8 +230,10 @@ function renderLiveDashboard(): void {
     row.querySelector('.live-dash-rank')!.textContent = String(rank);
 
     // Update name & icon
-    (row.querySelector('.live-dash-icon') as HTMLElement).innerHTML = renderIcon(p.icon || '', 10);
-    (row.querySelector('.live-dash-name-text') as HTMLElement).textContent = escapeHtml(p.name);
+    const dashIcon = row.querySelector<HTMLElement>('.live-dash-icon');
+    if (dashIcon) dashIcon.innerHTML = renderIcon(p.icon || '', 10);
+    const dashName = row.querySelector<HTMLElement>('.live-dash-name-text');
+    if (dashName) dashName.textContent = escapeHtml(p.name);
 
     // Update role icon
     const roleEl = row.querySelector<HTMLElement>('.live-dash-role');

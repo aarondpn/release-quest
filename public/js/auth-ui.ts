@@ -6,8 +6,8 @@ let _sendMessage: SendMessageFn | null = null;
 export function initAuthSend(fn: SendMessageFn): void { _sendMessage = fn; }
 
 export function updateAuthUI(): void {
-  const guestView = dom.authStatus!.querySelector('.auth-guest-view') as HTMLElement | null;
-  const loggedInView = dom.authStatus!.querySelector('.auth-logged-in-view') as HTMLElement | null;
+  const guestView = dom.authStatus!.querySelector<HTMLElement>('.auth-guest-view');
+  const loggedInView = dom.authStatus!.querySelector<HTMLElement>('.auth-logged-in-view');
 
   if (clientState.isLoggedIn && clientState.authUser) {
     guestView?.classList.add('hidden');
@@ -43,8 +43,8 @@ export function showAuthError(msg: string): void {
 }
 
 export function switchTab(tab: string): void {
-  dom.authTabs!.querySelectorAll('.auth-tab').forEach(t => {
-    (t as HTMLElement).classList.toggle('active', (t as HTMLElement).dataset.tab === tab);
+  dom.authTabs!.querySelectorAll<HTMLElement>('.auth-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tab);
   });
   if (tab === 'login') {
     dom.authLoginForm!.classList.remove('hidden');

@@ -104,7 +104,7 @@ export function connect(): void {
       try {
         let msg: ServerMessage;
         try {
-          msg = JSON.parse(event.data) as ServerMessage;
+          msg = JSON.parse(event.data);
         } catch (parseErr) {
           console.error('Failed to parse message:', parseErr);
           return;
@@ -645,7 +645,7 @@ export function handleMessageInternal(msg: ServerMessage): void {
           dur = 3500 * 0.4;
         } else {
           const cfg: Record<number, number> = { 1: 5000, 2: 3800, 3: 2800 };
-          dur = (cfg[parseInt(dom.levelEl!.textContent!)] || 5000) * 0.4;
+          dur = (cfg[parseInt(dom.levelEl!.textContent)] || 5000) * 0.4;
         }
         el.style.transition = 'left ' + dur + 'ms linear, top ' + dur + 'ms linear';
         el.style.left = pos.x + 'px';
@@ -749,7 +749,7 @@ export function handleMessageInternal(msg: ServerMessage): void {
       const effectiveRequiredTime = requiredTime / msg.holderCount;
       const elapsed = Date.now() - holdStartTime;
 
-      const fill = progressBar!.querySelector<HTMLElement>('.memory-leak-progress-fill')!;
+      const fill = progressBar.querySelector<HTMLElement>('.memory-leak-progress-fill')!;
       const currentProgress = Math.min(100, (elapsed / effectiveRequiredTime) * 100);
       const remainingTime = Math.max(0, effectiveRequiredTime - elapsed);
 
@@ -788,7 +788,7 @@ export function handleMessageInternal(msg: ServerMessage): void {
       if (msg.players) {
         for (const [playerId, score] of Object.entries(msg.players)) {
           if (clientState.players[playerId]) {
-            clientState.players[playerId].score = score as number;
+            clientState.players[playerId].score = score;
           }
         }
       }
@@ -940,7 +940,7 @@ export function handleMessageInternal(msg: ServerMessage): void {
       updateHUD(msg.score);
       if (msg.players) {
         for (const [pid, score] of Object.entries(msg.players)) {
-          if (clientState.players[pid]) clientState.players[pid].score = score as number;
+          if (clientState.players[pid]) clientState.players[pid].score = score;
         }
       }
       updateLiveDashboard();
@@ -1010,10 +1010,10 @@ export function handleMessageInternal(msg: ServerMessage): void {
         const bugEl = clientState.bugs[bid];
         if (bugEl) {
           bugEl.style.transition = 'none';
-          const pxPos = logicalToPixel((pos as any).x, (pos as any).y);
+          const pxPos = logicalToPixel(pos.x, pos.y);
           bugEl.style.left = pxPos.x + 'px';
           bugEl.style.top = pxPos.y + 'px';
-          clientState.bugPositions[bid] = { x: (pos as any).x, y: (pos as any).y };
+          clientState.bugPositions[bid] = { x: pos.x, y: pos.y };
           requestAnimationFrame(() => { bugEl.style.transition = ''; });
           bugEl.classList.add('pipeline-reset');
           setTimeout(() => bugEl.classList.remove('pipeline-reset'), 500);
@@ -1619,7 +1619,7 @@ function checkJoinUrl(): void {
 
 function showPasswordModal(code: string, errorMsg: string | null): void {
   const modal = document.getElementById('password-modal')!;
-  const input = document.getElementById('password-modal-input') as HTMLInputElement;
+  const input = document.querySelector<HTMLInputElement>('#password-modal-input')!;
   const error = document.getElementById('password-modal-error')!;
   const submitBtn = document.getElementById('password-modal-submit')!;
   const cancelBtn = document.getElementById('password-modal-cancel')!;

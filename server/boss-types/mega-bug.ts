@@ -3,7 +3,23 @@ import { randomPosition } from '../state.ts';
 import { setupBossWander, setupMinionSpawning } from '../boss.ts';
 import * as bugs from '../bugs.ts';
 import logger from '../logger.ts';
-import type { GameContext, BossTypePluginInterface, BossClickResult, BossState, DifficultyConfig } from '../types.ts';
+import type { GameContext, GameState, BossTypePluginInterface, BossClickResult, BossState, DifficultyConfig } from '../types.ts';
+
+interface MegaBugData {
+  phase: number;
+  phaseName: string;
+  invulnUntil: number;
+  shieldActive: boolean;
+  shieldCycleStart: number;
+  screenWipeLastAt: number;
+  _shieldCyclePausedAt?: number;
+  _screenWipePausedAt?: number;
+}
+
+function getMegaBugData(data: Record<string, unknown>): MegaBugData {
+  // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion
+  return data as unknown as MegaBugData;
+}
 
 const PHASE_NAMES: Record<number, string> = {
   1: 'The Sprint',
@@ -44,8 +60,8 @@ export const megaBugPlugin: BossTypePluginInterface = {
   onTick(ctx: GameContext): void {
     const { state } = ctx;
     if (!state.boss) return;
-    const data = state.boss.data;
-    const phase = data.phase as number;
+    const data = getMegaBugData(state.boss.data);
+    const phase = data.phase;
 
     // Phase 1: Apply base regen
     if (phase === 1) {
@@ -66,13 +82,13 @@ export const megaBugPlugin: BossTypePluginInterface = {
     if (phase === 2) {
       const phases = getPhaseConfig(ctx);
       const now = Date.now();
-      const cycleStart = data.shieldCycleStart as number;
+      const cycleStart = data.shieldCycleStart;
       const elapsed = now - cycleStart;
       const cycleDuration = phases.shieldInterval + phases.shieldDuration;
       const cyclePos = elapsed % cycleDuration;
 
       const shouldBeShielded = cyclePos >= phases.shieldInterval;
-      const wasShielded = data.shieldActive as boolean;
+      const wasShielded = data.shieldActive;
 
       if (shouldBeShielded !== wasShielded) {
         data.shieldActive = shouldBeShielded;
@@ -83,7 +99,7 @@ export const megaBugPlugin: BossTypePluginInterface = {
       }
 
       // Regen: double rate while shielded
-      const regenMult = (data.shieldActive as boolean) ? 2 : 1;
+      const regenMult = data.shieldActive ? 2 : 1;
       const oldHp = state.boss.hp;
       state.boss.hp = Math.min(state.boss.hp + state.boss.regenPerSecond * regenMult, state.boss.maxHp);
       const regenAmount = state.boss.hp - oldHp;
@@ -101,7 +117,7 @@ export const megaBugPlugin: BossTypePluginInterface = {
     if (phase === 3) {
       const phases = getPhaseConfig(ctx);
       const now = Date.now();
-      const lastWipe = data.screenWipeLastAt as number;
+      const lastWipe = data.screenWipeLastAt;
       if (now - lastWipe >= phases.screenWipeInterval) {
         data.screenWipeLastAt = now;
         doScreenWipe(ctx, phases.screenWipeBugCount);
@@ -112,20 +128,20 @@ export const megaBugPlugin: BossTypePluginInterface = {
   onClick(ctx: GameContext, pid: string, damage: number): BossClickResult {
     const { state } = ctx;
     if (!state.boss) return { damageApplied: 0, blocked: false, points: 0 };
-    const data = state.boss.data;
+    const data = getMegaBugData(state.boss.data);
 
     // Check invulnerability during phase transition
-    if ((data.invulnUntil as number) > Date.now()) {
+    if (data.invulnUntil > Date.now()) {
       return { damageApplied: 0, blocked: true, points: 0, emit: { reason: 'invuln' } };
     }
 
     // Phase 2 shield blocks damage
-    if ((data.phase as number) === 2 && (data.shieldActive as boolean)) {
+    if (data.phase === 2 && data.shieldActive) {
       return { damageApplied: 0, blocked: true, points: 0, emit: { reason: 'shield' } };
     }
 
     // Phase 3: minions on screen reduce boss damage
-    if ((data.phase as number) === 3) {
+    if (data.phase === 3) {
       const minionCount = Object.values(state.bugs).filter(b => b.isMinion).length;
       const phases = getPhaseConfig(ctx);
       const reduction = Math.min(minionCount * phases.phase3DamageReductionPerMinion, phases.phase3MaxDamageReduction);
@@ -139,7 +155,7 @@ export const megaBugPlugin: BossTypePluginInterface = {
     // Check phase transitions
     const phases = getPhaseConfig(ctx);
     const hpRatio = state.boss.hp / state.boss.maxHp;
-    const currentPhase = data.phase as number;
+    const currentPhase = data.phase;
 
     if (currentPhase === 1 && hpRatio <= phases.phase2Threshold) {
       transitionPhase(ctx, 2);
@@ -153,7 +169,7 @@ export const megaBugPlugin: BossTypePluginInterface = {
   onStun(ctx: GameContext): void {
     const { state } = ctx;
     if (!state.boss) return;
-    const data = state.boss.data;
+    const data = getMegaBugData(state.boss.data);
     data._shieldCyclePausedAt = Date.now();
     data._screenWipePausedAt = Date.now();
   },
@@ -161,17 +177,17 @@ export const megaBugPlugin: BossTypePluginInterface = {
   onResume(ctx: GameContext): void {
     const { state } = ctx;
     if (!state.boss) return;
-    const data = state.boss.data;
+    const data = getMegaBugData(state.boss.data);
     const now = Date.now();
 
     if (data._shieldCyclePausedAt && data.shieldCycleStart) {
-      const pauseDuration = now - (data._shieldCyclePausedAt as number);
-      data.shieldCycleStart = (data.shieldCycleStart as number) + pauseDuration;
+      const pauseDuration = now - data._shieldCyclePausedAt;
+      data.shieldCycleStart = data.shieldCycleStart + pauseDuration;
     }
 
     if (data._screenWipePausedAt && data.screenWipeLastAt) {
-      const pauseDuration = now - (data._screenWipePausedAt as number);
-      data.screenWipeLastAt = (data.screenWipeLastAt as number) + pauseDuration;
+      const pauseDuration = now - data._screenWipePausedAt;
+      data.screenWipeLastAt = data.screenWipeLastAt + pauseDuration;
     }
 
     delete data._shieldCyclePausedAt;
@@ -185,8 +201,8 @@ export const megaBugPlugin: BossTypePluginInterface = {
   getSpawnRate(ctx: GameContext): number {
     const { state } = ctx;
     if (!state.boss) return 4000;
-    const data = state.boss.data;
-    const phase = data.phase as number;
+    const data = getMegaBugData(state.boss.data);
+    const phase = data.phase;
     const phases = getPhaseConfig(ctx);
 
     if (phase === 2) return state.boss.currentSpawnRate / phases.phase2SpawnRateMultiplier;
@@ -197,18 +213,18 @@ export const megaBugPlugin: BossTypePluginInterface = {
   getMaxOnScreen(ctx: GameContext): number {
     const { state } = ctx;
     if (!state.boss) return 3;
-    const data = state.boss.data;
-    const phase = data.phase as number;
+    const data = getMegaBugData(state.boss.data);
+    const phase = data.phase;
     const phases = getPhaseConfig(ctx);
 
     if (phase === 3) return Math.ceil(state.boss.currentMaxOnScreen * phases.phase3MaxOnScreenMultiplier);
     return state.boss.currentMaxOnScreen;
   },
 
-  broadcastFields(ctx: GameContext): Record<string, unknown> {
+  broadcastFields(ctx: GameContext | { state: GameState }): Record<string, unknown> {
     const { state } = ctx;
     if (!state.boss) return {};
-    const data = state.boss.data;
+    const data = getMegaBugData(state.boss.data);
     const fields: Record<string, unknown> = {
       bossType: 'mega-bug',
       phase: data.phase,
@@ -216,7 +232,7 @@ export const megaBugPlugin: BossTypePluginInterface = {
       shieldActive: data.shieldActive,
       invulnUntil: data.invulnUntil,
     };
-    if ((data.phase as number) === 3) {
+    if (data.phase === 3) {
       const minionCount = Object.values(state.bugs).filter(b => b.isMinion).length;
       const phases = getPhaseConfig(ctx);
       fields.damageReduction = Math.round(Math.min(minionCount * phases.phase3DamageReductionPerMinion, phases.phase3MaxDamageReduction) * 100);
@@ -225,14 +241,14 @@ export const megaBugPlugin: BossTypePluginInterface = {
   },
 };
 
-function getPhaseConfig(ctx: GameContext): DifficultyConfig['boss']['bossPhases'] {
+function getPhaseConfig(ctx: GameContext | { state: GameState }): DifficultyConfig['boss']['bossPhases'] {
   return getDifficultyConfig(ctx.state.difficulty, ctx.state.customConfig).boss.bossPhases;
 }
 
 function transitionPhase(ctx: GameContext, newPhase: number): void {
   const { state } = ctx;
   if (!state.boss) return;
-  const data = state.boss.data;
+  const data = getMegaBugData(state.boss.data);
   const bossConfig = getDifficultyConfig(state.difficulty, state.customConfig).boss;
   const phases = bossConfig.bossPhases;
 

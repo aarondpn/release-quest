@@ -120,7 +120,10 @@ export function setupWebSocketConnection(
   ws.on('message', async (raw: RawData) => {
     let msg: any;
     try {
-      msg = JSON.parse(raw.toString());
+      const text = Buffer.isBuffer(raw) ? raw.toString('utf-8')
+        : raw instanceof ArrayBuffer ? new TextDecoder().decode(raw)
+        : Buffer.concat(raw).toString('utf-8');
+      msg = JSON.parse(text);
     } catch {
       return;
     }

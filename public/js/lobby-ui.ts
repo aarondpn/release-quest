@@ -34,7 +34,7 @@ export function renderLobbyList(lobbies: LobbyListEntry[]): void {
   }
   dom.lobbyList!.innerHTML = lobbies.map(l => {
     const full = l.player_count >= l.max_players;
-    const difficulty = (l.settings && l.settings.difficulty as string) || 'medium';
+    const difficulty = (l.settings && String(l.settings.difficulty)) || 'medium';
     const statusClass = l.started ? 'lobby-list-status-playing' : 'lobby-list-status-waiting';
     const statusLabel = l.started ? 'In Game' : 'Waiting';
     const difficultyLabel = difficulty.charAt(0).toUpperCase() + difficulty.slice(1);

@@ -25,6 +25,15 @@ interface ThreadCorralData {
   };
 }
 
+function toData(raw: Record<string, unknown>): ThreadCorralData {
+  // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion
+  return raw as unknown as ThreadCorralData;
+}
+
+function fromData(data: ThreadCorralData): Record<string, unknown> {
+  return { ...data };
+}
+
 function randomSyncZonePos(): { x: number; y: number } {
   const pad = 80;
   return {
@@ -99,7 +108,7 @@ export const raceConditionPlugin: MiniBossPlugin = {
         captureFlash: false,
       },
     };
-    mb.data = data as unknown as Record<string, unknown>;
+    mb.data = fromData(data);
 
     const posA = { x: LOGICAL_W * 0.2, y: LOGICAL_H * 0.3 + Math.random() * LOGICAL_H * 0.4 };
     const posB = { x: LOGICAL_W * 0.8, y: LOGICAL_H * 0.3 + Math.random() * LOGICAL_H * 0.4 };
@@ -159,7 +168,7 @@ export const raceConditionPlugin: MiniBossPlugin = {
     const mb = ctx.state.miniBoss;
     if (!mb || !clickPos) return;
 
-    const data = mb.data as unknown as ThreadCorralData;
+    const data = toData(mb.data);
     const threads = mb.entities.filter(
       e => (e.variant === 'thread-a' || e.variant === 'thread-b') && e.hp > 0
     );
@@ -253,7 +262,7 @@ export const raceConditionPlugin: MiniBossPlugin = {
     const mb = ctx.state.miniBoss;
     if (!mb) return;
 
-    const data = mb.data as unknown as ThreadCorralData;
+    const data = toData(mb.data);
     data.tickCount++;
 
     const threads = mb.entities.filter(

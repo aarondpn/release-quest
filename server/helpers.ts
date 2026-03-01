@@ -1,5 +1,5 @@
 import type { WebSocket } from 'ws';
-import type { GameContext, PlayerInfo } from './types.ts';
+import type { GameContext, PlayerInfo, MatchLog } from './types.ts';
 import logger from './logger.ts';
 import * as network from './network.ts';
 import * as lobby from './lobby.ts';
@@ -19,7 +19,7 @@ export function getCtxForPlayer(pid: string, playerInfo: Map<string, PlayerInfo>
   // matchLog must persist across ctx instances so logging survives level transitions
   Object.defineProperty(ctx, 'matchLog', {
     get() { return mem.matchLog; },
-    set(v: unknown) { mem.matchLog = v as GameContext['matchLog']; },
+    set(v: MatchLog | null) { mem.matchLog = v; },
     enumerable: true,
   });
   return ctx;
@@ -65,11 +65,11 @@ export async function handleLeaveLobby(ws: WebSocket, pid: string, lobbyId: numb
 export function augmentLobbies(lobbies: any[]): any[] {
   return lobbies.map(l => {
     const mem = lobby.lobbies.get(l.id);
-    const customConfig = (l.settings as any)?.customConfig;
+    const customConfig = l.settings?.customConfig;
     const hasCustomSettings = !!(customConfig && Object.keys(customConfig).length > 0);
-    const hasPassword = !!(l.settings as any)?.password;
+    const hasPassword = !!l.settings?.password;
     // Strip password from settings before sending to clients
-    const { password: _pw, ...safeSettings } = (l.settings as any) || {};
+    const { password: _pw, ...safeSettings } = l.settings || {};
     return { ...l, settings: safeSettings, started: mem ? mem.state.phase !== 'lobby' : false, hasCustomSettings, hasPassword, spectatorCount: lobby.getSpectators(l.id).size };
   });
 }

@@ -1,5 +1,5 @@
 import type { MessageHandler } from './types.ts';
-import type { PlayerInfo, ServerMessage } from '../types.ts';
+import type { PlayerInfo, ServerMessage, DbLobbyRow } from '../types.ts';
 import { LOGICAL_W, LOGICAL_H } from '../../shared/constants.ts';
 import { createPlayerLogger, createLobbyLogger } from '../logger.ts';
 import { getStateSnapshot } from '../state.ts';
@@ -9,6 +9,22 @@ import * as lobby from '../lobby.ts';
 import { getCtxForPlayer, handleLeaveLobby as doLeaveLobby, broadcastLobbyList, augmentLobbies } from '../helpers.ts';
 import { initChatForLobby, getLobbyModerator, removePlayerFromChat, broadcastSystemChat } from './chat.ts';
 import { getShopSnapshot } from '../shop.ts';
+
+/** Bridge from getStateSnapshot (Record<string, unknown>) spread into message objects */
+function asServerMessage(msg: Record<string, unknown>): ServerMessage {
+  // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion
+  return msg as unknown as ServerMessage;
+}
+
+function getLobbyPassword(lobbyRow: DbLobbyRow): string | undefined {
+  const pw = lobbyRow.settings.password;
+  return typeof pw === 'string' ? pw : undefined;
+}
+
+function stripPasswordFromSettings(lobbyRow: DbLobbyRow): Record<string, unknown> {
+  const { password: _pw, ...safe } = lobbyRow.settings;
+  return safe;
+}
 
 // Returns true if the same registered user (by userId) or the same guest session
 // (by guestToken) already occupies a player or spectator slot in the lobby under
@@ -73,11 +89,8 @@ export const handleCreateLobby: MessageHandler = ({ ws, msg, pid, wss }) => {
     }
     playerLogger.info({ lobbyName, lobbyCode: result.lobby!.code, difficulty: finalDifficulty, customConfig: !!customConfig }, 'Lobby created');
     initChatForLobby(result.lobby!.id, pid);
-    const lobbyResponse = { ...result.lobby! } as any;
-    if (lobbyResponse.settings?.password) {
-      lobbyResponse.settings = { ...lobbyResponse.settings };
-      delete lobbyResponse.settings.password;
-    }
+    const lobbyRow = result.lobby!;
+    const lobbyResponse = { ...lobbyRow, settings: stripPasswordFromSettings(lobbyRow), started: false, player_count: lobbyRow.player_count ?? 1 };
     network.send(ws, { type: 'lobby-created', lobby: lobbyResponse });
     // Broadcast updated lobby list to all unattached clients
     broadcastLobbyList(wss);
@@ -96,7 +109,7 @@ export const handleJoinLobby: MessageHandler = async ({ ws, msg, pid, playerInfo
   // Check password before joining
   const targetLobby = await db.getLobby(lobbyId);
   if (targetLobby) {
-    const lobbyPassword = (targetLobby.settings as any)?.password;
+    const lobbyPassword = getLobbyPassword(targetLobby);
     if (lobbyPassword) {
       if (!msg.password) {
         network.send(ws, { type: 'lobby-error', message: 'This lobby requires a password', needsPassword: true, lobbyId });
@@ -155,14 +168,14 @@ export const handleJoinLobby: MessageHandler = async ({ ws, msg, pid, playerInfo
     lobbyLogger.info({ playerId: pid, playerCount: Object.keys(ctx.state.players).length }, 'Player joined lobby');
 
     // Send lobby-joined with full game state (getStateSnapshot returns Record<string, unknown>)
-    network.send(ws, {
+    network.send(ws, asServerMessage({
       type: 'lobby-joined',
       lobbyId,
       lobbyName: result.lobby!.name,
       lobbyCode: result.lobby!.code,
       creatorId: getLobbyModerator(lobbyId),
       ...getStateSnapshot(ctx.state),
-    } as ServerMessage);
+    }));
 
     // If joining mid-shop, re-send the shop-open so the client renders the shop + timer
     const shopSnap = getShopSnapshot(ctx.state);
@@ -199,7 +212,7 @@ export const handleJoinLobbyByCode: MessageHandler = async ({ ws, msg, pid, play
     }
 
     // Check password
-    const lobbyPassword = (targetLobby.settings as any)?.password;
+    const lobbyPassword = getLobbyPassword(targetLobby);
     if (lobbyPassword) {
       if (!msg.password) {
         network.send(ws, { type: 'lobby-error', message: 'This lobby requires a password', needsPassword: true, lobbyId: targetLobby.id, code });
@@ -258,14 +271,14 @@ export const handleJoinLobbyByCode: MessageHandler = async ({ ws, msg, pid, play
     const lobbyLogger = createLobbyLogger(lobbyId.toString());
     lobbyLogger.info({ playerId: pid, code, playerCount: Object.keys(ctx.state.players).length }, 'Player joined via invite code');
 
-    network.send(ws, {
+    network.send(ws, asServerMessage({
       type: 'lobby-joined',
       lobbyId,
       lobbyName: result.lobby!.name,
       lobbyCode: result.lobby!.code,
       creatorId: getLobbyModerator(lobbyId),
       ...getStateSnapshot(ctx.state),
-    } as ServerMessage);
+    }));
 
     // If joining mid-shop, re-send the shop-open so the client renders the shop + timer
     const shopSnap = getShopSnapshot(ctx.state);
@@ -329,13 +342,13 @@ export const handleJoinSpectate: MessageHandler = async ({ ws, msg, pid, playerI
     return;
   }
 
-  const lobbyPassword = (targetLobby.settings as any)?.password;
-  if (lobbyPassword) {
+  const lobbyPw = getLobbyPassword(targetLobby);
+  if (lobbyPw) {
     if (!msg.password) {
       network.send(ws, { type: 'lobby-error', message: 'This lobby requires a password', needsPassword: true, lobbyId });
       return;
     }
-    if (msg.password !== lobbyPassword) {
+    if (msg.password !== lobbyPw) {
       network.send(ws, { type: 'lobby-error', message: 'Incorrect password', needsPassword: true, lobbyId });
       return;
     }
@@ -354,15 +367,15 @@ export const handleJoinSpectate: MessageHandler = async ({ ws, msg, pid, playerI
   const lobbyLogger = createLobbyLogger(lobbyId.toString());
   lobbyLogger.info({ playerId: pid }, 'Spectator joined lobby');
 
-  const { password: _pw, ...safeSettings } = (targetLobby.settings as any) || {};
-  network.send(ws, {
+  const safeSettings = stripPasswordFromSettings(targetLobby);
+  network.send(ws, asServerMessage({
     type: 'spectator-joined',
     lobbyId,
     lobbyName: targetLobby.name,
     lobbyCode: targetLobby.code,
-    hasCustomSettings: !!(safeSettings?.customConfig && Object.keys(safeSettings.customConfig).length > 0),
+    hasCustomSettings: !!(safeSettings.customConfig && typeof safeSettings.customConfig === 'object' && Object.keys(safeSettings.customConfig).length > 0),
     ...getStateSnapshot(mem.state),
-  } as ServerMessage);
+  }));
 
   const specSet = lobby.getSpectators(lobbyId);
   network.broadcastToLobby(lobbyId, {

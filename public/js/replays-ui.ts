@@ -38,7 +38,7 @@ function fetchRecording(id: number): void {
       startPlayback(recording);
     })
     .catch(err => {
-      showError((err as Error).message || 'Failed to load replay', ERROR_LEVELS.ERROR);
+      showError(err instanceof Error ? err.message : 'Failed to load replay', ERROR_LEVELS.ERROR);
     });
 }
 
@@ -123,8 +123,10 @@ export function handleRecordingShared(msg: RecordingSharedMsg): void {
       btn.textContent = 'UNSHARE';
       btn.className = 'btn btn-small replay-unshare-btn';
       btn.classList.remove('btn-copied');
-      const newBtn = btn.cloneNode(true) as HTMLButtonElement;
-      btn.parentNode?.replaceChild(newBtn, btn);
+      const cloned = btn.cloneNode(true);
+      if (!(cloned instanceof HTMLButtonElement)) throw new Error('Expected button element');
+      btn.parentNode?.replaceChild(cloned, btn);
+      const newBtn = cloned;
       newBtn.addEventListener('click', () => {
         const id = parseInt(newBtn.dataset.recordingId!, 10);
         if (_sendMessage) _sendMessage({ type: 'unshare-recording', id });

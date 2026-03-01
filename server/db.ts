@@ -216,11 +216,11 @@ function generateCode(): string {
 
 export async function createLobby(name: string, maxPlayers: number, settings: Record<string, unknown> = {}): Promise<DbLobbyRow> {
   const code = generateCode();
-  const result = await pool.query(
+  const result = await pool.query<DbLobbyRow>(
     `INSERT INTO lobbies (name, code, max_players, settings) VALUES ($1, $2, $3, $4) RETURNING *`,
     [name, code, maxPlayers, JSON.stringify(settings)]
   );
-  return result.rows[0] as DbLobbyRow;
+  return result.rows[0];
 }
 
 export async function joinLobby(lobbyId: number, playerId: string, playerName: string): Promise<void> {
@@ -239,7 +239,7 @@ export async function leaveLobby(lobbyId: number, playerId: string): Promise<voi
 }
 
 export async function listLobbies(): Promise<DbLobbyRow[]> {
-  const result = await pool.query(`
+  const result = await pool.query<DbLobbyRow>(`
     SELECT l.*, COUNT(lp.player_id)::int AS player_count
     FROM lobbies l
     LEFT JOIN lobby_players lp ON l.id = lp.lobby_id
@@ -247,23 +247,23 @@ export async function listLobbies(): Promise<DbLobbyRow[]> {
     GROUP BY l.id
     ORDER BY l.created_at DESC
   `);
-  return result.rows as DbLobbyRow[];
+  return result.rows;
 }
 
 export async function getLobby(lobbyId: number): Promise<DbLobbyRow | null> {
-  const result = await pool.query(`SELECT * FROM lobbies WHERE id = $1`, [lobbyId]);
-  return (result.rows[0] as DbLobbyRow) || null;
+  const result = await pool.query<DbLobbyRow>(`SELECT * FROM lobbies WHERE id = $1`, [lobbyId]);
+  return result.rows[0] ?? null;
 }
 
 export async function getLobbyByCode(code: string): Promise<DbLobbyRow | null> {
-  const result = await pool.query(`
+  const result = await pool.query<DbLobbyRow>(`
     SELECT l.*, COUNT(lp.player_id)::int AS player_count
     FROM lobbies l
     LEFT JOIN lobby_players lp ON l.id = lp.lobby_id
     WHERE l.code = $1 AND l.status = 'active'
     GROUP BY l.id
   `, [code]);
-  return (result.rows[0] as DbLobbyRow) || null;
+  return result.rows[0] ?? null;
 }
 
 export async function deleteLobby(lobbyId: number): Promise<void> {
@@ -271,28 +271,28 @@ export async function deleteLobby(lobbyId: number): Promise<void> {
 }
 
 export async function getLobbyPlayerCount(lobbyId: number): Promise<number> {
-  const result = await pool.query(
+  const result = await pool.query<{ count: number }>(
     `SELECT COUNT(*)::int AS count FROM lobby_players WHERE lobby_id = $1`,
     [lobbyId]
   );
-  return (result.rows[0] as { count: number }).count;
+  return result.rows[0].count;
 }
 
 export async function getActiveLobbyCount(): Promise<number> {
-  const result = await pool.query(
+  const result = await pool.query<{ count: number }>(
     `SELECT COUNT(*)::int AS count FROM lobbies WHERE status = 'active'`
   );
-  return (result.rows[0] as { count: number }).count;
+  return result.rows[0].count;
 }
 
 // User & session queries
 
 export async function createUser(username: string, passwordHash: string, displayName: string, icon: string): Promise<DbUserRow> {
-  const result = await pool.query(
+  const result = await pool.query<DbUserRow>(
     `INSERT INTO users (username, password_hash, display_name, icon) VALUES ($1, $2, $3, $4) RETURNING *`,
     [username, passwordHash, displayName, icon]
   );
-  return result.rows[0] as DbUserRow;
+  return result.rows[0];
 }
 
 export async function updateUserIcon(userId: number, icon: string): Promise<void> {
@@ -304,8 +304,8 @@ export async function updateUserDisplayName(userId: number, displayName: string)
 }
 
 export async function getUserByUsername(username: string): Promise<DbUserRow | null> {
-  const result = await pool.query(`SELECT * FROM users WHERE username = $1`, [username]);
-  return (result.rows[0] as DbUserRow) || null;
+  const result = await pool.query<DbUserRow>(`SELECT * FROM users WHERE username = $1`, [username]);
+  return result.rows[0] ?? null;
 }
 
 export async function createSession(token: string, userId: number, expiresAt: Date): Promise<void> {
@@ -316,13 +316,13 @@ export async function createSession(token: string, userId: number, expiresAt: Da
 }
 
 export async function getSessionWithUser(token: string): Promise<DbSessionRow | null> {
-  const result = await pool.query(
+  const result = await pool.query<DbSessionRow>(
     `SELECT s.token, s.expires_at, u.id AS user_id, u.username, u.display_name, u.icon
      FROM sessions s JOIN users u ON s.user_id = u.id
      WHERE s.token = $1 AND s.expires_at > NOW()`,
     [token]
   );
-  return (result.rows[0] as DbSessionRow) || null;
+  return result.rows[0] ?? null;
 }
 
 export async function deleteSession(token: string): Promise<void> {
@@ -339,11 +339,11 @@ export async function createGuestSession(token: string, name: string, icon: stri
 }
 
 export async function getGuestSession(token: string): Promise<DbGuestSessionRow | null> {
-  const result = await pool.query(
+  const result = await pool.query<DbGuestSessionRow>(
     `SELECT * FROM guest_sessions WHERE token = $1 AND expires_at > NOW()`,
     [token]
   );
-  return (result.rows[0] as DbGuestSessionRow) || null;
+  return result.rows[0] ?? null;
 }
 
 export async function updateGuestSession(token: string, name: string, icon: string): Promise<void> {
@@ -380,18 +380,18 @@ export async function recordGameStats(userId: number, score: number, won: boolea
 }
 
 export async function getUserStats(userId: number): Promise<LeaderboardEntry | null> {
-  const result = await pool.query(`
+  const result = await pool.query<LeaderboardEntry>(`
     SELECT u.display_name, u.icon, s.games_played, s.games_won, s.games_lost,
            s.total_score, s.highest_score, s.bugs_squashed
     FROM user_stats s
     JOIN users u ON s.user_id = u.id
     WHERE s.user_id = $1
   `, [userId]);
-  return (result.rows[0] as LeaderboardEntry) || null;
+  return result.rows[0] ?? null;
 }
 
 export async function getLeaderboard(limit: number = 10): Promise<LeaderboardEntry[]> {
-  const result = await pool.query(`
+  const result = await pool.query<LeaderboardEntry>(`
     SELECT u.display_name, u.icon, s.games_played, s.games_won, s.games_lost,
            s.total_score, s.highest_score, s.bugs_squashed
     FROM user_stats s
@@ -399,12 +399,12 @@ export async function getLeaderboard(limit: number = 10): Promise<LeaderboardEnt
     ORDER BY s.total_score DESC
     LIMIT $1
   `, [limit]);
-  return result.rows as LeaderboardEntry[];
+  return result.rows;
 }
 
 export async function getLeaderboardByPeriod(limit: number = 10, period: 'weekly' | 'monthly'): Promise<LeaderboardEntry[]> {
   const interval = period === 'weekly' ? '7 days' : '30 days';
-  const result = await pool.query(`
+  const result = await pool.query<LeaderboardEntry>(`
     SELECT u.display_name, u.icon,
            COUNT(*)::int as games_played,
            SUM(CASE WHEN gr.outcome = 'won' THEN 1 ELSE 0 END)::int as games_won,
@@ -419,7 +419,7 @@ export async function getLeaderboardByPeriod(limit: number = 10, period: 'weekly
     ORDER BY total_score DESC
     LIMIT $1
   `, [limit]);
-  return result.rows as LeaderboardEntry[];
+  return result.rows;
 }
 
 // Recording queries
@@ -431,12 +431,12 @@ export async function saveRecording(
   mouseMovements: MouseMoveEvent[]
 ): Promise<void> {
   // 1. Insert metadata row
-  const recResult = await pool.query(
+  const recResult = await pool.query<{ id: number }>(
     `INSERT INTO game_recordings (user_id, duration_ms, outcome, score, difficulty, player_count)
      VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
     [userId, meta.duration_ms, meta.outcome, meta.score, meta.difficulty, meta.player_count]
   );
-  const recordingId = recResult.rows[0].id as number;
+  const recordingId = recResult.rows[0].id;
 
   // 2. Batch insert players
   if (meta.players.length > 0) {
@@ -464,7 +464,7 @@ export async function saveRecording(
       let idx = 1;
       for (const ev of batch) {
         evPlaceholders.push(`($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3})`);
-        const eventType = (ev.msg.type as string) || 'unknown';
+        const eventType = typeof ev.msg.type === 'string' ? ev.msg.type : 'unknown';
         evValues.push(recordingId, ev.t, eventType, JSON.stringify(ev.msg));
         idx += 4;
       }
@@ -507,23 +507,23 @@ export async function saveRecording(
 }
 
 export async function getRecordingsList(userId: number): Promise<RecordingRow[]> {
-  const recResult = await pool.query(
+  const recResult = await pool.query<RecordingRow>(
     `SELECT id, user_id, recorded_at, duration_ms, outcome, score, difficulty, player_count, share_token
      FROM game_recordings WHERE user_id = $1
      ORDER BY recorded_at DESC`,
     [userId]
   );
-  const recordings = recResult.rows as RecordingRow[];
+  const recordings = recResult.rows;
 
   if (recordings.length > 0) {
     const ids = recordings.map(r => r.id);
-    const playersResult = await pool.query(
+    const playersResult = await pool.query<RecordingPlayerRow>(
       `SELECT id, recording_id, player_id, name, icon, color, score
        FROM recording_players WHERE recording_id = ANY($1)`,
       [ids]
     );
     const playersByRecording = new Map<number, RecordingPlayerRow[]>();
-    for (const row of playersResult.rows as RecordingPlayerRow[]) {
+    for (const row of playersResult.rows) {
       const list = playersByRecording.get(row.recording_id) ?? [];
       list.push(row);
       playersByRecording.set(row.recording_id, list);
@@ -541,47 +541,47 @@ export async function getRecordingsList(userId: number): Promise<RecordingRow[]>
 }
 
 export async function getRecording(id: number, userId: number): Promise<RecordingRow | null> {
-  const recResult = await pool.query(
+  const recResult = await pool.query<RecordingRow>(
     `SELECT id, user_id, recorded_at, duration_ms, outcome, score, difficulty, player_count
      FROM game_recordings WHERE id = $1 AND user_id = $2`,
     [id, userId]
   );
   if (recResult.rows.length === 0) return null;
-  const rec = recResult.rows[0] as RecordingRow;
+  const rec = recResult.rows[0];
 
   const [playersResult, eventsResult, mouseResult] = await Promise.all([
-    pool.query(
+    pool.query<RecordingPlayerRow>(
       `SELECT id, recording_id, player_id, name, icon, color, score
        FROM recording_players WHERE recording_id = $1`,
       [id]
     ),
-    pool.query(
+    pool.query<RecordingEventRow>(
       `SELECT id, recording_id, t, type, data
        FROM recording_events WHERE recording_id = $1 ORDER BY t`,
       [id]
     ),
-    pool.query(
+    pool.query<RecordingMouseMoveRow>(
       `SELECT id, recording_id, player_id, t, x, y
        FROM recording_mouse_moves WHERE recording_id = $1 ORDER BY t`,
       [id]
     ),
   ]);
 
-  rec.players = playersResult.rows as RecordingPlayerRow[];
-  rec.events = eventsResult.rows as RecordingEventRow[];
-  rec.mouseMovements = mouseResult.rows as RecordingMouseMoveRow[];
+  rec.players = playersResult.rows;
+  rec.events = eventsResult.rows;
+  rec.mouseMovements = mouseResult.rows;
 
   return rec;
 }
 
 export async function shareRecording(id: number, userId: number): Promise<string | null> {
   // Check ownership and return existing token if already shared
-  const existing = await pool.query(
+  const existing = await pool.query<{ share_token: string | null }>(
     `SELECT share_token FROM game_recordings WHERE id = $1 AND user_id = $2`,
     [id, userId]
   );
   if (existing.rows.length === 0) return null;
-  if (existing.rows[0].share_token) return existing.rows[0].share_token as string;
+  if (existing.rows[0].share_token) return existing.rows[0].share_token;
 
   const token = crypto.randomBytes(16).toString('hex');
   await pool.query(
@@ -608,67 +608,67 @@ export async function expireOldShares(): Promise<number> {
 }
 
 export async function getRecordingByToken(token: string): Promise<RecordingRow | null> {
-  const recResult = await pool.query(
+  const recResult = await pool.query<RecordingRow>(
     `SELECT id, user_id, recorded_at, duration_ms, outcome, score, difficulty, player_count, share_token
      FROM game_recordings WHERE share_token = $1`,
     [token]
   );
   if (recResult.rows.length === 0) return null;
-  const rec = recResult.rows[0] as RecordingRow;
+  const rec = recResult.rows[0];
 
   const [playersResult, eventsResult, mouseResult] = await Promise.all([
-    pool.query(
+    pool.query<RecordingPlayerRow>(
       `SELECT id, recording_id, player_id, name, icon, color, score
        FROM recording_players WHERE recording_id = $1`,
       [rec.id]
     ),
-    pool.query(
+    pool.query<RecordingEventRow>(
       `SELECT id, recording_id, t, type, data
        FROM recording_events WHERE recording_id = $1 ORDER BY t`,
       [rec.id]
     ),
-    pool.query(
+    pool.query<RecordingMouseMoveRow>(
       `SELECT id, recording_id, player_id, t, x, y
        FROM recording_mouse_moves WHERE recording_id = $1 ORDER BY t`,
       [rec.id]
     ),
   ]);
 
-  rec.players = playersResult.rows as RecordingPlayerRow[];
-  rec.events = eventsResult.rows as RecordingEventRow[];
-  rec.mouseMovements = mouseResult.rows as RecordingMouseMoveRow[];
+  rec.players = playersResult.rows;
+  rec.events = eventsResult.rows;
+  rec.mouseMovements = mouseResult.rows;
 
   return rec;
 }
 
 export async function getRecordingsCount(): Promise<number> {
-  const result = await pool.query(`SELECT COUNT(*)::int AS count FROM game_recordings`);
-  return result.rows[0]?.count || 0;
+  const result = await pool.query<{ count: number }>(`SELECT COUNT(*)::int AS count FROM game_recordings`);
+  return result.rows[0]?.count ?? 0;
 }
 
 export async function getReplayEventsCount(): Promise<number> {
-  const result = await pool.query(`SELECT COUNT(*)::int AS count FROM recording_events`);
-  return result.rows[0]?.count || 0;
+  const result = await pool.query<{ count: number }>(`SELECT COUNT(*)::int AS count FROM recording_events`);
+  return result.rows[0]?.count ?? 0;
 }
 
 export async function getReplayMouseEventsCount(): Promise<number> {
-  const result = await pool.query(`SELECT COUNT(*)::int AS count FROM recording_mouse_moves`);
-  return result.rows[0]?.count || 0;
+  const result = await pool.query<{ count: number }>(`SELECT COUNT(*)::int AS count FROM recording_mouse_moves`);
+  return result.rows[0]?.count ?? 0;
 }
 
 // Currency queries
 
 export async function getCurrencyBalance(userId: number): Promise<CurrencyBalance> {
-  const result = await pool.query(
+  const result = await pool.query<{ balance: number; total_earned: number }>(
     `SELECT balance, total_earned FROM user_currency WHERE user_id = $1`,
     [userId]
   );
   if (result.rows.length === 0) return { balance: 0, totalEarned: 0 };
-  return { balance: result.rows[0].balance as number, totalEarned: result.rows[0].total_earned as number };
+  return { balance: result.rows[0].balance, totalEarned: result.rows[0].total_earned };
 }
 
 export async function addCurrency(userId: number, amount: number): Promise<number> {
-  const result = await pool.query(`
+  const result = await pool.query<{ balance: number }>(`
     INSERT INTO user_currency (user_id, balance, total_earned, updated_at)
     VALUES ($1, $2, $2, NOW())
     ON CONFLICT (user_id) DO UPDATE SET
@@ -677,17 +677,17 @@ export async function addCurrency(userId: number, amount: number): Promise<numbe
       updated_at = NOW()
     RETURNING balance
   `, [userId, amount]);
-  return result.rows[0].balance as number;
+  return result.rows[0].balance;
 }
 
 // Quest queries
 
 export async function getActiveQuests(userId: number): Promise<UserQuestRow[]> {
-  const result = await pool.query(
+  const result = await pool.query<UserQuestRow>(
     `SELECT * FROM user_quests WHERE user_id = $1 AND period_end >= CURRENT_DATE ORDER BY quest_type, id`,
     [userId]
   );
-  return result.rows as UserQuestRow[];
+  return result.rows;
 }
 
 export async function assignQuests(userId: number, quests: { questKey: string; questType: string; target: number; reward: number; periodStart: Date; periodEnd: Date }[]): Promise<UserQuestRow[]> {
@@ -700,11 +700,11 @@ export async function assignQuests(userId: number, quests: { questKey: string; q
     values.push(userId, q.questKey, q.questType, q.target, q.reward, q.periodStart, q.periodEnd);
     idx += 7;
   }
-  const result = await pool.query(
+  const result = await pool.query<UserQuestRow>(
     `INSERT INTO user_quests (user_id, quest_key, quest_type, target, reward, period_start, period_end) VALUES ${placeholders.join(', ')} RETURNING *`,
     values
   );
-  return result.rows as UserQuestRow[];
+  return result.rows;
 }
 
 export async function updateQuestProgress(questId: number, progress: number, completed: boolean): Promise<void> {
@@ -731,11 +731,11 @@ export async function cleanupExpiredQuests(): Promise<number> {
 // Inventory queries
 
 export async function getUserInventory(userId: number): Promise<InventoryItem[]> {
-  const result = await pool.query(
+  const result = await pool.query<InventoryItem>(
     `SELECT item_id, category, purchased_at FROM user_inventory WHERE user_id = $1 ORDER BY purchased_at`,
     [userId]
   );
-  return result.rows as InventoryItem[];
+  return result.rows;
 }
 
 export async function userOwnsItem(userId: number, itemId: string): Promise<boolean> {
@@ -750,11 +750,11 @@ export async function purchaseItem(userId: number, itemId: string, category: str
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const balResult = await client.query(
+    const balResult = await client.query<{ balance: number }>(
       `SELECT balance FROM user_currency WHERE user_id = $1 FOR UPDATE`,
       [userId]
     );
-    const balance = balResult.rows.length > 0 ? (balResult.rows[0].balance as number) : 0;
+    const balance = balResult.rows.length > 0 ? balResult.rows[0].balance : 0;
     if (balance < cost) {
       await client.query('ROLLBACK');
       return { success: false, error: 'Insufficient balance' };
@@ -776,12 +776,12 @@ export async function purchaseItem(userId: number, itemId: string, category: str
       `INSERT INTO user_inventory (user_id, item_id, category) VALUES ($1, $2, $3)`,
       [userId, itemId, category]
     );
-    const newBalResult = await client.query(
+    const newBalResult = await client.query<{ balance: number }>(
       `SELECT balance FROM user_currency WHERE user_id = $1`,
       [userId]
     );
     await client.query('COMMIT');
-    return { success: true, newBalance: newBalResult.rows[0].balance as number };
+    return { success: true, newBalance: newBalResult.rows[0].balance };
   } catch {
     await client.query('ROLLBACK');
     return { success: false, error: 'Purchase failed' };
@@ -791,7 +791,7 @@ export async function purchaseItem(userId: number, itemId: string, category: str
 }
 
 export async function getShopSeenRotation(userId: number): Promise<string | null> {
-  const result = await pool.query(
+  const result = await pool.query<{ shop_seen_rotation: string | null }>(
     `SELECT shop_seen_rotation FROM users WHERE id = $1`,
     [userId]
   );

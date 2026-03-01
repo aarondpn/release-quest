@@ -33,7 +33,8 @@ export function initShopSend(fn: SendMessageFn): void {
   const categoryBtns = document.querySelectorAll<HTMLElement>('.shop-category-btn');
   categoryBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-      const cat = btn.dataset.category as 'avatar' | 'emote';
+      const cat = btn.dataset.category;
+      if (cat !== 'avatar' && cat !== 'emote') return;
       if (cat === _activeCategory) return;
       _activeCategory = cat;
       categoryBtns.forEach(b => b.classList.toggle('active', b === btn));
@@ -47,11 +48,11 @@ export function requestShopCatalog(): void {
 }
 
 export function handleShopCatalog(msg: ShopCatalogMsg): void {
-  _shopItems = (msg.rotatingItems || []) as ShopCatalogItem[];
-  _rotationEndUtc = (msg.rotationEndUtc as string) || null;
-  _ownedItems = new Set((msg.owned || []) as string[]);
+  _shopItems = msg.rotatingItems || [];
+  _rotationEndUtc = msg.rotationEndUtc || null;
+  _ownedItems = new Set(msg.owned || []);
   _catalogReceived = true;
-  clientState.byteCoinsBalance = (msg.balance as number) ?? 0;
+  clientState.byteCoinsBalance = msg.balance ?? 0;
   // Only show badge if server says new AND shop is not currently open
   const shopVisible = dom.shopPanel && !dom.shopPanel.classList.contains('hidden');
   if (!shopVisible) _isNewRotation = !!msg.isNewRotation;
@@ -62,17 +63,17 @@ export function handleShopCatalog(msg: ShopCatalogMsg): void {
 }
 
 export function handleShopPurchaseResult(msg: ShopPurchaseResultMsg): void {
-  if (msg.success) {
-    _ownedItems.add(msg.itemId as string);
-    clientState.byteCoinsBalance = msg.newBalance as number;
+  if (msg.success && msg.itemId !== undefined && msg.newBalance !== undefined) {
+    _ownedItems.add(msg.itemId);
+    clientState.byteCoinsBalance = msg.newBalance;
     const formatted = clientState.byteCoinsBalance.toLocaleString();
     if (dom.shopBalanceAmount) dom.shopBalanceAmount.textContent = formatted;
     if (dom.qtBalance) dom.qtBalance.textContent = formatted;
     if (dom.profileCoinBalance) dom.profileCoinBalance.textContent = formatted;
     renderShopGrid();
-    showPurchaseToast(msg.itemId as string);
+    showPurchaseToast(msg.itemId);
   } else {
-    showPurchaseError((msg.error as string) || 'Purchase failed');
+    showPurchaseError(msg.error || 'Purchase failed');
   }
 }
 
@@ -177,7 +178,7 @@ function renderShopGrid(): void {
   const isGuest = !clientState.isLoggedIn;
   if (dom.shopGuestLock) dom.shopGuestLock.classList.add('hidden');
   // Hide balance for guests
-  const balanceEl = document.querySelector('.shop-cosmetic-balance') as HTMLElement | null;
+  const balanceEl = document.querySelector<HTMLElement>('.shop-cosmetic-balance');
   if (balanceEl) balanceEl.style.display = isGuest ? 'none' : '';
 
   if (_shopItems.length === 0) {

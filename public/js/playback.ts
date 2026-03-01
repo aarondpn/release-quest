@@ -6,7 +6,7 @@ import { addRemoteCursor, clearRemoteCursors } from './players.ts';
 import { removeDuckBuffOverlay } from './vfx.ts';
 import { showLobbyBrowser } from './lobby-ui.ts';
 import { handleMessageInternal } from './network.ts';
-import type { PlaybackRecording, ServerMessage } from './client-types.ts';
+import type { PlaybackRecording } from './client-types.ts';
 
 let progressRafId: number | null = null;
 let progressBarClickBound = false;
@@ -99,17 +99,18 @@ function seekTo(targetTime: number): void {
   const recording = clientState.playbackRecording;
   if (recording) {
     const gameStartEvent = recording.events.find(e => e.msg.type === 'game-start');
-    if (gameStartEvent && gameStartEvent.msg.players) {
-      (gameStartEvent.msg.players as any[]).forEach((p: any) => {
+    if (gameStartEvent && gameStartEvent.msg.type === 'game-start' && 'players' in gameStartEvent.msg) {
+      const players = Array.isArray(gameStartEvent.msg.players) ? gameStartEvent.msg.players : [];
+      for (const p of players) {
         addRemoteCursor(p.id, p.name, p.color, p.icon);
-      });
+      }
     }
   }
 
   if (recording && recording.events) {
     for (const event of recording.events) {
       if (event.t <= targetTime) {
-        handleMessageInternal(event.msg as unknown as ServerMessage);
+        handleMessageInternal(event.msg);
       }
     }
   }
@@ -152,12 +153,13 @@ export function startPlayback(recording: PlaybackRecording): void {
 
   clientState.players = {};
   const gameStartEvent = recording.events.find(e => e.msg.type === 'game-start');
-  if (gameStartEvent && gameStartEvent.msg.players) {
-    (gameStartEvent.msg.players as any[]).forEach((p: any) => {
+  if (gameStartEvent && gameStartEvent.msg.type === 'game-start' && 'players' in gameStartEvent.msg) {
+    const players = Array.isArray(gameStartEvent.msg.players) ? gameStartEvent.msg.players : [];
+    for (const p of players) {
       clientState.players[p.id] = { id: p.id, name: p.name || 'Player', icon: p.icon || '', color: p.color || '#4ecdc4', score: 0 };
       playerColorMap[p.id] = p.color;
       addRemoteCursor(p.id, p.name, p.color, p.icon);
-    });
+    }
   } else if (recording.players) {
     recording.players.forEach((p, i) => {
       const id = p.player_id || ('replay_player_' + i);
@@ -205,20 +207,21 @@ function scheduleEvents(events: PlaybackRecording['events']): void {
     const delay = event.t / clientState.playbackSpeed;
     const timerId = setTimeout(() => {
       if (!clientState.isPlayback) return;
-      handleMessageInternal(event.msg as unknown as ServerMessage);
+      handleMessageInternal(event.msg);
     }, delay);
     clientState.playbackTimers.push(timerId);
   }
 }
 
 function scheduleMouseMoves(mouseMovements: NonNullable<PlaybackRecording['mouseMovements']>): void {
+  if (!clientState.playbackMouseTimers) clientState.playbackMouseTimers = [];
   for (const mm of mouseMovements) {
     const delay = mm.t / clientState.playbackSpeed;
     const timerId = setTimeout(() => {
       if (!clientState.isPlayback) return;
       handleMessageInternal({ type: 'player-cursor', playerId: mm.playerId, x: mm.x, y: mm.y });
     }, delay);
-    clientState.playbackMouseTimers!.push(timerId);
+    clientState.playbackMouseTimers.push(timerId);
   }
 }
 
@@ -277,7 +280,7 @@ function rescheduleFrom(gameTime: number): void {
     const delay = (event.t - gameTime) / clientState.playbackSpeed;
     const timerId = setTimeout(() => {
       if (!clientState.isPlayback || clientState.playbackPaused) return;
-      handleMessageInternal(event.msg as unknown as ServerMessage);
+      handleMessageInternal(event.msg);
     }, delay);
     clientState.playbackTimers.push(timerId);
   }
@@ -290,7 +293,7 @@ function rescheduleFrom(gameTime: number): void {
       if (!clientState.isPlayback || clientState.playbackPaused) return;
       handleMessageInternal({ type: 'player-cursor', playerId: mm.playerId, x: mm.x, y: mm.y });
     }, delay);
-    clientState.playbackMouseTimers!.push(timerId);
+    clientState.playbackMouseTimers.push(timerId);
   }
 }
 

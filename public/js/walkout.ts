@@ -183,8 +183,8 @@ export function showWalkout(playerList: WalkoutPlayer[], onComplete: () => void)
     mvpCard.style.display = 'flex';
     mvpCard.classList.add('visible');
     // Set final counter values
-    mvpCard.querySelectorAll('.walkout-stat-value').forEach(el => {
-      (el as HTMLElement).textContent = String(parseInt((el as HTMLElement).dataset.target || '0') || 0);
+    mvpCard.querySelectorAll<HTMLElement>('.walkout-stat-value').forEach(el => {
+      el.textContent = String(parseInt(el.dataset.target || '0') || 0);
     });
     continueEl.classList.add('visible');
     resizeCanvases();
@@ -432,7 +432,8 @@ export function showWalkout(playerList: WalkoutPlayer[], onComplete: () => void)
     phase = 8;
     const statEls = mvpCard.querySelectorAll('.walkout-stat-value');
     statEls.forEach(el => {
-      animateCounter(el as HTMLElement, parseInt((el as HTMLElement).dataset.target || '0') || 0, 900);
+      if (!(el instanceof HTMLElement)) return;
+      animateCounter(el, parseInt(el.dataset.target || '0') || 0, 900);
     });
     await wait(900);
     if (!running) return;
@@ -450,7 +451,7 @@ export function showWalkout(playerList: WalkoutPlayer[], onComplete: () => void)
     continueEl.classList.add('visible');
   }
 
-  run();
+  void run();
 }
 
 function escapeText(s: string): string {

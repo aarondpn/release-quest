@@ -136,9 +136,9 @@ export interface QuestEntry {
   claimed?: boolean;
 }
 
-export interface RecordingEvent {
+export interface RecordingEvent<T = Record<string, unknown>> {
   t: number;
-  msg: Record<string, unknown>;
+  msg: T;
 }
 
 export interface MouseMoveEvent {

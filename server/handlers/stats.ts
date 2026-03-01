@@ -3,7 +3,8 @@ import * as network from '../network.ts';
 import * as db from '../db.ts';
 
 export const handleGetLeaderboard: MessageHandler = ({ ws, msg }) => {
-  const period = msg.period as 'all' | 'monthly' | 'weekly' | undefined;
+  const rawPeriod = msg.period;
+  const period = (rawPeriod === 'all' || rawPeriod === 'monthly' || rawPeriod === 'weekly') ? rawPeriod : undefined;
   const promise = (period === 'weekly' || period === 'monthly')
     ? db.getLeaderboardByPeriod(10, period)
     : db.getLeaderboard(10);

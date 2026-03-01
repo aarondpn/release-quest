@@ -47,9 +47,11 @@ export function initLeaderboardPeriodTabs(): void {
     '" data-period="' + p.value + '">' + p.label + '</button>'
   ).join('');
   container.addEventListener('click', (e) => {
-    const btn = (e.target as HTMLElement).closest('.leaderboard-period-btn') as HTMLElement | null;
+    if (!(e.target instanceof HTMLElement)) return;
+    const btn = e.target.closest<HTMLElement>('.leaderboard-period-btn');
     if (!btn) return;
-    const period = btn.dataset.period as 'all' | 'monthly' | 'weekly';
+    const period = btn.dataset.period;
+    if (period !== 'all' && period !== 'monthly' && period !== 'weekly') return;
     if (period === _currentPeriod) return;
     _currentPeriod = period;
     container.querySelectorAll('.leaderboard-period-btn').forEach(b => b.classList.remove('active'));

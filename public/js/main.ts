@@ -204,7 +204,8 @@ dom.createLobbyBtn!.addEventListener('click', () => {
 
     const password = dom.lobbyPasswordInput!.value.trim();
     const gameModeEl = document.getElementById('lobby-game-mode');
-    const gameMode = (gameModeEl?.dataset.value as 'classic' | 'roguelike') || 'roguelike';
+    const gameModeValue = gameModeEl?.dataset.value;
+    const gameMode: 'classic' | 'roguelike' = gameModeValue === 'classic' ? 'classic' : 'roguelike';
 
     sendMessage({
       type: 'create-lobby',
@@ -227,7 +228,7 @@ dom.createLobbyBtn!.addEventListener('click', () => {
 });
 
 dom.lobbyNameInput!.addEventListener('keydown', (e: KeyboardEvent) => {
-  if (e.key === 'Enter') (dom.createLobbyBtn as HTMLButtonElement).click();
+  if (e.key === 'Enter') dom.createLobbyBtn!.click();
 });
 
 dom.lobbyNameInput!.addEventListener('input', () => {
@@ -240,7 +241,8 @@ dom.lobbyMaxPlayers!.querySelector('.custom-select-trigger')!.addEventListener('
   dom.lobbyMaxPlayers!.classList.toggle('open');
 });
 dom.lobbyMaxPlayers!.querySelector('.custom-select-options')!.addEventListener('click', (e: Event) => {
-  const opt = (e.target as HTMLElement).closest<HTMLElement>('.custom-select-option');
+  if (!(e.target instanceof HTMLElement)) return;
+  const opt = e.target.closest<HTMLElement>('.custom-select-option');
   if (!opt) return;
   dom.lobbyMaxPlayers!.dataset.value = opt.dataset.value;
   dom.lobbyMaxPlayers!.querySelector('.custom-select-trigger')!.textContent = opt.textContent + ' \u25BE';
@@ -256,7 +258,8 @@ dom.lobbyDifficulty!.querySelector('.custom-select-trigger')!.addEventListener('
   dom.lobbyDifficulty!.classList.toggle('open');
 });
 dom.lobbyDifficulty!.querySelector('.custom-select-options')!.addEventListener('click', (e: Event) => {
-  const opt = (e.target as HTMLElement).closest<HTMLElement>('.custom-select-option');
+  if (!(e.target instanceof HTMLElement)) return;
+  const opt = e.target.closest<HTMLElement>('.custom-select-option');
   if (!opt) return;
   const difficulty = opt.dataset.value!;
   dom.lobbyDifficulty!.dataset.value = difficulty;
@@ -275,7 +278,8 @@ gameModeEl.querySelector('.custom-select-trigger')!.addEventListener('click', (e
   gameModeEl.classList.toggle('open');
 });
 gameModeEl.querySelector('.custom-select-options')!.addEventListener('click', (e: Event) => {
-  const opt = (e.target as HTMLElement).closest<HTMLElement>('.custom-select-option');
+  if (!(e.target instanceof HTMLElement)) return;
+  const opt = e.target.closest<HTMLElement>('.custom-select-option');
   if (!opt) return;
   gameModeEl.dataset.value = opt.dataset.value!;
   gameModeEl.querySelector('.custom-select-trigger')!.textContent = opt.textContent + ' \u25BE';
@@ -609,14 +613,17 @@ fetch('/api/dev-mode')
     header.addEventListener('click', () => body.classList.toggle('hidden'));
 
     panel.addEventListener('click', (e: MouseEvent) => {
-      const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-cmd]');
+      if (!(e.target instanceof HTMLElement)) return;
+      const btn = e.target.closest<HTMLElement>('[data-cmd]');
       if (!btn) return;
       const cmd = btn.dataset.cmd!;
       const devMsg: any = { type: 'dev-command', command: cmd };
       if (btn.dataset.target) devMsg.target = btn.dataset.target;
       if (btn.dataset.level) devMsg.level = parseInt(btn.dataset.level);
-      if (cmd === 'set-boss-hp') devMsg.value = parseInt((document.getElementById('dev-boss-hp') as HTMLInputElement).value) || 1;
-      if (cmd === 'set-hp') devMsg.value = parseInt((document.getElementById('dev-hp-input') as HTMLInputElement).value) || 100;
+      const devBossHpEl = document.querySelector<HTMLInputElement>('#dev-boss-hp');
+      if (cmd === 'set-boss-hp' && devBossHpEl) devMsg.value = parseInt(devBossHpEl.value) || 1;
+      const devHpInputEl = document.querySelector<HTMLInputElement>('#dev-hp-input');
+      if (cmd === 'set-hp' && devHpInputEl) devMsg.value = parseInt(devHpInputEl.value) || 100;
       sendMessage(devMsg);
     });
   })

@@ -6,6 +6,15 @@ import { mulberry32, hashString } from './rng.ts';
 import logger from './logger.ts';
 import type { GameContext, MiniBossState } from './types.ts';
 
+function getExtra(data: Record<string, unknown>): Record<string, unknown> | undefined {
+  const extra = data._extra;
+  if (typeof extra === 'object' && extra !== null) {
+    // Spread into fresh object narrows from object to Record<string, unknown>
+    return { ...extra } as Record<string, unknown>;
+  }
+  return undefined;
+}
+
 export function pickMiniBoss(seed: number, nodeId: string): string {
   const keys = getMiniBossKeys();
   const combined = seed + hashString(nodeId) + 7919; // offset from elite picker
@@ -61,7 +70,7 @@ function startMiniBossInternal(ctx: GameContext, mbType: string, nodeId: string 
     description: plugin.description,
     timeLimit: plugin.timeLimit,
     entities: mbState.entities,
-    extra: mbState.data._extra as Record<string, unknown> | undefined,
+    extra: getExtra(mbState.data),
   });
 
   // Start tick timer (1s intervals)
@@ -106,7 +115,7 @@ function miniBossTick(ctx: GameContext): void {
     type: 'mini-boss-tick',
     timeRemaining: state.miniBoss.timeRemaining,
     entities: state.miniBoss.entities,
-    extra: state.miniBoss.data._extra as Record<string, unknown> | undefined,
+    extra: getExtra(state.miniBoss.data),
   });
 
   // Check timeout

@@ -57,7 +57,8 @@ export function showRestScreen(msg: RestStartMsg): void {
       if (btn.classList.contains('my-vote')) return;
       card.querySelectorAll('.rest-option-btn').forEach(b => b.classList.remove('my-vote'));
       btn.classList.add('my-vote');
-      const option = btn.dataset.option as 'rest' | 'train';
+      const option = btn.dataset.option;
+      if (option !== 'rest' && option !== 'train') return;
       if (_sendMessage) _sendMessage({ type: 'rest-vote', option });
     });
   });

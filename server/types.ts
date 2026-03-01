@@ -166,7 +166,7 @@ export interface BossTypePluginInterface {
   onDefeat(ctx: GameContext): void;
   getSpawnRate(ctx: GameContext): number;
   getMaxOnScreen(ctx: GameContext): number;
-  broadcastFields(ctx: GameContext): Record<string, unknown>;
+  broadcastFields(ctx: GameContext | { state: GameState }): Record<string, unknown>;
   handlers?: Record<string, (ctx: any) => void | Promise<void>>;
   schemas?: Record<string, ZodType>;
 }

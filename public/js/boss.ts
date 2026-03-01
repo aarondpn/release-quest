@@ -71,8 +71,8 @@ export function createBossElement(
 
 export function updateBossHp(hp: number, maxHp: number, phase?: number, damageReduction?: number): void {
   if (!clientState.bossHpBarContainer) return;
-  const fill = clientState.bossHpBarContainer.querySelector('.boss-hp-bar-fill') as HTMLElement | null;
-  const label = clientState.bossHpBarContainer.querySelector('.boss-hp-text') as HTMLElement | null;
+  const fill = clientState.bossHpBarContainer.querySelector<HTMLElement>('.boss-hp-bar-fill');
+  const label = clientState.bossHpBarContainer.querySelector<HTMLElement>('.boss-hp-text');
   if (fill) {
     fill.style.width = ((hp / maxHp) * 100) + '%';
     // Update phase-based HP bar color
@@ -83,7 +83,7 @@ export function updateBossHp(hp: number, maxHp: number, phase?: number, damageRe
   if (label) label.textContent = hp + '/' + maxHp;
 
   // Damage reduction indicator (phase 3)
-  let drEl = clientState.bossHpBarContainer.querySelector('.boss-dr-indicator') as HTMLElement | null;
+  let drEl = clientState.bossHpBarContainer.querySelector<HTMLElement>('.boss-dr-indicator');
   if (typeof damageReduction === 'number' && damageReduction > 0) {
     if (!drEl) {
       drEl = document.createElement('div');
@@ -107,10 +107,10 @@ export function setBossPhase(phase: number, phaseName: string): void {
 
   // Update HP bar label
   if (clientState.bossHpBarContainer) {
-    const phaseLabel = clientState.bossHpBarContainer.querySelector('.boss-phase-name') as HTMLElement | null;
+    const phaseLabel = clientState.bossHpBarContainer.querySelector<HTMLElement>('.boss-phase-name');
     if (phaseLabel) phaseLabel.textContent = phaseName;
     // Update fill color
-    const fill = clientState.bossHpBarContainer.querySelector('.boss-hp-bar-fill') as HTMLElement | null;
+    const fill = clientState.bossHpBarContainer.querySelector<HTMLElement>('.boss-hp-bar-fill');
     if (fill) {
       fill.classList.remove('phase-shield', 'phase-swarm');
       const cls = HP_FILL_CLASSES[phase];

@@ -166,7 +166,7 @@ async function start(): Promise<void> {
     await db.initialize();
     logger.info('Database initialized');
   } catch (err: unknown) {
-    logger.error({ err: (err as Error).message }, 'Database initialization failed');
+    logger.error({ err: err instanceof Error ? err.message : String(err) }, 'Database initialization failed');
     logger.warn('Starting without database — lobby persistence disabled');
   }
 
@@ -192,4 +192,4 @@ async function start(): Promise<void> {
   });
 }
 
-start();
+void start();

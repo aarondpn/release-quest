@@ -32,7 +32,8 @@ export function removePlayerEmoteState(pid: string): void {
 }
 
 export const handleEmote: MessageHandler = async ({ ws, msg, pid, playerInfo }) => {
-  const emoteId = msg.emoteId as string;
+  if (typeof msg.emoteId !== 'string') return;
+  const emoteId = msg.emoteId;
 
   // Validate emote exists
   if (!EMOTE_MAP.has(emoteId)) return;

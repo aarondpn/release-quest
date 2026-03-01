@@ -114,8 +114,8 @@ export const mergeConflictDescriptor: EntityDescriptor = {
         if (isEliteMerge) {
           const elite = state.eliteConfig!;
           const waveKey = `mergeTeleports_wave${elite.wavesSpawned}`;
-          if (elite.data && (elite.data[waveKey] as number) < 2) {
-            elite.data[waveKey] = ((elite.data[waveKey] as number) || 0) + 1;
+          if (elite.data && (Number(elite.data[waveKey]) || 0) < 2) {
+            elite.data[waveKey] = (Number(elite.data[waveKey]) || 0) + 1;
             const np = randomPosition();
             bug.x = np.x;
             bug.y = np.y;

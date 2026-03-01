@@ -235,8 +235,8 @@ export function showMiniBossScreen(msg: {
   renderEntities(arena, msg.entities, msg.miniBossType);
 
   // Apply initial lock lit state for deadlock
-  if (msg.miniBossType === 'deadlock' && msg.extra?.litLockIds) {
-    applyLitLocks(arena, msg.extra.litLockIds as string[]);
+  if (msg.miniBossType === 'deadlock' && msg.extra?.litLockIds && Array.isArray(msg.extra.litLockIds)) {
+    applyLitLocks(arena, msg.extra.litLockIds);
   }
 }
 
@@ -247,10 +247,10 @@ function buildBossHpBar(extra: Record<string, unknown>, showStreak: boolean): HT
   container.className = 'mini-boss-boss-hp';
   container.id = 'mini-boss-boss-hp';
 
-  const hp = (extra.bossHp as number) ?? 0;
-  const maxHp = (extra.bossMaxHp as number) ?? 15;
+  const hp = Number(extra.bossHp ?? 0);
+  const maxHp = Number(extra.bossMaxHp ?? 15);
   const pct = Math.max(0, (hp / maxHp) * 100);
-  const streak = (extra.streak as number) ?? 0;
+  const streak = Number(extra.streak ?? 0);
 
   container.innerHTML =
     '<div class="mb-hp-header">' +
@@ -271,8 +271,8 @@ function updateBossHpBar(extra: Record<string, unknown>): void {
   const container = document.getElementById('mini-boss-boss-hp');
   if (!container) return;
 
-  const hp = (extra.bossHp as number) ?? 0;
-  const maxHp = (extra.bossMaxHp as number) ?? 15;
+  const hp = Number(extra.bossHp ?? 0);
+  const maxHp = Number(extra.bossMaxHp ?? 15);
   const pct = Math.max(0, (hp / maxHp) * 100);
 
   const fill = container.querySelector<HTMLElement>('.mb-hp-fill');
@@ -280,7 +280,7 @@ function updateBossHpBar(extra: Record<string, unknown>): void {
 
   const streakEl = document.getElementById('mb-hp-streak');
   if (streakEl && extra.streak !== undefined) {
-    streakEl.textContent = 'STREAK: ' + (extra.streak as number);
+    streakEl.textContent = 'STREAK: ' + Number(extra.streak);
   }
 }
 
@@ -395,13 +395,13 @@ export function updateMiniBossEntities(msg: {
     }
 
     // Lock lit state update for deadlock
-    if (type === 'deadlock' && msg.extra.litLockIds) {
-      applyLitLocks(arena, msg.extra.litLockIds as string[]);
+    if (type === 'deadlock' && msg.extra.litLockIds && Array.isArray(msg.extra.litLockIds)) {
+      applyLitLocks(arena, msg.extra.litLockIds);
     }
 
     // Wrong click shake for deadlock
-    if (type === 'deadlock' && msg.extra.wrongClickLockId) {
-      const lockId = msg.extra.wrongClickLockId as string;
+    if (type === 'deadlock' && typeof msg.extra.wrongClickLockId === 'string') {
+      const lockId = msg.extra.wrongClickLockId;
       const lockEl = arena.querySelector<HTMLElement>(`[data-entity-id="${lockId}"]`);
       if (lockEl) {
         lockEl.classList.add('shake-error');

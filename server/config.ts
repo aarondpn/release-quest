@@ -14,7 +14,8 @@ interface FileConfig {
 
 let fileConfig: FileConfig = {};
 try {
-  fileConfig = JSON.parse(readFileSync(path.join(import.meta.dirname, '..', 'config.json'), 'utf-8')) as FileConfig;
+  const parsed: unknown = JSON.parse(readFileSync(path.join(import.meta.dirname, '..', 'config.json'), 'utf-8'));
+  if (parsed && typeof parsed === 'object') fileConfig = parsed as FileConfig;
 } catch {
   // config.json is optional; defaults below
 }
@@ -412,29 +413,34 @@ export const DIFFICULTY_PRESETS: Record<string, DifficultyConfig> = {
   },
 };
 
-function deepMerge<T>(target: T, source: any): T {
-  if (!source) return target;
-  
-  const output = { ...target } as any;
-  
+function deepMergeImpl(target: Record<string, unknown>, source: Record<string, unknown>): void {
   for (const key in source) {
     if (!Object.hasOwn(source, key)) continue;
     if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
     if (source[key] !== undefined && source[key] !== null) {
       if (typeof source[key] === 'object' && !Array.isArray(source[key]) && source[key] !== null) {
-        output[key] = deepMerge(output[key] || {}, source[key]);
+        const existing = target[key];
+        const sub: Record<string, unknown> = (typeof existing === 'object' && existing !== null && !Array.isArray(existing))
+          ? { ...existing } as Record<string, unknown>
+          : {};
+        deepMergeImpl(sub, { ...source[key] } as Record<string, unknown>);
+        target[key] = sub;
       } else {
-        output[key] = source[key];
+        target[key] = source[key];
       }
     }
   }
-  
-  return output as T;
 }
 
 export function getDifficultyConfig(difficulty: string = 'medium', customConfig?: CustomDifficultyConfig): DifficultyConfig {
   const preset = DIFFICULTY_PRESETS[difficulty] || DIFFICULTY_PRESETS.medium;
-  return deepMerge(preset, customConfig || {});
+  if (!customConfig || Object.keys(customConfig).length === 0) return preset;
+  // Structured clone of preset + deep merge customConfig overrides
+  const result = structuredClone(preset);
+  // Access through indexed wrapper to satisfy Record<string, unknown> constraint
+  const wrapper: Record<string, Record<string, unknown>> = { r: { ...result } as Record<string, unknown> };
+  deepMergeImpl(wrapper.r, { ...customConfig } as Record<string, unknown>);
+  return Object.assign(result, wrapper.r);
 }
 
 // Game structure constants

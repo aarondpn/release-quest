@@ -52,8 +52,7 @@ export function randomPosition(): { x: number; y: number } {
 export function currentLevelConfig(state: GameState): LevelConfigEntry {
   let base: LevelConfigEntry;
   if (state.gameMode === 'roguelike') {
-    const row = state.level as keyof typeof ROGUELIKE_CONFIG.rowScaling;
-    base = ROGUELIKE_CONFIG.rowScaling[row] || ROGUELIKE_CONFIG.rowScaling[5];
+    base = ROGUELIKE_CONFIG.rowScaling[state.level] || ROGUELIKE_CONFIG.rowScaling[5];
   } else {
     const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
     base = diffConfig.levels[state.level] || diffConfig.levels[MAX_LEVEL];
@@ -132,7 +131,7 @@ export function getStateSnapshot(state: GameState): Record<string, unknown> {
       x: state.boss.x,
       y: state.boss.y,
       timeRemaining: state.boss.timeRemaining,
-      ...getActivePlugin()?.broadcastFields({ state } as any),
+      ...getActivePlugin()?.broadcastFields({ state }),
     } : null,
     ...(state.gameMode !== 'classic' ? { gameMode: state.gameMode } : {}),
     ...(state.roguelikeMap ? { roguelikeMap: state.roguelikeMap } : {}),

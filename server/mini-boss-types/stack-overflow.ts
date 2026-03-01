@@ -21,6 +21,17 @@ interface StackPurgeData {
   };
 }
 
+/** Typed view of the shared mini-boss data record. Runtime: always a StackPurgeData. */
+function toData(raw: Record<string, unknown>): StackPurgeData {
+  // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion
+  return raw as unknown as StackPurgeData;
+}
+
+/** Return typed data back to the generic record slot. */
+function fromData(data: StackPurgeData): Record<string, unknown> {
+  return { ...data };
+}
+
 function randomPos(): { x: number; y: number } {
   return {
     x: PAD + Math.random() * (LOGICAL_W - PAD * 2),
@@ -54,7 +65,7 @@ export const stackOverflowPlugin: MiniBossPlugin = {
         overflow: false,
       },
     };
-    mb.data = data as unknown as Record<string, unknown>;
+    mb.data = fromData(data);
 
     logger.info({
       miniBoss: 'stack-overflow',
@@ -99,7 +110,7 @@ export const stackOverflowPlugin: MiniBossPlugin = {
     const mb = ctx.state.miniBoss;
     if (!mb) return;
 
-    const data = mb.data as unknown as StackPurgeData;
+    const data = toData(mb.data);
     const entity = mb.entities.find(e => e.id === entityId);
     if (!entity || entity.hp <= 0) return;
 
@@ -180,14 +191,14 @@ export const stackOverflowPlugin: MiniBossPlugin = {
     const mb = ctx.state.miniBoss;
     if (!mb) return;
 
-    const data = mb.data as unknown as StackPurgeData;
+    const data = toData(mb.data);
     const now = Date.now();
     data.tickCount++;
 
     // Expire old frames, heal boss for each expired one
     const expiredFrames = mb.entities.filter(
       e => (e.variant === 'frame' || e.variant === 'recursive-frame') &&
-        e.spawnedAt !== undefined && (now - e.spawnedAt!) >= FRAME_LIFETIME_MS
+        e.spawnedAt !== undefined && (now - e.spawnedAt) >= FRAME_LIFETIME_MS
     );
     for (const _frame of expiredFrames) {
       data.bossHp = Math.min(BOSS_HP, data.bossHp + EXPIRED_FRAME_HEAL);
@@ -282,7 +293,7 @@ export const stackOverflowPlugin: MiniBossPlugin = {
   checkVictory(ctx: GameContext): boolean {
     const mb = ctx.state.miniBoss;
     if (!mb) return false;
-    const data = mb.data as unknown as StackPurgeData;
+    const data = toData(mb.data);
     const victory = data.bossHp <= 0;
     if (victory) {
       logger.info({

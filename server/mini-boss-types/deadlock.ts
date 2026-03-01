@@ -34,6 +34,15 @@ interface LockCascadeData {
   };
 }
 
+function toData(raw: Record<string, unknown>): LockCascadeData {
+  // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion
+  return raw as unknown as LockCascadeData;
+}
+
+function fromData(data: LockCascadeData): Record<string, unknown> {
+  return { ...data };
+}
+
 function lockPositions(): { x: number; y: number }[] {
   const cx = LOGICAL_W / 2;
   const cy = LOGICAL_H / 2;
@@ -87,7 +96,7 @@ export const deadlockPlugin: MiniBossPlugin = {
         wrongClickLockId: '',
       },
     };
-    mb.data = data as unknown as Record<string, unknown>;
+    mb.data = fromData(data);
 
     logger.info({
       miniBoss: 'deadlock',
@@ -121,7 +130,7 @@ export const deadlockPlugin: MiniBossPlugin = {
     const mb = ctx.state.miniBoss;
     if (!mb) return;
 
-    const data = mb.data as unknown as LockCascadeData;
+    const data = toData(mb.data);
 
     // Only handle lock entities
     if (!entityId.match(/^mb_lock_\d+$/)) return;
@@ -200,7 +209,7 @@ export const deadlockPlugin: MiniBossPlugin = {
     const mb = ctx.state.miniBoss;
     if (!mb) return;
 
-    const data = mb.data as unknown as LockCascadeData;
+    const data = toData(mb.data);
     const now = Date.now();
     data.tickCount++;
 
@@ -245,7 +254,7 @@ export const deadlockPlugin: MiniBossPlugin = {
   checkVictory(ctx: GameContext): boolean {
     const mb = ctx.state.miniBoss;
     if (!mb) return false;
-    const data = mb.data as unknown as LockCascadeData;
+    const data = toData(mb.data);
     const victory = data.bossHp <= 0;
     if (victory) {
       logger.info({

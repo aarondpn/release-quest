@@ -1,6 +1,6 @@
 import { clientState, dom, activateLobbyTab } from './state.ts';
 import { showToast } from './utils.ts';
-import type { SendMessageFn, QuestEntry, QuestData } from './client-types.ts';
+import type { SendMessageFn, QuestEntry } from './client-types.ts';
 import type { QuestsDataMsg, QuestProgressMsg, BalanceDataMsg } from '../../shared/messages.ts';
 
 let _sendMessage: SendMessageFn | null = null;
@@ -28,7 +28,12 @@ export function handleQuestsData(msg: QuestsDataMsg): void {
     showGuestView();
     return;
   }
-  clientState.questData = msg as QuestData;
+  clientState.questData = {
+    quests: msg.quests || [],
+    balance: msg.balance || 0,
+    dailyResetAt: msg.dailyResetAt,
+    isGuest: msg.isGuest,
+  };
   clientState.byteCoinsBalance = msg.balance || 0;
   renderQuestTracker();
   updateBalanceDisplay();

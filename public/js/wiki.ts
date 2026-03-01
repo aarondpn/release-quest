@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', init);
 async function init(): Promise<void> {
   try {
     const res = await fetch('/api/wiki-config');
-    config = await res.json() as WikiConfig;
+    config = await res.json();
     showDifficultySelector();
     render();
   } catch (err) {
