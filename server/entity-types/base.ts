@@ -82,7 +82,7 @@ export const baseDescriptor: EntityDescriptor = {
     delete ctx.state.bugs[bug.id];
     let damage = diffConfig.hpDamage;
     damage = Math.ceil(damage * getKevlarDamageMultiplier(ctx));
-    if (ctx.state.eliteConfig) damage = Math.ceil(damage * ctx.state.eliteConfig.hpDamageMultiplier);
+    if (ctx.state.eliteConfig && !bug.isMinion) damage = Math.ceil(damage * ctx.state.eliteConfig.hpDamageMultiplier);
     ctx.state.hp -= damage;
     if (ctx.state.hp < 0) ctx.state.hp = 0;
     if (ctx.matchLog) {

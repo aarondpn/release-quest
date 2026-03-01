@@ -108,6 +108,12 @@ export const REST_CONFIG = {
   trainScoreBonus: 0.1,
 };
 
+export const ELITE_AMBIENT_CONFIG = {
+  spawnRate: 6000,
+  maxOnScreen: 2,
+  gracePeriod: 3000,
+};
+
 export const ELITE_CONFIG = {
   maxPerMap: 2,
   scoreMultiplier: 2.5,
@@ -116,7 +122,7 @@ export const ELITE_CONFIG = {
     'super-heisenbug': {
       title: 'Super-Heisenbug',
       icon: '\u{1F47B}',
-      description: 'A massive Heisenbug with 5 flees and 30% faster escape',
+      description: 'A massive Heisenbug with 5 flees, 30% faster escape, and decoy ghosts',
       scoreMultiplier: 5,
       hpDamageMultiplier: 1.5,
       wavesTotal: 1,
@@ -124,7 +130,7 @@ export const ELITE_CONFIG = {
     'mega-pipeline': {
       title: 'Mega-Pipeline',
       icon: '\u{1F6A7}',
-      description: 'An 8-segment pipeline that resets on wrong clicks',
+      description: 'An 8-segment pipeline that resets on wrong clicks and regenerates killed segments',
       scoreMultiplier: 3,
       hpDamageMultiplier: 1.5,
       wavesTotal: 1,
@@ -132,7 +138,7 @@ export const ELITE_CONFIG = {
     'memory-leak-cluster': {
       title: 'Memory Leak Cluster',
       icon: '\u{1F4A7}',
-      description: '3 simultaneous memory leaks with accelerating growth',
+      description: '3 simultaneous memory leaks that duplicate over time',
       scoreMultiplier: 3,
       hpDamageMultiplier: 1.5,
       wavesTotal: 1,
@@ -140,7 +146,7 @@ export const ELITE_CONFIG = {
     'merge-conflict-chain': {
       title: 'Merge Conflict Chain',
       icon: '\u{1F500}',
-      description: '3 waves of merge conflicts with shrinking resolve windows',
+      description: '3 waves of merge conflicts that teleport on half-clicks',
       scoreMultiplier: 3,
       hpDamageMultiplier: 1.5,
       wavesTotal: 3,

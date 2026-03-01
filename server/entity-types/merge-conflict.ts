@@ -103,13 +103,26 @@ export const mergeConflictDescriptor: EntityDescriptor = {
     } else {
       // Only one clicked — set timeout for reset
       ctx.events.emit({ type: 'merge-conflict-halfclick', bugId: bug.id });
+      const isEliteMerge = state.eliteConfig?.eliteType === 'merge-conflict-chain';
+      const timeout = isEliteMerge ? 3000 : MERGE_CONFLICT_MECHANICS.resolveWindow;
       bug._timers.setTimeout('mergeReset', () => {
-        if (state.bugs[bug.id]) {
-          bug.mergeClicked = false;
-          bug.mergeClickedBy = null;
-          bug.mergeClickedAt = 0;
+        if (!state.bugs[bug.id]) return;
+        bug.mergeClicked = false;
+        bug.mergeClickedBy = null;
+        bug.mergeClickedAt = 0;
+        // Elite: teleport on reset if under cap
+        if (isEliteMerge) {
+          const elite = state.eliteConfig!;
+          const waveKey = `mergeTeleports_wave${elite.wavesSpawned}`;
+          if (elite.data && (elite.data[waveKey] as number) < 2) {
+            elite.data[waveKey] = ((elite.data[waveKey] as number) || 0) + 1;
+            const np = randomPosition();
+            bug.x = np.x;
+            bug.y = np.y;
+            ctx.events.emit({ type: 'bug-wander', bugId: bug.id, x: np.x, y: np.y });
+          }
         }
-      }, MERGE_CONFLICT_MECHANICS.resolveWindow);
+      }, timeout);
     }
   },
 };

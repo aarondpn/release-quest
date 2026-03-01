@@ -1,4 +1,4 @@
-import { getDifficultyConfig } from './config.ts';
+import { getDifficultyConfig, ELITE_AMBIENT_CONFIG, ROGUELIKE_CONFIG } from './config.ts';
 import { randomPosition, currentLevelConfig } from './state.ts';
 import { createTimerBag } from './timer-bag.ts';
 import { getDescriptor, getType, getPlugins } from './entity-types/index.ts';
@@ -130,6 +130,27 @@ export function spawnMinion(ctx: GameContext): void {
     isMinion: true,
     onEscapeCheck: () => game.checkBossGameState(ctx),
     variant,
+  });
+}
+
+export function spawnEliteMinion(ctx: GameContext): void {
+  const { state } = ctx;
+  if (state.phase !== 'playing' || !state.eliteConfig) return;
+
+  // Count only isMinion bugs for the cap
+  const minionCount = Object.values(state.bugs).filter(b => b.isMinion).length;
+  if (minionCount >= ELITE_AMBIENT_CONFIG.maxOnScreen) return;
+
+  const row = state.level as keyof typeof ROGUELIKE_CONFIG.rowScaling;
+  const baseCfg = ROGUELIKE_CONFIG.rowScaling[row] || ROGUELIKE_CONFIG.rowScaling[5];
+
+  spawnEntity(ctx, {
+    phaseCheck: 'playing',
+    maxOnScreen: Infinity, // cap already enforced by minionCount check above
+    escapeTime: baseCfg.escapeTime,
+    isMinion: true,
+    onEscapeCheck: () => game.checkGameState(ctx),
+    variant: null,
   });
 }
 

@@ -1,8 +1,8 @@
-import { ELITE_CONFIG, ROGUELIKE_CONFIG, getDifficultyConfig } from './config.ts';
+import { ELITE_CONFIG, ELITE_AMBIENT_CONFIG, ROGUELIKE_CONFIG, getDifficultyConfig } from './config.ts';
 import { LOGICAL_W, LOGICAL_H } from '../shared/constants.ts';
 import { randomPosition, getPlayerScores } from './state.ts';
 import { createTimerBag } from './timer-bag.ts';
-import { spawnEntity } from './bugs.ts';
+import { spawnEntity, spawnEliteMinion, clearAllMinions } from './bugs.ts';
 import { getKevlarDamageMultiplier } from './shop.ts';
 import { mulberry32, hashString } from './rng.ts';
 import * as game from './game.ts';
@@ -111,6 +111,13 @@ function spawnEliteWave(ctx: GameContext): void {
     default:
       game.startLevel(ctx);
   }
+
+  // Start ambient minion spawning after grace period
+  ctx.timers.lobby.setTimeout('eliteAmbientGrace', () => {
+    ctx.timers.lobby.setInterval('eliteAmbientSpawn', () => {
+      spawnEliteMinion(ctx);
+    }, ELITE_AMBIENT_CONFIG.spawnRate);
+  }, ELITE_AMBIENT_CONFIG.gracePeriod);
 }
 
 // ── Elite wave check (called from checkGameState) ──
@@ -119,6 +126,11 @@ export function onEliteWaveCheck(ctx: GameContext): void {
   const { state } = ctx;
   const elite = state.eliteConfig;
   if (!elite) return;
+
+  // Clean up ambient minion timers and minions between waves
+  ctx.timers.lobby.clear('eliteAmbientSpawn');
+  ctx.timers.lobby.clear('eliteAmbientGrace');
+  clearAllMinions(ctx);
 
   if (elite.wavesSpawned < elite.wavesTotal) {
     // More waves to go — brief pause then next wave
@@ -135,6 +147,8 @@ function completeElite(ctx: GameContext): void {
   const { state } = ctx;
   const elite = state.eliteConfig;
   if (!elite) return;
+
+  // Ambient cleanup already done by onEliteWaveCheck which calls this
 
   const playerCount = Object.keys(state.players).length;
   const soloMode = playerCount <= 1;
@@ -203,21 +217,41 @@ function spawnSuperHeisenbug(ctx: GameContext, baseCfg: LevelConfigEntry): void 
 
   spawnEntity(ctx, {
     phaseCheck: 'playing',
-    maxOnScreen: 2,
+    maxOnScreen: 10,
     escapeTime,
     isMinion: false,
     onEscapeCheck: () => game.checkGameState(ctx),
     variant,
   });
+
+  // Spawn 2 decoy ghosts — routed through spawnEntity so they get full entity lifecycle
+  for (let i = 0; i < 2; i++) {
+    spawnEntity(ctx, {
+      phaseCheck: 'playing',
+      maxOnScreen: 10,
+      escapeTime: escapeTime * 1.5,
+      isMinion: true,
+      onEscapeCheck: () => game.checkGameState(ctx),
+      variant: { isHeisenbug: true, isDecoy: true, fleesRemaining: 0, lastFleeTime: 0 },
+    });
+  }
 }
 
 // ── Elite type: Mega-Pipeline ──
 
+const MAX_PIPELINE_REGENS = 2;
+
 function spawnMegaPipeline(ctx: GameContext, baseCfg: LevelConfigEntry): void {
   const { state, counters } = ctx;
+  const elite = state.eliteConfig;
   const chainLength = 8;
   state.bugsRemaining = chainLength;
   state.bugsSpawned = chainLength;
+
+  if (elite) {
+    if (!elite.data) elite.data = {};
+    elite.data.pipelineRegens = 0;
+  }
 
   const chainId = 'chain_' + (counters.nextChainId++);
   const escapeTime = baseCfg.escapeTime * 2.0;
@@ -335,12 +369,52 @@ function spawnMegaPipeline(ctx: GameContext, baseCfg: LevelConfigEntry): void {
   for (const bug of chainBugs) {
     if (bug !== headBug) bug._sharedEscapeWith = headBug.id;
   }
+
+  // Pipeline regen: triggered by pipeline descriptor onClick when a segment is killed
+  if (elite) {
+    const chain = state.pipelineChains[chainId];
+    chain.onSegmentKilled = () => {
+      if ((elite.data!.pipelineRegens as number) >= MAX_PIPELINE_REGENS) return;
+      if (state.phase !== 'playing') return;
+      elite.data!.pipelineRegens = (elite.data!.pipelineRegens as number) + 1;
+      const regenIndex = elite.data!.pipelineRegens as number;
+      headBug._timers.setTimeout(`regen_${regenIndex}`, () => {
+        const ch = state.pipelineChains[chainId];
+        if (!ch || state.phase !== 'playing') return;
+        const alive = ch.bugIds.filter(bid => state.bugs[bid]);
+        if (alive.length === 0) return;
+
+        // Spawn new segment at tail position
+        const tailBug = state.bugs[alive[alive.length - 1]];
+        if (!tailBug) return;
+        const newId = 'bug_' + (counters.nextBugId++);
+        const newBug: BugEntity = {
+          id: newId, x: tailBug.x, y: tailBug.y,
+          _timers: createTimerBag(),
+          isPipeline: true, chainId, chainIndex: ch.bugIds.length, chainLength: ch.bugIds.length + 1,
+          escapeTime, escapeStartedAt: Date.now(),
+        };
+        state.bugs[newId] = newBug;
+        ch.bugIds.push(newId);
+        state.bugsRemaining++;
+
+        newBug._onEscape = escapeHandler;
+        newBug._sharedEscapeWith = headBug.id;
+
+        ctx.events.emit({ type: 'bug-spawned', bug: {
+          id: newId, x: newBug.x, y: newBug.y,
+          isPipeline: true, chainId, chainIndex: newBug.chainIndex, chainLength: ch.bugIds.length,
+        }});
+      }, 4000);
+    };
+  }
 }
 
 // ── Elite type: Memory Leak Cluster ──
 
 function spawnMemoryLeakCluster(ctx: GameContext, baseCfg: LevelConfigEntry): void {
   const { state } = ctx;
+  const elite = state.eliteConfig;
   const playerCount = Object.keys(state.players).length;
   const soloMode = playerCount <= 1;
 
@@ -348,9 +422,18 @@ function spawnMemoryLeakCluster(ctx: GameContext, baseCfg: LevelConfigEntry): vo
   // Multi: 3 leaks at normal pace
   const count = soloMode ? 2 : 3;
   const escapeTime = baseCfg.escapeTime * (soloMode ? 2.0 : 1.3);
+  const maxTotal = soloMode ? 4 : 5;
 
   state.bugsRemaining = count;
   state.bugsSpawned = count;
+
+  if (elite) {
+    if (!elite.data) elite.data = {};
+    elite.data.leakDuplications = 0;
+  }
+
+  // Capture bug counter before spawning so we can derive the IDs deterministically
+  const firstBugNum = ctx.counters.nextBugId;
 
   for (let i = 0; i < count; i++) {
     const variant: Partial<BugEntity> = {
@@ -366,15 +449,61 @@ function spawnMemoryLeakCluster(ctx: GameContext, baseCfg: LevelConfigEntry): vo
       variant,
     });
   }
+
+  // Schedule duplication for each original after 6s
+  if (elite) {
+    const spawnedBugIds: string[] = [];
+    for (let i = firstBugNum; i < ctx.counters.nextBugId; i++) {
+      spawnedBugIds.push('bug_' + i);
+    }
+
+    for (const origId of spawnedBugIds) {
+      ctx.timers.lobby.setTimeout(`leakDup_${origId}`, () => {
+        if (!state.eliteConfig || state.phase !== 'playing') return;
+        const orig = state.bugs[origId];
+        if (!orig || !orig.isMemoryLeak) return;
+
+        // Count current memory leaks (non-minion)
+        const currentLeaks = Object.values(state.bugs).filter(b => b.isMemoryLeak).length;
+        if (currentLeaks >= maxTotal) return;
+
+        // Spawn duplicate
+        const remainingTime = Math.max(1000, (orig.escapeTime - (Date.now() - orig.escapeStartedAt)) * 0.7);
+        const dupVariant: Partial<BugEntity> = {
+          isMemoryLeak: true,
+          growthStage: orig.growthStage || 0,
+        };
+        spawnEntity(ctx, {
+          phaseCheck: 'playing',
+          maxOnScreen: maxTotal + ELITE_AMBIENT_CONFIG.maxOnScreen + 1,
+          escapeTime: remainingTime,
+          isMinion: false,
+          onEscapeCheck: () => game.checkGameState(ctx),
+          variant: dupVariant,
+        });
+        state.bugsRemaining++;
+        state.bugsSpawned++;
+        elite.data!.leakDuplications = ((elite.data!.leakDuplications as number) || 0) + 1;
+      }, 6000);
+    }
+  }
 }
 
 // ── Elite type: Merge Conflict Chain ──
 
 function spawnMergeConflictWave(ctx: GameContext, baseCfg: LevelConfigEntry, waveNum: number): void {
   const { state, counters } = ctx;
+  const elite = state.eliteConfig;
 
   state.bugsRemaining = 2;
   state.bugsSpawned = 2;
+
+  // Init merge teleport tracking data
+  if (elite) {
+    if (!elite.data) elite.data = {};
+    const waveKey = `mergeTeleports_wave${waveNum}`;
+    elite.data[waveKey] = 0;
+  }
 
   const escapeTime = baseCfg.escapeTime * 1.2;
 

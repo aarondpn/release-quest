@@ -206,7 +206,9 @@ export function checkGameState(ctx: GameContext): void {
     const allSpawned = state.eliteConfig
       ? true
       : state.bugsSpawned >= cfg.bugsTotal;
-    const noneAlive = Object.keys(state.bugs).length === 0;
+    const noneAlive = state.eliteConfig
+      ? Object.values(state.bugs).every(b => b.isMinion || b.isDecoy)
+      : Object.keys(state.bugs).length === 0;
 
     if (allSpawned && noneAlive) {
       // Elite wave check: if elite config is active and more waves remain, trigger next wave

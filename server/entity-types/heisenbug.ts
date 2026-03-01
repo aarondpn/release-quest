@@ -21,11 +21,33 @@ export const heisenbugDescriptor: EntityDescriptor = {
     return { isHeisenbug: true, fleesRemaining: bug.fleesRemaining };
   },
 
+  onEscape(bug: BugEntity, ctx: GameContext, onEscapeCheck: () => void) {
+    // Decoys vanish without dealing damage
+    if (bug.isDecoy) {
+      bug._timers.clearAll();
+      delete ctx.state.bugs[bug.id];
+      ctx.events.emit({ type: 'bug-escaped', bugId: bug.id, hp: ctx.state.hp });
+      onEscapeCheck();
+      return;
+    }
+    baseDescriptor.onEscape(bug, ctx, onEscapeCheck);
+  },
+
   onClick(bug: BugEntity, ctx: GameContext, pid: string, _msg: any) {
     const { state } = ctx;
-    const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
     const player = state.players[pid];
     if (!player) return;
+
+    // Decoy: vanish on click with no points
+    if (bug.isDecoy) {
+      bug._timers.clearAll();
+      delete state.bugs[bug.id];
+      ctx.events.emit({ type: 'decoy-popped', bugId: bug.id, playerId: pid });
+      game.checkGameState(ctx);
+      return;
+    }
+
+    const diffConfig = getDifficultyConfig(state.difficulty, state.customConfig);
 
     bug._timers.clearAll();
     delete state.bugs[bug.id];

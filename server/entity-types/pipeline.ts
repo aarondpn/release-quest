@@ -118,6 +118,11 @@ export const pipelineDescriptor: EntityDescriptor = {
         score: state.score, playerScore: player.score, points,
       });
 
+      // Notify elite regen hook before checking chain completion
+      if (chain.nextIndex < chain.length) {
+        chain.onSegmentKilled?.();
+      }
+
       if (chain.nextIndex >= chain.length) {
         // Chain complete — bonus!
         let rawBonus = PIPELINE_BUG_MECHANICS.chainBonus;

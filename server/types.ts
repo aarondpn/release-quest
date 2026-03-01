@@ -81,6 +81,7 @@ export interface BugEntity {
   isStunned?: boolean;
   remainingEscapeTime?: number;
   isMinion?: boolean;
+  isDecoy?: boolean;
   // Heisenbug
   isHeisenbug?: boolean;
   fleesRemaining?: number;
@@ -127,6 +128,7 @@ export interface PipelineChain {
   headBugId: string;
   snakeAngle: number;
   architectFreeResetsUsed?: Record<string, boolean>;
+  onSegmentKilled?: () => void;
 }
 
 export interface BossState {
@@ -178,6 +180,7 @@ export interface EliteConfig {
   hpDamageMultiplier: number;
   wavesTotal: number;
   wavesSpawned: number;
+  data?: Record<string, unknown>;
 }
 
 export interface MiniBossState {
