@@ -38,7 +38,7 @@ export const clientState: ClientState = {
   byteCoinsBalance: 0,
   questTimerInterval: null,
   // Roguelike
-  gameMode: 'classic',
+  gameMode: 'roguelike',
   roguelikeMap: null,
   // Dev mode
   devMode: false,

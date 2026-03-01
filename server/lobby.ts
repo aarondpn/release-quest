@@ -16,7 +16,7 @@ function createGameTimers(): GameTimers {
   return { lobby: createTimerBag(), boss: createTimerBag() };
 }
 
-function createLobbyMemory(lobbyId: number, difficulty: string, customConfig?: CustomDifficultyConfig, gameMode: GameMode = 'classic'): LobbyMemory {
+function createLobbyMemory(lobbyId: number, difficulty: string, customConfig?: CustomDifficultyConfig, gameMode: GameMode = 'roguelike'): LobbyMemory {
   const timers = createGameTimers();
   const state = createGameState(difficulty, customConfig, gameMode);
   const events = createEventBus();
@@ -103,7 +103,7 @@ export function getSpectatorLobby(pid: string): number | null {
   return spectatorToLobby.get(pid) ?? null;
 }
 
-export async function createLobby(name: string, maxPlayers: number | undefined, difficulty: string = 'medium', customConfig?: CustomDifficultyConfig, password?: string, gameMode: GameMode = 'classic'): Promise<{ lobby?: DbLobbyRow; error?: string }> {
+export async function createLobby(name: string, maxPlayers: number | undefined, difficulty: string = 'medium', customConfig?: CustomDifficultyConfig, password?: string, gameMode: GameMode = 'roguelike'): Promise<{ lobby?: DbLobbyRow; error?: string }> {
   const lobbyCount = await db.getActiveLobbyCount();
   if (lobbyCount >= LOBBY_CONFIG.maxLobbies) {
     return { error: 'Maximum number of lobbies reached' };
@@ -139,7 +139,7 @@ export async function joinLobby(lobbyId: number, playerId: string, playerData: P
   if (!lobbies.has(lobbyId)) {
     const difficulty = (lobby.settings as any)?.difficulty || 'medium';
     const customConfig = (lobby.settings as any)?.customConfig;
-    const gameMode = (lobby.settings as any)?.gameMode || 'classic';
+    const gameMode = (lobby.settings as any)?.gameMode || 'roguelike';
     lobbies.set(lobbyId, createLobbyMemory(lobbyId, difficulty, customConfig, gameMode));
   }
 

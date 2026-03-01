@@ -204,7 +204,7 @@ dom.createLobbyBtn!.addEventListener('click', () => {
 
     const password = dom.lobbyPasswordInput!.value.trim();
     const gameModeEl = document.getElementById('lobby-game-mode');
-    const gameMode = gameModeEl?.dataset.value === 'roguelike' ? 'roguelike' as const : undefined;
+    const gameMode = (gameModeEl?.dataset.value as 'classic' | 'roguelike') || 'roguelike';
 
     sendMessage({
       type: 'create-lobby',
@@ -213,7 +213,7 @@ dom.createLobbyBtn!.addEventListener('click', () => {
       difficulty,
       ...(Object.keys(customConfig).length > 0 ? { customConfig } : {}),
       ...(password ? { password } : {}),
-      ...(gameMode ? { gameMode } : {}),
+      gameMode,
     });
 
     clientState.pendingLobbyPassword = password || null;
