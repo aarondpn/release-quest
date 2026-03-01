@@ -245,8 +245,18 @@ export function updateVotes(
 }
 
 export function highlightSelectedNode(nodeId: string): void {
+  // Clear all local vote highlights and disable further clicks
+  const container = document.getElementById('map-nodes');
+  if (container) {
+    container.querySelectorAll('.map-node.my-vote').forEach(n => n.classList.remove('my-vote'));
+    container.querySelectorAll('.map-node.available').forEach(n => {
+      n.classList.remove('available');
+      n.classList.add('locked');
+    });
+  }
   const el = document.querySelector<HTMLElement>(`.map-node[data-node-id="${nodeId}"]`);
   if (el) {
+    el.classList.remove('locked');
     el.classList.add('selected');
   }
 }

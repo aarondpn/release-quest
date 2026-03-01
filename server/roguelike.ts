@@ -94,10 +94,13 @@ export function handleNodeVote(ctx: GameContext, pid: string, nodeId: string): v
   const { state } = ctx;
   if (state.phase !== 'map_view' || !state.roguelikeMap) return;
 
+  // mapVotes is set to {} by showMapView and cleared to undefined by resolveVote;
+  // reject votes after the vote has already been resolved
+  if (!state.mapVotes) return;
+
   const available = getReachableNodes(state.roguelikeMap, state.roguelikeMap.currentNodeId);
   if (!available.includes(nodeId)) return;
 
-  if (!state.mapVotes) state.mapVotes = {};
   state.mapVotes[pid] = nodeId;
 
   const soloMode = isSoloMode(state.players);
