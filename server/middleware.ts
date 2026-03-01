@@ -3,7 +3,7 @@ import logger from './logger.ts';
 import { AppError } from './utils.ts';
 
 // Global error handler middleware
-export function errorHandler(err: Error, req: Request, res: Response, next: NextFunction) {
+export function errorHandler(err: Error, req: Request, res: Response, _next: NextFunction) {
   logger.error({ err, path: req.path, method: req.method }, 'HTTP request error');
 
   // Handle operational errors

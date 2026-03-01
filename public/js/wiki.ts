@@ -210,7 +210,7 @@ function renderBugTypes(d: DifficultyConfig, m: MechanicsConfig): void {
   const holdMin = sec(m.memoryLeak.holdTimeByStage[0]);
   const holdMax = sec(m.memoryLeak.holdTimeByStage[m.memoryLeak.holdTimeByStage.length - 1]);
   const slowerPct = Math.round((m.memoryLeak.escapeTimeMultiplier - 1) * 100);
-  const pointsDesc = m.memoryLeak.pointsByStage.slice().reverse().join('\u2192');
+  const pointsDesc = m.memoryLeak.pointsByStage.slice().toReversed().join('\u2192');
   const damageDesc = m.memoryLeak.damageByStage.join('\u2192');
   setStats('memory-leak-stats', [
     '\uD83D\uDDB1\uFE0F Click & HOLD to clear (' + holdMin + '-' + holdMax + 's)',
@@ -401,7 +401,7 @@ function renderMechanics(d: DifficultyConfig, m: MechanicsConfig): void {
 
   // Scoring
   const heisenPts = d.bugPoints * m.heisenbug.pointsMultiplier;
-  const memPts = m.memoryLeak.pointsByStage.slice().reverse().join('/');
+  const memPts = m.memoryLeak.pointsByStage.slice().toReversed().join('/');
   setHtml('scoring-card', '' +
     '<h3>\uD83C\uDFAF Scoring</h3>' +
     '<p><strong>Normal bug:</strong> ' + d.bugPoints + ' points</p>' +

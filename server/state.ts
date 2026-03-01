@@ -2,7 +2,7 @@ import { LOGICAL_W, LOGICAL_H } from '../shared/constants.ts';
 import { MAX_LEVEL, getDifficultyConfig } from './config.ts';
 import { getDescriptor } from './entity-types/index.ts';
 import { getActivePlugin } from './boss.ts';
-import type { GameState, GameContext, GameCounters, LevelConfigEntry, PlayerScoreEntry, DifficultyConfig, CustomDifficultyConfig, GameMode } from './types.ts';
+import type { GameState, GameContext, GameCounters, LevelConfigEntry, PlayerScoreEntry, CustomDifficultyConfig, GameMode } from './types.ts';
 import { ROGUELIKE_CONFIG } from './config.ts';
 
 export function createGameState(difficulty: string = 'medium', customConfig?: CustomDifficultyConfig, gameMode: GameMode = 'classic'): GameState {
@@ -132,7 +132,7 @@ export function getStateSnapshot(state: GameState): Record<string, unknown> {
       x: state.boss.x,
       y: state.boss.y,
       timeRemaining: state.boss.timeRemaining,
-      ...(getActivePlugin()?.broadcastFields({ state } as any) || {}),
+      ...getActivePlugin()?.broadcastFields({ state } as any),
     } : null,
     ...(state.gameMode !== 'classic' ? { gameMode: state.gameMode } : {}),
     ...(state.roguelikeMap ? { roguelikeMap: state.roguelikeMap } : {}),

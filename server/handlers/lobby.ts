@@ -1,4 +1,4 @@
-import type { HandlerContext, MessageHandler } from './types.ts';
+import type { MessageHandler } from './types.ts';
 import type { PlayerInfo, ServerMessage } from '../types.ts';
 import { LOGICAL_W, LOGICAL_H } from '../../shared/constants.ts';
 import { createPlayerLogger, createLobbyLogger } from '../logger.ts';

@@ -1,4 +1,4 @@
-import type { HandlerContext, MessageHandler } from './types.ts';
+import type { MessageHandler } from './types.ts';
 import * as network from '../network.ts';
 import * as db from '../db.ts';
 

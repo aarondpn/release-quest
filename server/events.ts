@@ -1,4 +1,4 @@
-import { getPlayerScores, awardScore } from './state.ts';
+import { awardScore } from './state.ts';
 import * as roguelike from './roguelike.ts';
 import { endGame } from './game.ts';
 import { mulberry32, hashString } from './rng.ts';

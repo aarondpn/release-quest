@@ -1,4 +1,4 @@
-import logger, { createLobbyLogger } from './logger.ts';
+import { createLobbyLogger } from './logger.ts';
 import type { MatchLog } from './types.ts';
 
 export function createMatchLog(lobbyId: number): MatchLog {

@@ -1,4 +1,4 @@
-import { dom, clientState } from './state.ts';
+import { dom } from './state.ts';
 import { escapeHtml } from './utils.ts';
 import { VOTE_TIMER_MS } from '../../shared/constants.ts';
 import type { SendMessageFn, ClientPlayer, EventDefinition } from './client-types.ts';

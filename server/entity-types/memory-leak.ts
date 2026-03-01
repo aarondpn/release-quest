@@ -75,8 +75,6 @@ export const memoryLeakDescriptor: EntityDescriptor = {
   },
 
   onHoldStart(this: EntityDescriptor, bug: BugEntity, ctx: GameContext, pid: string) {
-    const { state } = ctx;
-
     // Initialize holders tracking if needed
     if (!bug.holders) {
       bug.holders = new Map();

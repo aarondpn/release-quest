@@ -1,6 +1,6 @@
 import { dom, clientState } from './state.ts';
 import { sendMessage } from './network.ts';
-import { hideAllScreens, showLiveDashboard } from './hud.ts';
+import { hideAllScreens } from './hud.ts';
 import { escapeHtml } from './utils.ts';
 import type { ActiveBuffDisplay } from './client-types.ts';
 import type { ShopOpenMsg, ShopBuyResultMsg, ShopReadyResultMsg } from '../../shared/messages.ts';

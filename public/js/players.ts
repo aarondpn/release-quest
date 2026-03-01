@@ -47,7 +47,7 @@ export function clearRemoteCursors(): void {
 
 // ── Cursor trail dots for replay playback ──
 
-export function addCursorTrailDot(playerId: string, lx: number, ly: number, color: string): void {
+export function addCursorTrailDot(playerId: string, lx: number, ly: number, _color: string): void {
   const pos = logicalToPixel(lx, ly);
   const dot = document.createElement('div');
   dot.className = 'replay-cursor-trail-dot';

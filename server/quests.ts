@@ -1,4 +1,3 @@
-import logger from './logger.ts';
 import * as db from './db.ts';
 import type { QuestDefinition, UserQuestRow } from './types.ts';
 
@@ -54,7 +53,7 @@ export function getWeeklyPeriod(): { start: Date; end: Date } {
 // ── Random Selection ──
 
 function pickRandom<T>(arr: T[], count: number): T[] {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
+  const shuffled = [...arr].toSorted(() => Math.random() - 0.5);
   return shuffled.slice(0, count);
 }
 

@@ -170,13 +170,13 @@ export function handleBossClick(ctx: GameContext, pid: string): void {
         playerColor: player.color,
         bossHp: state.boss.hp,
         bossMaxHp: state.boss.maxHp,
-        ...(result.emit || {}),
+        ...result.emit,
         ...activePlugin.broadcastFields(ctx),
       });
       return;
     }
 
-    const clickPoints = awardScore(ctx, pid, bossConfig.clickPoints);
+    awardScore(ctx, pid, bossConfig.clickPoints);
 
     if (ctx.matchLog) {
       try {

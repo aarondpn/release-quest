@@ -1,5 +1,4 @@
 import { renderIcon } from './avatars.ts';
-import type { ClientPlayer } from './client-types.ts';
 
 const ROW_HEIGHT = 80;
 
@@ -36,7 +35,7 @@ interface ConfettiPiece {
  * Show a slot-machine "Player of the Match" reveal animation.
  */
 export function showWalkout(playerList: WalkoutPlayer[], onComplete: () => void): void {
-  const sorted = playerList.slice().sort((a, b) => b.score - a.score);
+  const sorted = playerList.slice().toSorted((a, b) => b.score - a.score);
   const mvp = sorted[0];
   const numPlayers = sorted.length;
   const reps = Math.max(14, Math.ceil(56 / numPlayers));

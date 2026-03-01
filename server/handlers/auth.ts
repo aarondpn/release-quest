@@ -1,6 +1,6 @@
-import type { HandlerContext, MessageHandler } from './types.ts';
+import type { MessageHandler } from './types.ts';
 import { STANDARD_ICONS as ICONS } from '../../shared/constants.ts';
-import { ALL_ICONS, PREMIUM_ICON_IDS, GUEST_NAMES } from '../config.ts';
+import { PREMIUM_ICON_IDS, GUEST_NAMES } from '../config.ts';
 import { createPlayerLogger } from '../logger.ts';
 import * as network from '../network.ts';
 import * as auth from '../auth.ts';

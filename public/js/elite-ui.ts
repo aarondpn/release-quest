@@ -1,5 +1,4 @@
 import { dom } from './state.ts';
-import { hideAllScreens } from './hud.ts';
 import type { SendMessageFn } from './client-types.ts';
 
 let _sendMessage: SendMessageFn | null = null;

@@ -1,4 +1,4 @@
-import type { HandlerContext, MessageHandler } from './types.ts';
+import type { MessageHandler } from './types.ts';
 import { createGameLogger } from '../logger.ts';
 import * as game from '../game.ts';
 import * as network from '../network.ts';

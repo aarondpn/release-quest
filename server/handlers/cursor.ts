@@ -1,4 +1,4 @@
-import type { HandlerContext, MessageHandler } from './types.ts';
+import type { MessageHandler } from './types.ts';
 import * as network from '../network.ts';
 import * as entityTypes from '../entity-types/index.ts';
 import { getCtxForPlayer } from '../helpers.ts';

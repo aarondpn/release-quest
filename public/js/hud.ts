@@ -141,7 +141,7 @@ export function showLevelScreen(levelNum: number): void {
 }
 
 export function renderScoreboard(container: HTMLElement, playerList: ScoreboardEntry[]): void {
-  const sorted = playerList.slice().sort((a, b) => b.score - a.score);
+  const sorted = playerList.slice().toSorted((a, b) => b.score - a.score);
   container.innerHTML = sorted.map(p =>
     '<div class="scoreboard-row">' +
       '<span class="scoreboard-name">' +
@@ -176,7 +176,7 @@ function renderLiveDashboard(): void {
   const players = Object.values(clientState.players);
   if (!players.length) return;
 
-  const sorted = players.slice().sort((a, b) => (b.score || 0) - (a.score || 0));
+  const sorted = players.slice().toSorted((a, b) => (b.score || 0) - (a.score || 0));
 
   // Capture old positions (FLIP step 1: First)
   const existingRows = container.querySelectorAll<HTMLElement>('.live-dash-row');

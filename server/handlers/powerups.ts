@@ -1,4 +1,4 @@
-import type { HandlerContext, MessageHandler } from './types.ts';
+import type { MessageHandler } from './types.ts';
 import * as powerups from '../powerups.ts';
 import { getCtxForPlayer } from '../helpers.ts';
 

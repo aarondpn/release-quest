@@ -189,7 +189,7 @@ export const stackOverflowPlugin: MiniBossPlugin = {
       e => (e.variant === 'frame' || e.variant === 'recursive-frame') &&
         e.spawnedAt !== undefined && (now - e.spawnedAt!) >= FRAME_LIFETIME_MS
     );
-    for (const frame of expiredFrames) {
+    for (const _frame of expiredFrames) {
       data.bossHp = Math.min(BOSS_HP, data.bossHp + EXPIRED_FRAME_HEAL);
     }
     if (expiredFrames.length > 0) {

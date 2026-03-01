@@ -1,0 +1,18 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error"
+  },
+  "plugins": ["typescript", "import", "unicorn"],
+  "rules": {
+    "no-unused-vars": "off",
+    "typescript/no-unused-vars": "error",
+    "import/no-named-as-default": "off",
+    "import/no-named-as-default-member": "off",
+    "no-await-in-loop": "off",
+    "unicorn/prefer-add-event-listener": "off"
+  },
+  "ignorePatterns": ["dist/**", "node_modules/**", "*.min.js", "*.min.css"]
+}

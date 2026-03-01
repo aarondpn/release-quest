@@ -9,7 +9,7 @@ export const CODE_REVIEW_MECHANICS = {
 
 export const featureDescriptor: EntityDescriptor = {
   ...baseDescriptor,
-  broadcastFields(bug: BugEntity) {
+  broadcastFields(_bug: BugEntity) {
     return { isFeature: true };
   },
 

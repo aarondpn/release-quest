@@ -1,13 +1,13 @@
 {
   "compilerOptions": {
     "strict": true,
-    "target": "es2022",
+    "target": "es2023",
     "module": "esnext",
     "moduleResolution": "bundler",
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
-    "lib": ["es2022", "dom", "dom.iterable"],
+    "lib": ["es2023", "dom", "dom.iterable"],
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },

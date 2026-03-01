@@ -1,4 +1,4 @@
-import { dom, clientState } from './state.ts';
+import { dom } from './state.ts';
 import { VOTE_TIMER_MS } from '../../shared/constants.ts';
 import type { SendMessageFn, ClientPlayer } from './client-types.ts';
 import type { RestStartMsg, RestResolvedMsg } from '../../shared/messages.ts';

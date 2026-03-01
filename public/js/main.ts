@@ -6,7 +6,7 @@ import { clientState, dom, initDom } from './state.ts';
 import { pixelToLogical } from './coordinates.ts';
 import { updateHUD, initHudSend } from './hud.ts';
 import { connect, sendMessage } from './network.ts';
-import { showLobbyBrowser, initLobbySend, updateLobbyProfileBar, toggleLobbyEditor, saveLobbyProfile } from './lobby-ui.ts';
+import { showLobbyBrowser, initLobbySend, toggleLobbyEditor, saveLobbyProfile } from './lobby-ui.ts';
 import { initAuthSend, showAuthOverlay, hideAuthOverlay, switchTab, submitLogin, submitRegister, submitLogout } from './auth-ui.ts';
 import { initLeaderboardSend, initLeaderboardPeriodTabs, showLeaderboardTab, showLobbiesTab } from './leaderboard-ui.ts';
 import { initReplaysSend, showReplaysTab } from './replays-ui.ts';
@@ -14,7 +14,7 @@ import { initStatsCardSend, showStatsCardTab, initThemePicker, downloadStatsCard
 import { stopPlayback, togglePause, cycleSpeed } from './playback.ts';
 import { showError, ERROR_LEVELS } from './error-handler.ts';
 import { initChatSend, initChat } from './chat.ts';
-import { initQuestsSend, requestQuests, showQuestsTab } from './quests-ui.ts';
+import { initQuestsSend, showQuestsTab } from './quests-ui.ts';
 import { initShopSend, showShopTab, hideShopPanel } from './cosmetic-shop-ui.ts';
 import { initMapSend } from './roguelike-map-ui.ts';
 import { initEventSend } from './event-ui.ts';

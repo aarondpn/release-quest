@@ -77,7 +77,7 @@ const NODE_SVG_ICONS: Record<string, string> = {
 export function renderMap(
   map: RoguelikeMap,
   availableNodes: string[],
-  players: Record<string, { name: string; color: string }>,
+  _players: Record<string, { name: string; color: string }>,
 ): void {
   const container = document.getElementById('map-nodes');
   const svgEl = document.getElementById('map-edges') as unknown as SVGSVGElement;
@@ -96,7 +96,7 @@ export function renderMap(
     rows.get(node.row)!.push(node);
   }
 
-  const totalRows = Math.max(...[...rows.keys()]) + 1;
+  const totalRows = Math.max(...rows.keys()) + 1;
 
   // Create node elements
   for (const node of map.nodes) {

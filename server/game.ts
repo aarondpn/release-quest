@@ -2,7 +2,6 @@ import { MAX_LEVEL, getDifficultyConfig } from './config.ts';
 import { currentLevelConfig, getPlayerScores } from './state.ts';
 import logger, { createLobbyLogger } from './logger.ts';
 import * as bugs from './bugs.ts';
-import * as boss from './boss.ts';
 import * as powerups from './powerups.ts';
 import * as shop from './shop.ts';
 import * as stats from './stats.ts';

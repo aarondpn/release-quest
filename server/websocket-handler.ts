@@ -186,8 +186,8 @@ export function setupWebSocketConnection(
         }
         cleanupPurchaseRateLimit(pid);
         playerInfo.delete(pid);
-        const playerLogger = createPlayerLogger(pid);
-        playerLogger.info({ onlineCount: wss.clients.size }, 'Player disconnected');
+        const disconnectLogger = createPlayerLogger(pid);
+        disconnectLogger.info({ onlineCount: wss.clients.size }, 'Player disconnected');
       }
 
       // Broadcast updated online count to all remaining clients
