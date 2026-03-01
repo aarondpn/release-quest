@@ -220,6 +220,7 @@ export interface DomRefs {
   lobbyListPanel: HTMLElement | null;
   leaderboardPanel: HTMLElement | null;
   leaderboardList: HTMLElement | null;
+  leaderboardPeriodTabs: HTMLElement | null;
   leaderboardTab: HTMLElement | null;
   lobbiesTab: HTMLElement | null;
   liveDashboard: HTMLElement | null;

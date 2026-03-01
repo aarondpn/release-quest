@@ -22,7 +22,10 @@ const startGameSchema = z.object({ type: z.literal('start-game') }) satisfies Zo
 const clickBossSchema = z.object({ type: z.literal('click-boss') }) satisfies ZodType<ClickBossMsg>;
 const clickDuckSchema = z.object({ type: z.literal('click-duck') }) satisfies ZodType<ClickDuckMsg>;
 const clickHammerSchema = z.object({ type: z.literal('click-hammer') }) satisfies ZodType<ClickHammerMsg>;
-const getLeaderboardSchema = z.object({ type: z.literal('get-leaderboard') }) satisfies ZodType<GetLeaderboardMsg>;
+const getLeaderboardSchema = z.object({
+  type: z.literal('get-leaderboard'),
+  period: z.enum(['all', 'monthly', 'weekly']).optional(),
+}) satisfies ZodType<GetLeaderboardMsg>;
 const getMyStatsSchema = z.object({ type: z.literal('get-my-stats') }) satisfies ZodType<GetMyStatsMsg>;
 const getRecordingsSchema = z.object({ type: z.literal('get-recordings') }) satisfies ZodType<GetRecordingsMsg>;
 const getQuestsSchema = z.object({ type: z.literal('get-quests') }) satisfies ZodType<GetQuestsMsg>;

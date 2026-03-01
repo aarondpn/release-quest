@@ -2,8 +2,12 @@ import type { HandlerContext, MessageHandler } from './types.ts';
 import * as network from '../network.ts';
 import * as db from '../db.ts';
 
-export const handleGetLeaderboard: MessageHandler = ({ ws }) => {
-  db.getLeaderboard(10).then(entries => {
+export const handleGetLeaderboard: MessageHandler = ({ ws, msg }) => {
+  const period = msg.period as 'all' | 'monthly' | 'weekly' | undefined;
+  const promise = (period === 'weekly' || period === 'monthly')
+    ? db.getLeaderboardByPeriod(10, period)
+    : db.getLeaderboard(10);
+  promise.then(entries => {
     network.send(ws, { type: 'leaderboard', entries });
   }).catch(() => {
     network.send(ws, { type: 'leaderboard', entries: [] });

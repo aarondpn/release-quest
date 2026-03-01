@@ -3710,6 +3710,37 @@ header p {
   letter-spacing: 2px;
 }
 
+.leaderboard-period-tabs {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+
+.leaderboard-period-btn {
+  font-family: inherit;
+  font-size: 6px;
+  letter-spacing: 1px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.leaderboard-period-btn:hover {
+  border-color: var(--purple);
+  color: var(--text);
+}
+
+.leaderboard-period-btn.active {
+  background: var(--purple);
+  border-color: var(--purple);
+  color: var(--bg);
+  text-shadow: none;
+}
+
 .leaderboard-list {
   display: flex;
   flex-direction: column;

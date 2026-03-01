@@ -104,6 +104,7 @@ export const dom: DomRefs = {
   lobbyListPanel: null,
   leaderboardPanel: null,
   leaderboardList: null,
+  leaderboardPeriodTabs: null,
   leaderboardTab: null,
   lobbiesTab: null,
   liveDashboard: null,
@@ -267,6 +268,7 @@ export function initDom(): void {
   dom.lobbyListPanel = document.getElementById('lobby-list-panel');
   dom.leaderboardPanel = document.getElementById('leaderboard-panel');
   dom.leaderboardList = document.getElementById('leaderboard-list');
+  dom.leaderboardPeriodTabs = document.getElementById('leaderboard-period-tabs');
   dom.leaderboardTab = document.getElementById('leaderboard-tab');
   dom.lobbiesTab = document.getElementById('lobbies-tab');
   dom.liveDashboard = document.getElementById('live-dashboard');

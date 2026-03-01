@@ -4,10 +4,12 @@ import { escapeHtml } from './utils.ts';
 import type { SendMessageFn, LeaderboardEntry } from './client-types.ts';
 
 let _sendMessage: SendMessageFn | null = null;
+let _currentPeriod: 'all' | 'monthly' | 'weekly' = 'all';
+
 export function initLeaderboardSend(fn: SendMessageFn): void { _sendMessage = fn; }
 
 export function requestLeaderboard(): void {
-  if (_sendMessage) _sendMessage({ type: 'get-leaderboard' });
+  if (_sendMessage) _sendMessage({ type: 'get-leaderboard', period: _currentPeriod });
 }
 
 export function renderLeaderboard(entries: LeaderboardEntry[]): void {
@@ -30,6 +32,30 @@ export function renderLeaderboard(entries: LeaderboardEntry[]): void {
       '<span class="leaderboard-winrate">' + winRate + '%</span>' +
     '</div>';
   }).join('');
+}
+
+export function initLeaderboardPeriodTabs(): void {
+  const container = dom.leaderboardPeriodTabs;
+  if (!container) return;
+  const periods: { label: string; value: 'all' | 'monthly' | 'weekly' }[] = [
+    { label: 'ALL TIME', value: 'all' },
+    { label: 'MONTHLY', value: 'monthly' },
+    { label: 'WEEKLY', value: 'weekly' },
+  ];
+  container.innerHTML = periods.map(p =>
+    '<button class="leaderboard-period-btn' + (p.value === _currentPeriod ? ' active' : '') +
+    '" data-period="' + p.value + '">' + p.label + '</button>'
+  ).join('');
+  container.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.leaderboard-period-btn') as HTMLElement | null;
+    if (!btn) return;
+    const period = btn.dataset.period as 'all' | 'monthly' | 'weekly';
+    if (period === _currentPeriod) return;
+    _currentPeriod = period;
+    container.querySelectorAll('.leaderboard-period-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    requestLeaderboard();
+  });
 }
 
 export function showLeaderboardTab(): void {

@@ -402,6 +402,26 @@ export async function getLeaderboard(limit: number = 10): Promise<LeaderboardEnt
   return result.rows as LeaderboardEntry[];
 }
 
+export async function getLeaderboardByPeriod(limit: number = 10, period: 'weekly' | 'monthly'): Promise<LeaderboardEntry[]> {
+  const interval = period === 'weekly' ? '7 days' : '30 days';
+  const result = await pool.query(`
+    SELECT u.display_name, u.icon,
+           COUNT(*)::int as games_played,
+           SUM(CASE WHEN gr.outcome = 'won' THEN 1 ELSE 0 END)::int as games_won,
+           SUM(CASE WHEN gr.outcome != 'won' THEN 1 ELSE 0 END)::int as games_lost,
+           SUM(gr.score)::bigint as total_score,
+           MAX(gr.score)::int as highest_score,
+           0 as bugs_squashed
+    FROM game_recordings gr
+    JOIN users u ON gr.user_id = u.id
+    WHERE gr.recorded_at >= NOW() - INTERVAL '${interval}'
+    GROUP BY u.id, u.display_name, u.icon
+    ORDER BY total_score DESC
+    LIMIT $1
+  `, [limit]);
+  return result.rows as LeaderboardEntry[];
+}
+
 // Recording queries
 
 export async function saveRecording(

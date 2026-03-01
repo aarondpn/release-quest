@@ -231,6 +231,7 @@ export interface EmoteMsg {
 
 export interface GetLeaderboardMsg {
   type: 'get-leaderboard';
+  period?: 'all' | 'monthly' | 'weekly';
 }
 
 export interface GetMyStatsMsg {
