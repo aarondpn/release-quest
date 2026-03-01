@@ -6973,6 +6973,7 @@ body.qa-hitbox-active .arena .bug::before {
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, opacity 0.25s ease;
   z-index: 2;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
 }
 
 .map-node::before {
