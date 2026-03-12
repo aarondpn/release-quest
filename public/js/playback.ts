@@ -1,5 +1,5 @@
 import { dom, clientState } from './state.ts';
-import { updateHUD, updatePlayerCount, hideAllScreens, hideLiveDashboard, showGameOverScreen, showWinScreen } from './hud.ts';
+import { updateHUD, updatePlayerCount, hideAllScreens, hideLiveDashboard } from './hud.ts';
 import { clearAllBugs } from './bugs.ts';
 import { removeBossElement } from './boss.ts';
 import { addRemoteCursor, clearRemoteCursors } from './players.ts';
@@ -42,17 +42,6 @@ function updateProgressBar(): void {
 
   if (!playbackEnded && duration > 0 && gameTime >= duration) {
     playbackEnded = true;
-    const recording = clientState.playbackRecording;
-    if (recording) {
-      const players = Object.values(clientState.players).map(p => ({
-        id: p.id, name: p.name, icon: p.icon, color: p.color, score: p.score, bugsSquashed: p.bugsSquashed || 0, isGuest: false as const,
-      }));
-      if (recording.outcome === 'win') {
-        showWinScreen(recording.score, players);
-      } else {
-        showGameOverScreen(recording.score, 3, players);
-      }
-    }
   }
 }
 
