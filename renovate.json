@@ -19,6 +19,12 @@
       "description": "Require longer stabilization for major updates",
       "matchUpdateTypes": ["major"],
       "minimumReleaseAge": "7 days"
+    },
+    {
+      "description": "Do not pin engines — it is a semver constraint, not a dependency",
+      "matchDepTypes": ["engines"],
+      "rangeStrategy": "replace",
+      "enabled": false
     }
   ]
 }
