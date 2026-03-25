@@ -6,13 +6,9 @@
   "rangeStrategy": "pin",
   "minimumReleaseAge": "3 days",
   "automerge": false,
-  "separateMultipleMajorReleases": true,
+  "separateMultipleMajor": true,
   "prConcurrentLimit": 10,
   "prHourlyLimit": 2,
-  "lockFileMaintenance": {
-    "enabled": true,
-    "schedule": ["before 5am on monday"]
-  },
   "vulnerabilityAlerts": {
     "enabled": true,
     "labels": ["security"],
