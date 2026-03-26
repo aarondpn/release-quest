@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine@sha256:20edbde7749f822887a1a022ad526fde0a47d6b2be9a8364433605cf65099416
+    image: postgres:17-alpine@sha256:6f30057d31f5861b66f3545d4821f987aacf1dd920765f0acadea0c58ff975b1
     environment:
       POSTGRES_DB: release_quest
       POSTGRES_USER: release_quest
