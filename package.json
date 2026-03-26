@@ -36,7 +36,7 @@
     "@types/ws": "8.18.1",
     "esbuild": "0.27.3",
     "oxlint": "1.56.0",
-    "oxlint-tsgolint": "0.15.0",
+    "oxlint-tsgolint": "0.17.1",
     "typescript": "5.9.3"
   }
 }
