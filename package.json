@@ -26,7 +26,7 @@
     "zod": "4.3.6"
   },
   "overrides": {
-    "tar": "7.5.11"
+    "tar": "7.5.13"
   },
   "devDependencies": {
     "@types/bcrypt": "6.0.0",
