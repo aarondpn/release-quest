@@ -27,7 +27,7 @@ services:
       - "9091:9091"
 
   prometheus:
-    image: prom/prometheus:latest@sha256:4a61322ac1103a0e3aea2a61ef1718422a48fa046441f299d71e660a3bc71ae9
+    image: prom/prometheus:latest@sha256:3c42b892cf723fa54d2f262c37a0e1f80aa8c8ddb1da7b9b0df9455a35a7f893
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - promdata:/prometheus
